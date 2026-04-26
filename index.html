@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SKU Forecasting</title>
+    <meta name="description" content="SKU Forecasting Platform" />
+    <meta name="theme-color" content="#004743" />
+
+    <!--
+      Minimal Content Security Policy for the SPA.
+
+      ⚠ connect-src is intentionally broad (http:/https:) because the API
+      host is configured at build time via VITE_API_URL. Tighten in your
+      deployment by injecting the actual origin at build time, e.g.:
+
+          <meta http-equiv="Content-Security-Policy"
+                content="... connect-src 'self' https://api.example.com; ...">
+
+      Notes:
+        • 'unsafe-inline' on style-src is needed by Tailwind's base layer
+          when loaded via <style> tags during dev — production builds emit
+          external stylesheets and you can drop it.
+        • img-src data: is needed for inline SVGs from recharts/toast.
+        • frame-ancestors 'none' defends against clickjacking.
+    -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self';
+                   style-src 'self' 'unsafe-inline';
+                   img-src 'self' data: blob:;
+                   font-src 'self' data:;
+                   connect-src 'self' http: https:;
+                   frame-ancestors 'none';
+                   base-uri 'self';
+                   form-action 'self';" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!--
+      Editorial type pair:
+        • Fraunces — variable serif for display + numbers (SOFT + opsz axes).
+        • IBM Plex Sans — characterful body/UI, with Cyrillic.
+        • JetBrains Mono — retained for mono.
+      Preload only the weights we actually use to keep FCP tight.
+    -->
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,400..700,0..100;1,9..144,400..700,0..100&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <noscript>
+      <p style="padding:24px;font-family:system-ui;">
+        JavaScript is required to run this application.
+      </p>
+    </noscript>
+  </body>
+</html>

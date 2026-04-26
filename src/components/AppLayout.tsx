@@ -1,0 +1,224 @@
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../features/auth/store'
+import { useUsage } from '../features/plans/useUsage'
+import { PlanBadge } from '../features/plans/PlanBadge'
+import { QuotaMeter, LockTag } from '../features/plans/upsell'
+import type { PlanId } from '../features/plans/api'
+
+// Sidebar entries; `minPlan` controls whether the item is clickable
+// for the current user's plan.
+const NAV = [
+  { to: '',            label: 'Главная',       icon: IconHome,    minPlan: 'free'     },
+  { to: 'uploads',     label: 'Загрузки',      icon: IconUpload,  minPlan: 'free'     },
+  { to: 'forecasts',   label: 'Прогнозы',      icon: IconChart,   minPlan: 'free'     },
+  { to: 'training',    label: 'Обучение',      icon: IconCog,     minPlan: 'free'     },
+  { to: 'scenarios',   label: 'Сценарии',      icon: IconSplit,   minPlan: 'business' },
+  { to: 'promo',       label: 'Промо',         icon: IconSpark,   minPlan: 'business' },
+  { to: 'settings',    label: 'Настройки',     icon: IconSlider,  minPlan: 'free'     },
+  { to: 'admin/clients', label: 'Клиенты',     icon: IconUsers,   minPlan: 'free', adminOnly: true },
+] as const
+
+const PLAN_RANK: Record<PlanId, number> = { free: 0, start: 1, business: 2 }
+
+export default function AppLayout() {
+  const nav      = useNavigate()
+  const clientId = useAuthStore((s) => s.clientId)
+  const logout   = useAuthStore((s) => s.logout)
+  const isAdmin  = useAuthStore((s) => s.isAdmin())
+  const { data: usage } = useUsage()
+
+  const userRank = usage ? PLAN_RANK[usage.plan] : 0
+  const visibleNav = NAV.filter((item) => !('adminOnly' in item) || !item.adminOnly || isAdmin)
+
+  return (
+    <div className="min-h-screen flex bg-surface">
+      {/* ── Sidebar ─────────────────────────────────────────────── */}
+      <aside className="w-64 bg-brand-700 text-ink-invert flex flex-col relative">
+        {/* Editorial ambient decoration — thin gold vertical rule */}
+        <span
+          aria-hidden
+          className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-gold-600/30 to-transparent"
+        />
+
+        <div className="px-6 py-6 flex items-center gap-3 border-b border-brand-600">
+          <div className="h-9 w-9 rounded-md bg-brand-500 flex items-center justify-center text-[11px] font-semibold tracking-wider">
+            SKU
+          </div>
+          <div className="leading-tight">
+            <div className="font-display italic text-lg">Forecasting</div>
+            {usage && (
+              <div className="eyebrow !text-gold-300 !tracking-[0.16em]">
+                {usage.model_display_name}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <nav className="flex-1 p-3 space-y-0.5">
+          {visibleNav.map((item) => {
+            const { to, label, icon: Icon } = item
+            const minPlan = (item as any).minPlan as PlanId
+            const locked  = PLAN_RANK[minPlan] > userRank
+            const Component: typeof NavLink | 'div' = locked ? 'div' : NavLink
+            return (
+              <Component
+                key={to}
+                to={locked ? undefined as any : to}
+                {...(locked ? {} : {
+                  end: to === '',          // "Главная" matches only on "/", not on every child
+                  className: ({ isActive }: { isActive: boolean }) => [
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm',
+                    'transition-colors',
+                    isActive
+                      ? 'bg-brand-500 text-ink-invert'
+                      : 'text-brand-50/80 hover:bg-brand-600 hover:text-ink-invert',
+                  ].join(' ')
+                })}
+                {...(locked ? {
+                  className: 'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-brand-50/40 cursor-not-allowed',
+                  title: `Доступно в тарифе ${minPlan === 'start' ? 'Start' : 'Business'}`,
+                } : {})}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="flex-1 truncate">{label}</span>
+                {locked && <LockTag required={minPlan} compact />}
+              </Component>
+            )
+          })}
+        </nav>
+
+        {/* Footer of sidebar — client identity */}
+        <div className="p-4 border-t border-brand-600">
+          <div className="eyebrow !text-brand-50/50">Клиент</div>
+          <div className="font-mono text-xs text-ink-invert truncate">{clientId ?? '—'}</div>
+        </div>
+      </aside>
+
+      {/* ── Main column ─────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="flex items-center justify-between bg-surface-raised border-b border-surface-border px-6 h-16 shrink-0 gap-6">
+          <div className="eyebrow">Панель управления</div>
+
+          <div className="flex items-center gap-6">
+            {usage && (
+              <QuotaMeter
+                used={usage.trained_sku_count ?? 0}
+                max={usage.max_skus}
+                label="SKU"
+              />
+            )}
+            {usage && (
+              <PlanBadge
+                plan={usage.plan}
+                modelName={usage.model_display_name}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => { logout(); nav('/login') }}
+              className="btn-ghost"
+              title="Выйти"
+            >
+              Выйти
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto p-6 sm:p-8">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  )
+}
+
+// ── Icons — keeping them inline keeps the bundle tiny ──────────────────
+type IconProps = { className?: string }
+function IconHome({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z" />
+    </svg>
+  )
+}
+function IconUpload({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M17 8l-5-5-5 5" />
+      <path d="M12 3v12" />
+    </svg>
+  )
+}
+function IconCog({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  )
+}
+function IconChart({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 3v18h18" />
+      <path d="M7 14l4-4 4 4 6-6" />
+    </svg>
+  )
+}
+function IconSlider({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="4" y1="21" x2="4" y2="14" />
+      <line x1="4" y1="10" x2="4" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12" y2="3" />
+      <line x1="20" y1="21" x2="20" y2="16" />
+      <line x1="20" y1="12" x2="20" y2="3" />
+      <line x1="1" y1="14" x2="7" y2="14" />
+      <line x1="9" y1="8" x2="15" y2="8" />
+      <line x1="17" y1="16" x2="23" y2="16" />
+    </svg>
+  )
+}
+function IconUsers({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  )
+}
+function IconSplit({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M6 3v6l-4 4" />
+      <path d="M18 3v6l4 4" />
+      <path d="M12 3v18" />
+    </svg>
+  )
+}
+function IconSpark({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 2v5" />
+      <path d="M12 17v5" />
+      <path d="M4.22 4.22l3.54 3.54" />
+      <path d="M16.24 16.24l3.54 3.54" />
+      <path d="M2 12h5" />
+      <path d="M17 12h5" />
+      <path d="M4.22 19.78l3.54-3.54" />
+      <path d="M16.24 7.76l3.54-3.54" />
+    </svg>
+  )
+}

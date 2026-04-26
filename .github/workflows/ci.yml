@@ -1,0 +1,49 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: ["main", "develop", "feature/**"]
+  pull_request:
+    branches: ["main", "develop"]
+
+# Assumes this repo is the frontend directory (package.json at root).
+# For a monorepo, add a `paths:` filter on the trigger.
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  ci:
+    name: Lint + typecheck + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+        # eslint config is minimal for now; allow failure once we add
+        # rules by removing this line.
+        continue-on-error: false
+
+      - name: Build (prod)
+        # Using the placeholder API URL keeps the build deterministic.
+        # The deployment pipeline rebuilds with the real VITE_API_URL.
+        run: VITE_API_URL=https://api.example.com npm run build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist
+          retention-days: 14

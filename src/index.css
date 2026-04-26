@@ -1,0 +1,234 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Root tokens ────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+  --brand-500: #004743;
+  --brand-600: #003E3A;
+  --brand-700: #002B29;
+  --gold-500:  #C79A33;
+  --gold-600:  #A37C10;
+  --paper:     #F4EFE5;
+  --paper-deep:#EAE2D1;
+  --paper-ink: #4C4435;
+  --surface:   #FAFAFA;
+  --ink:       #1A1A1A;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  @apply bg-surface text-ink font-sans antialiased;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv05", "cv11";
+}
+
+/* ── Focus ring ─────────────────────────────────────────────────────── */
+*:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   Editorial typography — Fraunces for display, IBM Plex Sans for body.
+   Fraunces is a variable serif tuned per optical size; we lean into
+   its SOFT axis (40) at display sizes for a humane, confident feel.
+   ═════════════════════════════════════════════════════════════════════ */
+
+.display-xl, .display-lg, .display-md {
+  @apply font-display;
+  font-variation-settings: "opsz" 144, "SOFT" 40, "WONK" 1;
+  font-optical-sizing: auto;
+}
+
+.display-xl { @apply text-display-xl; }
+.display-lg { @apply text-display-lg; }
+.display-md { @apply text-display-md; }
+
+/* Italic display used for emphasis — Fraunces italic is delicious */
+.display-em {
+  @apply font-display italic;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+}
+
+/* Small caps label — editorial eyebrow */
+.eyebrow {
+  @apply font-sans uppercase text-[11px] tracking-[0.18em] text-ink-subtle;
+}
+
+/* Figure for a number with tabular spacing — great in tables */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   Components
+   ═════════════════════════════════════════════════════════════════════ */
+@layer components {
+
+  /* ── Buttons ────────────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+           rounded-md px-4 py-2 text-sm font-medium
+           transition-all duration-150
+           disabled:cursor-not-allowed disabled:opacity-50
+           font-sans;
+  }
+  .btn-primary {
+    @apply btn bg-brand-500 text-ink-invert
+           hover:bg-brand-600 active:bg-brand-700;
+  }
+  .btn-secondary {
+    @apply btn bg-surface-raised text-ink ring-1 ring-surface-border
+           hover:bg-surface-muted;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink-muted hover:bg-surface-muted hover:text-ink;
+  }
+  .btn-gold {
+    @apply btn bg-gold-500 text-brand-800 font-semibold
+           hover:bg-gold-600 hover:text-ink-invert
+           shadow-[0_1px_0_rgba(124,93,10,0.4),0_4px_12px_rgba(199,154,51,0.25)];
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:opacity-90;
+  }
+
+  /* ── Cards ──────────────────────────────────────────────────────── */
+  .card {
+    @apply rounded-lg bg-surface-raised shadow-card ring-1 ring-surface-border;
+  }
+  /* Premium paper surface — for locked previews and upgrade teasers */
+  .card-paper {
+    @apply rounded-lg shadow-paper ring-1 ring-paper-deep;
+    background-image: var(--tw-gradient-paper-grain, none);
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(rgba(140,106,46,0.08) 1px, transparent 1px),
+      linear-gradient(180deg, #F4EFE5 0%, #EFE8D8 100%);
+    background-size: 6px 6px, 100% 100%;
+  }
+
+  /* ── Inputs ─────────────────────────────────────────────────────── */
+  .input {
+    @apply block w-full rounded-md border-0 bg-surface-raised px-3 py-2
+           text-sm text-ink ring-1 ring-inset ring-surface-border
+           placeholder:text-ink-subtle
+           focus:ring-2 focus:ring-inset focus:ring-brand-500
+           disabled:cursor-not-allowed disabled:bg-surface-muted
+           font-sans;
+  }
+  .label {
+    @apply block text-sm font-medium text-ink mb-1.5 font-sans;
+  }
+
+  /* ── Badges ─────────────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5
+           text-xs font-medium font-sans;
+  }
+  .badge-neutral  { @apply badge bg-surface-muted text-ink-muted; }
+  .badge-success  { @apply badge bg-success-bg   text-success; }
+  .badge-danger   { @apply badge bg-danger-bg    text-danger; }
+  .badge-warn     { @apply badge bg-warn-bg      text-warn; }
+  .badge-info     { @apply badge bg-brand-50     text-brand-700; }
+  .badge-gold     { @apply badge bg-gold-50      text-gold-700 ring-1 ring-gold-100; }
+
+  /* ── Dividers ───────────────────────────────────────────────────── */
+  /* Thin editorial rule with a centered brand dot. Use between sections. */
+  .rule-dot {
+    @apply h-px w-full;
+    background-image: linear-gradient(to right,
+      transparent 0%,
+      rgba(0,43,41,0.18) 14%,
+      rgba(0,43,41,0.18) 48%,
+      transparent 48.5%,
+      transparent 51.5%,
+      rgba(0,43,41,0.18) 52%,
+      rgba(0,43,41,0.18) 86%,
+      transparent 100%);
+  }
+  .rule-dot::before {
+    content: "";
+    @apply block mx-auto;
+    width: 6px; height: 6px; border-radius: 9999px;
+    background: var(--brand-500);
+    margin-top: -3px;
+  }
+
+  /* ── Section anchor (numbered chapter markers for PlansPage etc.) ─ */
+  .chapter-num {
+    @apply font-display italic text-gold-600 text-sm;
+    font-variation-settings: "opsz" 144, "SOFT" 100;
+  }
+
+  /* ── Slider — editorial range input ─────────────────────────────
+     Used on SettingsPage as the "business regulators". Thin rail,
+     solid brand thumb with a gold halo on hover / active.
+  */
+  .slider {
+    @apply w-full appearance-none bg-transparent cursor-pointer;
+    -webkit-appearance: none;
+  }
+  .slider::-webkit-slider-runnable-track {
+    @apply h-[3px] rounded-full bg-surface-border;
+  }
+  .slider::-moz-range-track {
+    @apply h-[3px] rounded-full bg-surface-border;
+  }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    @apply h-4 w-4 rounded-full bg-brand-500 cursor-pointer;
+    margin-top: -6.5px;
+    box-shadow: 0 0 0 0 rgba(199, 154, 51, 0);
+    transition: box-shadow 120ms ease-out;
+  }
+  .slider::-moz-range-thumb {
+    @apply h-4 w-4 rounded-full bg-brand-500 border-0 cursor-pointer;
+    box-shadow: 0 0 0 0 rgba(199, 154, 51, 0);
+    transition: box-shadow 120ms ease-out;
+  }
+  .slider:hover::-webkit-slider-thumb {
+    box-shadow: 0 0 0 5px rgba(199, 154, 51, 0.28);
+  }
+  .slider:hover::-moz-range-thumb {
+    box-shadow: 0 0 0 5px rgba(199, 154, 51, 0.28);
+  }
+  .slider:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 5px rgba(0, 71, 67, 0.25);
+  }
+  .slider:disabled::-webkit-slider-thumb {
+    @apply bg-ink-subtle opacity-60;
+  }
+  .slider:disabled::-webkit-slider-runnable-track {
+    @apply bg-surface-muted;
+  }
+
+  /* ── Seal — wax-stamp-like decoration for paper lock overlays ──── */
+  .seal {
+    @apply inline-flex items-center justify-center
+           rounded-full uppercase tracking-[0.18em] text-[10px] font-semibold
+           bg-brand-700 text-gold-100
+           ring-2 ring-brand-700 ring-offset-2 ring-offset-paper;
+    width: 84px; height: 84px;
+    background-image:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12), transparent 40%),
+      linear-gradient(135deg, #002B29 0%, #004743 80%);
+  }
+  .seal-gold {
+    @apply inline-flex items-center justify-center
+           rounded-full uppercase tracking-[0.18em] text-[10px] font-semibold
+           text-brand-800;
+    width: 84px; height: 84px;
+    background: radial-gradient(circle at 30% 30%, #F4E3B0 0%, #C79A33 80%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.4),
+      0 2px 6px rgba(124,93,10,0.35);
+  }
+}

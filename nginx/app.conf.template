@@ -1,0 +1,91 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Frontend VPS — TLS-terminating static host for the Vite SPA bundle.
+#
+# Layout:
+#   /usr/share/nginx/html/  ← the `dist/` produced by `npm run build`
+#   /etc/letsencrypt/live/${WEB_DOMAIN}/fullchain.pem
+#   /etc/letsencrypt/live/${WEB_DOMAIN}/privkey.pem
+#   /var/www/certbot        ← ACME http-01 webroot
+#
+# There is NO proxy layer here — the browser talks to the API host directly
+# (VITE_API_URL was baked in at build time). CORS is enforced by the API.
+# ─────────────────────────────────────────────────────────────────────────────
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${WEB_DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type "text/plain";
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${WEB_DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${WEB_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${WEB_DOMAIN}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:WEB_TLS:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    ssl_stapling        on;
+    ssl_stapling_verify on;
+    ssl_trusted_certificate /etc/letsencrypt/live/${WEB_DOMAIN}/chain.pem;
+
+    # Security headers — tightened for a static SPA.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options    "nosniff" always;
+    add_header X-Frame-Options           "DENY"    always;
+    add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy        "geolocation=(), microphone=(), camera=()" always;
+    # CSP — the <meta> tag in index.html has the same policy, but the
+    # HTTP header takes precedence for browsers that see it first. Adjust
+    # connect-src to match your API host; the {CSP_CONNECT_SRC} placeholder
+    # is substituted by entrypoint.sh from env CSP_CONNECT_SRC (defaults to "*").
+    add_header Content-Security-Policy   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+
+    server_tokens off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Vite builds assets under /assets with content-hashed filenames —
+    # they're safely immutable for a year.
+    location /assets/ {
+        try_files $uri =404;
+        access_log off;
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # SPA fallback: unknown paths resolve to index.html so react-router
+    # handles them client-side.
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-store" always;   # index.html never cached
+    }
+
+    location = /nginx-healthz {
+        access_log off;
+        return 200 "ok\n";
+        default_type text/plain;
+    }
+
+    # GZip static assets (JS/CSS). Brotli would be nicer but requires
+    # a custom nginx build — skip for portability.
+    gzip              on;
+    gzip_types        text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length   256;
+    gzip_proxied      any;
+    gzip_vary         on;
+}

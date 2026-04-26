@@ -1,0 +1,59 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Production compose for the FRONTEND VPS.
+#
+# Build + run:
+#   docker compose -f docker-compose.prod.yml build \
+#       --build-arg VITE_API_URL=$VITE_API_URL
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# First cert issuance: run scripts/init_tls.sh (same flow as the backend
+# overlay — copy it over and swap env names).
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  web:
+    build:
+      context: .
+      args:
+        VITE_API_URL: ${VITE_API_URL:?ERROR: set VITE_API_URL in .env}
+    environment:
+      WEB_DOMAIN:      ${WEB_DOMAIN:?ERROR: set WEB_DOMAIN in .env}
+      CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:-*}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/nginx-healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  certbot:
+    image: certbot/certbot:v2.11.0
+    environment:
+      CERTBOT_EMAIL:   ${CERTBOT_EMAIL:?ERROR: set CERTBOT_EMAIL in .env}
+      WEB_DOMAIN:      ${WEB_DOMAIN}
+      CERTBOT_STAGING: ${CERTBOT_STAGING:-0}
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        trap exit TERM
+        while :; do
+            certbot renew --webroot --webroot-path /var/www/certbot --quiet || true
+            sleep 12h & wait $!
+        done
+    restart: unless-stopped
+
+volumes:
+  letsencrypt:
+  certbot_webroot:
