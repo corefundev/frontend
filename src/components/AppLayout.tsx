@@ -106,7 +106,10 @@ export default function AppLayout() {
           <div className="flex items-center gap-6">
             {usage && (
               <QuotaMeter
-                used={usage.trained_sku_count ?? 0}
+                // Prefer "current catalog size" (latest processed upload)
+                // over "last-trained SKU count" — users see the upload's
+                // numbers immediately, before they kick off training.
+                used={usage.current_sku_count ?? usage.trained_sku_count ?? 0}
                 max={usage.max_skus}
                 label="SKU"
               />

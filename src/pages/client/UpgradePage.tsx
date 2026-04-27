@@ -77,11 +77,14 @@ export default function UpgradePage() {
         .post(`/clients/${encodeURIComponent(clientId ?? '')}/upgrade`, { plan })
         .then((r) => r.data),
     onMutate: (plan) => setPending(plan),
-    onSuccess: (resp: { display_name: string; changed: boolean }) => {
+    onSuccess: async (resp: { display_name: string; changed: boolean }) => {
       setPending(null)
       if (resp.changed) toast.success(`Тариф изменён на ${resp.display_name}`)
       else toast(`Уже на ${resp.display_name}`)
-      qc.invalidateQueries({ queryKey: ['usage', clientId] })
+      // refetchQueries (not just invalidate) so the header badge + SKU
+      // counter pull fresh data right now, without waiting for the
+      // 30s staleTime to elapse.
+      await qc.refetchQueries({ queryKey: ['usage', clientId] })
     },
     onError: (e) => {
       setPending(null)

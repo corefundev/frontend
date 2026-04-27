@@ -32,6 +32,9 @@ export interface ClientUsage {
   training_runs_remaining: number | null
   cooldown_until: string | null           // ISO
   trained_sku_count: number | null
+  // Distinct SKU count from the latest processed upload — what's in
+  // the catalog right now, even if the user hasn't trained yet.
+  current_sku_count: number | null
 }
 
 export const plansApi = {

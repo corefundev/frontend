@@ -205,12 +205,13 @@ export function QuotaMeter({
       className="group inline-flex items-center gap-3 select-none"
       title="Тариф и лимиты"
     >
-      <div className="flex flex-col items-end leading-tight">
+      {/* Inline: label first, then counter — was a stacked column. */}
+      <div className="flex items-baseline gap-2 leading-tight">
+        <span className="eyebrow !text-[10px] !tracking-[0.16em]">{label}</span>
         <span className="num font-display text-brand-700 text-lg font-medium">
           {used}
           <span className="text-ink-subtle">/{max}</span>
         </span>
-        <span className="eyebrow !text-[10px] !tracking-[0.16em]">{label}</span>
       </div>
       {/* Tick scale: 24 ticks, proportional, last tick is gold */}
       <div className="flex items-end gap-[2px]" aria-hidden>
