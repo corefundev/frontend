@@ -76,9 +76,15 @@ export default function TrainingPage() {
 
   const { mutate: train, isPending } = useMutation({
     mutationFn: () =>
+      // We pass only upload_id — backend resolves the actual s3:// URI
+      // from the upload registry. Hardcoding "s3://processed/..." here
+      // (as we used to) was wrong: "processed" isn't the real bucket
+      // name on Beget. data_path stays as a stub so the request
+      // satisfies the schema; the backend ignores it when upload_id
+      // is present.
       trainingApi.startTraining(clientId, {
-        data_path: selectedUpload
-          ? `s3://processed/${clientId}/${selectedUpload.upload_id}/data.parquet`
+        data_path: selectedUpload?.upload_id
+          ? `upload://${selectedUpload.upload_id}`
           : '',
         upload_id: uploadId || undefined,
       }),
