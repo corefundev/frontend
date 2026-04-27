@@ -113,6 +113,21 @@ export default function UploadsPage() {
     if (inflight) setActiveUploadId(inflight.upload_id)
   }, [uploads, activeUploadId])
 
+  // ── Cancel mutation ────────────────────────────────────────────
+  // Calls DELETE /uploads/{id}. Backend cleans up S3 in all 3 zones
+  // and removes the registry row. Idempotent server-side (204 even
+  // if already gone), so we don't bother handling 404 specially.
+  const { mutate: cancelUpload, isPending: cancelling } = useMutation({
+    mutationFn: (id: string) => uploadsApi.cancel(id),
+    onSuccess: () => {
+      setActiveUploadId(null)
+      setProgressPct(0)
+      toast.success('Загрузка отменена')
+      qc.invalidateQueries({ queryKey: ['uploads', clientId] })
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Не удалось отменить')),
+  })
+
   async function handlePickFile(file: File | null) {
     if (!file) return
     const err = validateUploadClientSide(file)
@@ -178,7 +193,11 @@ export default function UploadsPage() {
 
       {/* ═══════════════════ 3. ACTIVE UPLOAD ═══════════════════ */}
       {activeUpload && (
-        <ActiveUploadCard upload={activeUpload} />
+        <ActiveUploadCard
+          upload={activeUpload}
+          onCancel={() => cancelUpload(activeUpload.upload_id)}
+          cancelling={cancelling}
+        />
       )}
 
       {/* ═══════════════════ 4. CATALOG SPLIT (soft-lock) ═══════════════════ */}
@@ -520,7 +539,15 @@ const STATUS_CAPTION: Record<UploadStatus, string> = {
   processing_failed: 'Парсер не справился — см. ошибку ниже',
 }
 
-function ActiveUploadCard({ upload }: { upload: UploadRecord }) {
+function ActiveUploadCard({
+  upload,
+  onCancel,
+  cancelling,
+}: {
+  upload: UploadRecord
+  onCancel: () => void
+  cancelling: boolean
+}) {
   const pct = STATUS_PERCENT[upload.status] ?? 0
   const isFailed = upload.status === 'infected' || upload.status === 'processing_failed'
   const isDone   = upload.status === 'processed'
@@ -563,8 +590,23 @@ function ActiveUploadCard({ upload }: { upload: UploadRecord }) {
         />
       </div>
 
-      <div className="mt-3 text-xs text-ink-muted">
-        {STATUS_CAPTION[upload.status]}
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="text-xs text-ink-muted">
+          {STATUS_CAPTION[upload.status]}
+        </div>
+        {/* Cancel — visible only while pipeline still moving. After
+            terminal status the row is on its own; user dismisses by
+            uploading another file or via "Удалить" in the history table. */}
+        {isMoving && (
+          <button
+            type="button"
+            className="btn-tertiary !px-3 !py-1.5 text-xs shrink-0"
+            onClick={onCancel}
+            disabled={cancelling}
+          >
+            {cancelling ? 'Отмена…' : 'Отменить'}
+          </button>
+        )}
       </div>
 
       {upload.error_message && (

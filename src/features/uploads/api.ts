@@ -94,4 +94,11 @@ export const uploadsApi = {
     apiClient
       .get<UploadRecord>(`/uploads/${encodeURIComponent(uploadId)}`)
       .then((r) => r.data),
+
+  // User-initiated cancel. Backend best-effort-cleans up S3 in all 3
+  // zones and removes the registry row. Idempotent (204 on missing too).
+  cancel: (uploadId: string) =>
+    apiClient
+      .delete(`/uploads/${encodeURIComponent(uploadId)}`)
+      .then(() => undefined),
 }
