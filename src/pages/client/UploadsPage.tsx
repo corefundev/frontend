@@ -179,25 +179,28 @@ export default function UploadsPage() {
         <UpgradeTrigger variant="quota-hit" />
       )}
 
-      {/* ═══════════════════ 2. DROPZONE ═══════════════════ */}
-      <section>
-        <div className="rule-dot mb-6" />
-        <div className="eyebrow mb-3">Новый файл</div>
-        <Dropzone
-          disabled={uploading}
-          onFile={handlePickFile}
-          progressPct={uploading ? progressPct : 0}
-          inputRef={fileInputRef}
-        />
-      </section>
-
-      {/* ═══════════════════ 3. ACTIVE UPLOAD ═══════════════════ */}
-      {activeUpload && (
+      {/* ═══════════════════ 2. DROPZONE / ACTIVE UPLOAD ═══════════════════
+          One slot in the layout, two states:
+          - no in-flight upload  → show Dropzone (user can pick a file)
+          - upload in pipeline   → hide Dropzone, show ActiveUploadCard
+          Cancel from the card sets activeUploadId=null → Dropzone returns. */}
+      {activeUpload ? (
         <ActiveUploadCard
           upload={activeUpload}
           onCancel={() => cancelUpload(activeUpload.upload_id)}
           cancelling={cancelling}
         />
+      ) : (
+        <section>
+          <div className="rule-dot mb-6" />
+          <div className="eyebrow mb-3">Новый файл</div>
+          <Dropzone
+            disabled={uploading}
+            onFile={handlePickFile}
+            progressPct={uploading ? progressPct : 0}
+            inputRef={fileInputRef}
+          />
+        </section>
       )}
 
       {/* ═══════════════════ 4. CATALOG SPLIT (soft-lock) ═══════════════════ */}
