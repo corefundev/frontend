@@ -63,10 +63,21 @@ apiClient.interceptors.request.use(attachAuth)
 uploadClient.interceptors.request.use(attachAuth)
 
 // ── Response interceptor: 401 → logout + redirect ─────────────────────────
+//
+// Only treat 401 as "session expired" for REGULAR endpoints. A 401 on
+// the auth endpoints themselves (/auth/login, /auth/login/verify,
+// /auth/signup, /auth/signup/verify, /auth/token) means "wrong
+// credentials this attempt" — a normal mutation error to surface as a
+// toast, not a reason to wipe state and reload the page.
 function handle401(error: AxiosError) {
-  if (error.response?.status === 401) {
+  const url = error.config?.url ?? ''
+  const isAuthAttempt =
+    url.startsWith('/auth/login') ||
+    url.startsWith('/auth/signup') ||
+    url.startsWith('/auth/token')
+
+  if (error.response?.status === 401 && !isAuthAttempt) {
     useAuthStore.getState().logout()
-    // Avoid infinite loops when the login page itself fails
     if (!window.location.pathname.startsWith('/login')) {
       window.location.href = '/login'
     }

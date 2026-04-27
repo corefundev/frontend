@@ -37,10 +37,23 @@ export function OtpInput({
     if (autoFocus) refs.current[0]?.focus()
   }, [autoFocus])
 
-  // Fire onComplete whenever we hit the full length.
+  // Fire onComplete EXACTLY ONCE per "0…length" → "length" transition.
+  // The previous implementation depended on `onComplete` (a fresh inline
+  // arrow on every parent render) and re-fired the callback on every
+  // re-render — which made react-query mutations restart in a tight loop
+  // (one wrong-code submit produced 15+ POSTs to /auth/login/verify).
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
+  const firedRef = useRef(false)
   useEffect(() => {
-    if (value.length === length && /^\d+$/.test(value)) onComplete?.(value)
-  }, [value, length, onComplete])
+    const isComplete = value.length === length && /^\d+$/.test(value)
+    if (isComplete && !firedRef.current) {
+      firedRef.current = true
+      onCompleteRef.current?.(value)
+    } else if (!isComplete) {
+      firedRef.current = false   // reset so the next full entry fires too
+    }
+  }, [value, length])
 
   function setDigit(i: number, d: string) {
     const arr = value.padEnd(length, ' ').split('')
