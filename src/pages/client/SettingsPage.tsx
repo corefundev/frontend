@@ -40,6 +40,8 @@ interface RegulatorState {
   promoOn:         boolean
   stockOn:         boolean
   weatherOn:       boolean     // Business-only
+  weatherLat:      string       // string so empty = "use server default" (СПб)
+  weatherLon:      string
 }
 
 const DEFAULTS: RegulatorState = {
@@ -53,6 +55,8 @@ const DEFAULTS: RegulatorState = {
   promoOn:         true,
   stockOn:         false,
   weatherOn:       false,
+  weatherLat:      '',
+  weatherLon:      '',
 }
 
 const COUNTRIES = ['RU', 'KZ', 'BY', 'US', 'DE', 'FR'] as const
@@ -83,7 +87,13 @@ function stateToOverride(s: RegulatorState): Record<string, any> {
       price:    s.priceOn,
       promo:    s.promoOn,
       stock:    s.stockOn,
-      weather:  { enabled: s.weatherOn },
+      weather: {
+        enabled: s.weatherOn,
+        // Send lat/lon ONLY when filled; backend keeps its default
+        // (Saint Petersburg, 59.93/30.32) for the empty case.
+        ...(s.weatherLat.trim() ? { latitude:  Number(s.weatherLat) }  : {}),
+        ...(s.weatherLon.trim() ? { longitude: Number(s.weatherLon) } : {}),
+      },
     },
   }
 }
@@ -107,6 +117,10 @@ function overrideToState(raw: Record<string, any>): RegulatorState {
     promoOn:          features.promo              ?? DEFAULTS.promoOn,
     stockOn:          features.stock              ?? DEFAULTS.stockOn,
     weatherOn:        features.weather?.enabled   ?? DEFAULTS.weatherOn,
+    weatherLat:
+      features.weather?.latitude  != null ? String(features.weather.latitude)  : '',
+    weatherLon:
+      features.weather?.longitude != null ? String(features.weather.longitude) : '',
   }
 }
 
@@ -360,6 +374,42 @@ function SettingsContent({
               businessOnly={!canEdit('weatherOn')}
             />
           </div>
+
+          {state.weatherOn && canEdit('weatherOn') && (
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+              <Field label="Широта" hint="−90 … +90, по умолчанию СПб (59.93)">
+                <input
+                  type="number"
+                  step="0.0001"
+                  min={-90}
+                  max={90}
+                  inputMode="decimal"
+                  className="input"
+                  value={state.weatherLat}
+                  onChange={(e) => update('weatherLat', e.target.value)}
+                  placeholder="59.93"
+                />
+              </Field>
+              <Field label="Долгота" hint="−180 … +180, по умолчанию СПб (30.32)">
+                <input
+                  type="number"
+                  step="0.0001"
+                  min={-180}
+                  max={180}
+                  inputMode="decimal"
+                  className="input"
+                  value={state.weatherLon}
+                  onChange={(e) => update('weatherLon', e.target.value)}
+                  placeholder="30.32"
+                />
+              </Field>
+              <p className="sm:col-span-2 text-xs text-ink-subtle leading-relaxed">
+                Координаты центра вашего магазина / склада — модель тянет
+                исторический ряд температуры и осадков из Open-Meteo.
+                Можно скопировать из Яндекс.Карт (правый клик → координаты).
+              </p>
+            </div>
+          )}
 
           {state.holidaysOn && (
             <div className="mt-4">
