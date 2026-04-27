@@ -48,7 +48,7 @@ export default function OAuthReturnPage() {
     // Existing user → straight in.
     if (!newUser) {
       toast.success(`Добро пожаловать, ${clientId}`)
-      nav('/', { replace: true })
+      nav('/app', { replace: true })
     }
     // New user → stay on this page to show api_key, then continue.
     // (effect doesn't navigate; ApiKeyReveal calls onContinue)

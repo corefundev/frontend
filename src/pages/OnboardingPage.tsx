@@ -96,7 +96,7 @@ export default function OnboardingPage() {
           {step === 3 && (
             <ProcessingStep
               upload={upload ?? null}
-              onDone={() => nav('/')}
+              onDone={() => nav('/app')}
             />
           )}
         </div>

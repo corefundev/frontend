@@ -128,7 +128,7 @@ function EmailTab() {
     onSuccess: (resp) => {
       setAuth(resp.access_token, resp.client_id)
       toast.success(`Добро пожаловать, ${resp.client_id}`)
-      nav('/', { replace: true })
+      nav('/app', { replace: true })
     },
     onError: (e) => {
       setCode('')
@@ -229,7 +229,7 @@ function ClassicTab() {
     onSuccess: (data) => {
       setAuth(data.access_token, clientId.trim())
       toast.success('Вход выполнен')
-      nav('/', { replace: true })
+      nav('/app', { replace: true })
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось войти')),
   })

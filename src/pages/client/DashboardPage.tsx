@@ -86,7 +86,7 @@ export default function DashboardPage() {
                     {statusLabel(lastAny.status)}
                   </span>
                 }
-                href="/uploads"
+                href="/app/uploads"
               />
               <ActivityCard
                 eyebrow="Последнее обучение"
@@ -105,7 +105,7 @@ export default function DashboardPage() {
                     {client?.status === 'ready' ? 'готова' : (client?.status ?? '—')}
                   </span>
                 }
-                href="/training"
+                href="/app/training"
               />
             </div>
           </div>
@@ -143,7 +143,7 @@ export default function DashboardPage() {
               <Link to="/welcome" className="btn-gold">
                 Начать онбординг →
               </Link>
-              <Link to="/uploads" className="btn-ghost text-paper-ink">
+              <Link to="/app/uploads" className="btn-ghost text-paper-ink">
                 Я сам, к загрузкам
               </Link>
             </div>
@@ -164,14 +164,14 @@ export default function DashboardPage() {
             number="01"
             title="Загрузки"
             blurb="Новый CSV с продажами"
-            href="/uploads"
+            href="/app/uploads"
             icon={<IconUpload />}
           />
           <QuickTile
             number="02"
             title="Прогнозы"
             blurb="Посмотреть, что продастся"
-            href="/forecasts"
+            href="/app/forecasts"
             icon={<IconChart />}
             highlight={hasTrained}
           />
@@ -179,14 +179,14 @@ export default function DashboardPage() {
             number="03"
             title="Обучение"
             blurb="Перетренировать модель"
-            href="/training"
+            href="/app/training"
             icon={<IconCog />}
           />
           <QuickTile
             number="04"
             title="Настройки"
             blurb="Конструктор под бизнес"
-            href="/settings"
+            href="/app/settings"
             icon={<IconSlider />}
             planNote={isFree ? 'доступно на Start' : undefined}
           />

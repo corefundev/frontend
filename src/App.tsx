@@ -5,6 +5,7 @@ import { useAuthStore } from './features/auth/store'
 import AppLayout from './components/AppLayout'
 import AdminGuard from './components/AdminGuard'
 import LoginPage from './pages/LoginPage'
+import LandingPage from './pages/LandingPage'
 
 // Code-split client pages — keeps the initial bundle small (login first).
 const DashboardPage     = lazy(() => import('./pages/client/DashboardPage'))
@@ -83,8 +84,14 @@ export default function App() {
         }
       />
 
+      {/* Public landing — / показывает лендинг и неавторизованным, и
+          авторизованным (для последних шапка ведёт в /app). */}
+      <Route path="/" element={<LandingPage />} />
+
+      {/* Authenticated app под /app/* — перенесён с / на /app, чтобы
+          корень мог быть публичным. */}
       <Route
-        path="/"
+        path="/app"
         element={
           <ProtectedRoute>
             <AppLayout />
@@ -158,6 +165,15 @@ export default function App() {
           }
         />
       </Route>
+
+      {/* Старые ссылки вида /uploads, /forecasts и т.п. редиректим на /app/* */}
+      <Route path="/uploads"        element={<Navigate to="/app/uploads"        replace />} />
+      <Route path="/training"       element={<Navigate to="/app/training"       replace />} />
+      <Route path="/forecasts"      element={<Navigate to="/app/forecasts"      replace />} />
+      <Route path="/scenarios"      element={<Navigate to="/app/scenarios"      replace />} />
+      <Route path="/promo"          element={<Navigate to="/app/promo"          replace />} />
+      <Route path="/settings"       element={<Navigate to="/app/settings"       replace />} />
+      <Route path="/admin/clients"  element={<Navigate to="/app/admin/clients"  replace />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
