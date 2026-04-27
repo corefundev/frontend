@@ -24,14 +24,22 @@
         • img-src data: is needed for inline SVGs from recharts/toast.
         • frame-ancestors 'none' defends against clickjacking.
     -->
+    <!--
+      Note: the authoritative CSP is delivered as an HTTP header by nginx
+      (see nginx/app.conf.template). Browsers enforce the intersection of
+      meta + header CSPs, so this meta needs to be at least as permissive
+      as the header — otherwise it silently blocks Turnstile / Google Fonts
+      / api.testcore.ru calls. Keeping it broad here and authoritative in
+      the header.
+    -->
     <meta http-equiv="Content-Security-Policy"
           content="default-src 'self';
-                   script-src 'self';
-                   style-src 'self' 'unsafe-inline';
+                   script-src 'self' https://challenges.cloudflare.com;
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
                    img-src 'self' data: blob:;
-                   font-src 'self' data:;
-                   connect-src 'self' http: https:;
-                   frame-ancestors 'none';
+                   font-src 'self' data: https://fonts.gstatic.com;
+                   connect-src 'self' https: wss:;
+                   frame-src https://challenges.cloudflare.com;
                    base-uri 'self';
                    form-action 'self';" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
