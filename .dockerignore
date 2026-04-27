@@ -1,7 +1,11 @@
 node_modules
 dist
 .env
-.env.*
+.env.local
+.env.*.local
+# Keep .env.production for the Docker build — Vite reads it during
+# `npm run build` to bake VITE_API_URL + VITE_TURNSTILE_SITE_KEY into
+# the static bundle. Those are public values; no secrets here.
 .vite
 .DS_Store
 .git

@@ -28,6 +28,14 @@ export interface PredictResponse {
   forecast_dates: string[] // ISO date strings, same length as forecast
   horizon: number
   model_source: 'primary' | 'fallback' | 'zero'
+  // Display name of the model that produced the forecast (e.g.
+  // "LightGBM v3" or "SeasonalNaive fallback"). Set by backend.
+  model_name?: string
+  // Set when the requested horizon was clamped down to the plan's limit;
+  // backend returns the original ask + the cap so the UI can warn.
+  horizon_limited_by_plan?: boolean
+  horizon_requested?: number
+  horizon_max?: number
 }
 
 // Batch: up to 100 requests

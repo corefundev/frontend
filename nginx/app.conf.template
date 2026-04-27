@@ -42,17 +42,20 @@ server {
     ssl_stapling_verify on;
     ssl_trusted_certificate /etc/letsencrypt/live/${WEB_DOMAIN}/chain.pem;
 
-    # Security headers — tightened for a static SPA.
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Content-Type-Options    "nosniff" always;
-    add_header X-Frame-Options           "DENY"    always;
-    add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
-    add_header Permissions-Policy        "geolocation=(), microphone=(), camera=()" always;
-    # CSP — the <meta> tag in index.html has the same policy, but the
-    # HTTP header takes precedence for browsers that see it first. Adjust
-    # connect-src to match your API host; the {CSP_CONNECT_SRC} placeholder
-    # is substituted by entrypoint.sh from env CSP_CONNECT_SRC (defaults to "*").
-    add_header Content-Security-Policy   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${CSP_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+    # ── Security headers ────────────────────────────────────────────────
+    # IMPORTANT: nginx's add_header is per-block, NOT cumulative — once any
+    # location adds even one header, ALL outer add_header lines are dropped
+    # for that location. So we keep all headers in named maps and re-emit
+    # them inside each location that needs its own Cache-Control.
+    #
+    # CSP includes Cloudflare Turnstile so the captcha widget can:
+    #   • load https://challenges.cloudflare.com/turnstile/v0/api.js  (script-src)
+    #   • render its iframe                                            (frame-src)
+    #   • POST the challenge response                                   (connect-src)
+    #
+    # ${CSP_CONNECT_SRC} comes from the env (api.testcore.ru in prod);
+    # ${WEB_DOMAIN} is the apex frontend host.
+    set $sec_csp "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${CSP_CONNECT_SRC} https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
 
     server_tokens off;
 
@@ -66,6 +69,9 @@ server {
         access_log off;
         expires 1y;
         add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options    "nosniff" always;
+        add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
     }
 
     # SPA fallback: unknown paths resolve to index.html so react-router
@@ -73,6 +79,12 @@ server {
     location / {
         try_files $uri $uri/ /index.html;
         add_header Cache-Control "no-store" always;   # index.html never cached
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options    "nosniff" always;
+        add_header X-Frame-Options           "DENY"    always;
+        add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy        "geolocation=(), microphone=(), camera=()" always;
+        add_header Content-Security-Policy   $sec_csp always;
     }
 
     location = /nginx-healthz {

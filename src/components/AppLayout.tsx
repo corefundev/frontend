@@ -59,7 +59,10 @@ export default function AppLayout() {
             const { to, label, icon: Icon } = item
             const minPlan = (item as any).minPlan as PlanId
             const locked  = PLAN_RANK[minPlan] > userRank
-            const Component: typeof NavLink | 'div' = locked ? 'div' : NavLink
+            // Cast to any: TS won't narrow a 'div' | typeof NavLink union from a
+            // runtime ternary, and ElementType isn't permissive enough for the
+            // NavLink-only `to` prop in the unlocked branch.
+            const Component: any = locked ? 'div' : NavLink
             return (
               <Component
                 key={to}
