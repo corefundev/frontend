@@ -16,9 +16,9 @@ services:
     build:
       context: .
       args:
-        VITE_API_URL: ${VITE_API_URL:?ERROR: set VITE_API_URL in .env}
+        VITE_API_URL: "${VITE_API_URL:?ERROR: set VITE_API_URL in .env}"
     environment:
-      WEB_DOMAIN:      ${WEB_DOMAIN:?ERROR: set WEB_DOMAIN in .env}
+      WEB_DOMAIN: "${WEB_DOMAIN:?ERROR: set WEB_DOMAIN in .env}"
       CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:-*}
     ports:
       - "80:80"
@@ -36,7 +36,7 @@ services:
   certbot:
     image: certbot/certbot:v2.11.0
     environment:
-      CERTBOT_EMAIL:   ${CERTBOT_EMAIL:?ERROR: set CERTBOT_EMAIL in .env}
+      CERTBOT_EMAIL: "${CERTBOT_EMAIL:?ERROR: set CERTBOT_EMAIL in .env}"
       WEB_DOMAIN:      ${WEB_DOMAIN}
       CERTBOT_STAGING: ${CERTBOT_STAGING:-0}
     volumes:

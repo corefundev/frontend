@@ -12,6 +12,10 @@ server {
         root /var/www/certbot;
         default_type "text/plain";
     }
+    location = /nginx-healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
     location / { return 503; }
 }
 EOF
