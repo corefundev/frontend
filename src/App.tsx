@@ -9,6 +9,7 @@ import LandingPage from './pages/LandingPage'
 
 // Code-split client pages — keeps the initial bundle small (login first).
 const DashboardPage     = lazy(() => import('./pages/client/DashboardPage'))
+const UpgradePage       = lazy(() => import('./pages/client/UpgradePage'))
 const ScenariosPage     = lazy(() => import('./pages/client/ScenariosPage'))
 const PromoPage         = lazy(() => import('./pages/client/PromoPage'))
 const ForecastsPage     = lazy(() => import('./pages/client/ForecastsPage'))
@@ -151,6 +152,14 @@ export default function App() {
           element={
             <Suspense fallback={<SuspenseFallback />}>
               <SettingsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="upgrade"
+          element={
+            <Suspense fallback={<SuspenseFallback />}>
+              <UpgradePage />
             </Suspense>
           }
         />

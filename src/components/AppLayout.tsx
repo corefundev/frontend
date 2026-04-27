@@ -15,6 +15,7 @@ const NAV = [
   { to: 'scenarios',   label: 'Сценарии',      icon: IconSplit,   minPlan: 'business' },
   { to: 'promo',       label: 'Промо',         icon: IconSpark,   minPlan: 'business' },
   { to: 'settings',    label: 'Настройки',     icon: IconSlider,  minPlan: 'free'     },
+  { to: 'upgrade',     label: 'Апгрейд',       icon: IconStar,    minPlan: 'free'     },
   { to: 'admin/clients', label: 'Клиенты',     icon: IconUsers,   minPlan: 'free', adminOnly: true },
 ] as const
 
@@ -222,6 +223,14 @@ function IconSpark({ className }: IconProps) {
       <path d="M17 12h5" />
       <path d="M4.22 19.78l3.54-3.54" />
       <path d="M16.24 7.76l3.54-3.54" />
+    </svg>
+  )
+}
+function IconStar({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   )
 }
