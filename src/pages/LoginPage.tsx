@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -283,8 +283,18 @@ function TurnstileWidget({
   siteKey: string
   onToken: (t: string) => void
 }) {
-  const containerRef = (el: HTMLDivElement | null) => {
+  // See SignupPage.tsx — useEffect-based mount, NOT a callback ref. A
+  // callback ref's identity changes on every parent re-render, which
+  // makes turnstile.render() fire on every keystroke (severe lag + the
+  // widget keeps resetting).
+  const elRef = useRef<HTMLDivElement | null>(null)
+  const cbRef = useRef(onToken)
+  cbRef.current = onToken
+
+  useEffect(() => {
+    const el = elRef.current
     if (!el) return
+
     if (!document.querySelector('script[data-turnstile]')) {
       const s = document.createElement('script')
       s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
@@ -292,18 +302,32 @@ function TurnstileWidget({
       s.dataset.turnstile = '1'
       document.head.appendChild(s)
     }
+
+    let widgetId: string | undefined
+    let cancelled = false
+
     const tryRender = () => {
+      if (cancelled) return
       const turnstile = (window as any).turnstile
       if (!turnstile) { setTimeout(tryRender, 100); return }
       el.innerHTML = ''
-      turnstile.render(el, {
+      widgetId = turnstile.render(el, {
         sitekey: siteKey,
-        callback: onToken,
-        'error-callback': () => onToken(''),
-        'expired-callback': () => onToken(''),
+        callback: (t: string) => cbRef.current(t),
+        'error-callback': () => cbRef.current(''),
+        'expired-callback': () => cbRef.current(''),
       })
     }
     tryRender()
-  }
-  return <div ref={containerRef} className="flex justify-center" />
+
+    return () => {
+      cancelled = true
+      const turnstile = (window as any).turnstile
+      if (turnstile && widgetId) {
+        try { turnstile.remove(widgetId) } catch { /* widget already gone */ }
+      }
+    }
+  }, [siteKey])
+
+  return <div ref={elRef} className="flex justify-center" />
 }

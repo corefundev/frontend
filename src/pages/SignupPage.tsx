@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -140,9 +140,21 @@ function TurnstileWidget({
   siteKey: string
   onToken: (token: string) => void
 }) {
-  const containerRef = (el: HTMLDivElement | null) => {
+  // useRef + useEffect, NOT a callback ref — a callback ref's function
+  // identity changes on every parent re-render (e.g. on every keystroke
+  // in the email field), which makes React detach + reattach the ref
+  // and re-run the body, causing turnstile.render() to fire repeatedly.
+  // That manifested as "screen jumps every keystroke + captcha resets".
+  const elRef = useRef<HTMLDivElement | null>(null)
+  // Stash the latest onToken in a ref so we don't need to re-render
+  // Turnstile when the parent passes a fresh setCaptcha closure.
+  const cbRef = useRef(onToken)
+  cbRef.current = onToken
+
+  useEffect(() => {
+    const el = elRef.current
     if (!el) return
-    // Inject script tag once
+
     if (!document.querySelector('script[data-turnstile]')) {
       const s = document.createElement('script')
       s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
@@ -151,22 +163,36 @@ function TurnstileWidget({
       s.dataset.turnstile = '1'
       document.head.appendChild(s)
     }
-    // Wait for the global to appear, then render
+
+    let widgetId: string | undefined
+    let cancelled = false
+
     const tryRender = () => {
+      if (cancelled) return
       const turnstile = (window as any).turnstile
       if (!turnstile) {
         setTimeout(tryRender, 100)
         return
       }
       el.innerHTML = ''
-      turnstile.render(el, {
+      widgetId = turnstile.render(el, {
         sitekey: siteKey,
-        callback: onToken,
-        'error-callback': () => onToken(''),
-        'expired-callback': () => onToken(''),
+        callback: (t: string) => cbRef.current(t),
+        'error-callback': () => cbRef.current(''),
+        'expired-callback': () => cbRef.current(''),
       })
     }
     tryRender()
-  }
-  return <div ref={containerRef} className="flex justify-center" />
+
+    return () => {
+      cancelled = true
+      const turnstile = (window as any).turnstile
+      if (turnstile && widgetId) {
+        try { turnstile.remove(widgetId) } catch { /* widget already gone */ }
+      }
+    }
+    // siteKey almost never changes, but keep it in deps for correctness.
+  }, [siteKey])
+
+  return <div ref={elRef} className="flex justify-center" />
 }
