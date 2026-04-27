@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -11,6 +11,7 @@ import { errorMessage } from '../../shared/api/client'
 import {
   MAX_UPLOAD_BYTES,
   ACCEPT_ATTRIBUTE,
+  UPLOADS_TERMINAL,
   uploadsApi,
   validateUploadClientSide,
   type UploadRecord,
@@ -99,6 +100,18 @@ export default function UploadsPage() {
   })
 
   const { data: activeUpload } = useUploadStatus(activeUploadId)
+
+  // Recover the in-flight upload after a hard reload: the user's local
+  // state (activeUploadId) is gone, but the backend still has the row
+  // in non-terminal status. As soon as the list arrives, pick that one
+  // so the progress card reappears instead of disappearing.
+  useEffect(() => {
+    if (activeUploadId) return
+    const inflight = uploads.find(
+      (u) => !UPLOADS_TERMINAL.includes(u.status),
+    )
+    if (inflight) setActiveUploadId(inflight.upload_id)
+  }, [uploads, activeUploadId])
 
   async function handlePickFile(file: File | null) {
     if (!file) return
@@ -479,59 +492,80 @@ function Dropzone({
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-//  ActiveUploadCard — 5-step pipeline indicator
+//  ActiveUploadCard — single continuous progress bar (was 5-step stepper).
+//
+//  Backend status maps to a percent + a one-line caption. Failed states
+//  paint red, success goes 100% green-ish (brand teal). The bar fills
+//  smoothly via CSS transition so the user feels progress instead of
+//  watching pills light up one by one.
 // ══════════════════════════════════════════════════════════════════════════
 
+const STATUS_PERCENT: Record<UploadStatus, number> = {
+  uploaded:          15,
+  scanning:          35,
+  scanned_clean:     55,
+  processing:        80,
+  processed:        100,
+  infected:         100,   // bar full, but coloured red
+  processing_failed: 100,
+}
+
+const STATUS_CAPTION: Record<UploadStatus, string> = {
+  uploaded:          'Файл принят, ждём антивирус…',
+  scanning:          'Антивирусная проверка ClamAV…',
+  scanned_clean:     'Файл чистый, перевод в карантин…',
+  processing:        'Парсер в изолированной песочнице…',
+  processed:         'Готово — данные доступны для обучения',
+  infected:          'Антивирус нашёл угрозу — файл удалён',
+  processing_failed: 'Парсер не справился — см. ошибку ниже',
+}
+
 function ActiveUploadCard({ upload }: { upload: UploadRecord }) {
-  const steps = ['uploaded', 'scanning', 'scanned_clean', 'processing', 'processed'] as const
-  const currentIdx =
-    upload.status === 'processed' ? steps.length - 1
-    : upload.status === 'infected' || upload.status === 'processing_failed' ? -1
-    : steps.indexOf(upload.status as typeof steps[number])
+  const pct = STATUS_PERCENT[upload.status] ?? 0
+  const isFailed = upload.status === 'infected' || upload.status === 'processing_failed'
+  const isDone   = upload.status === 'processed'
+  // Animated stripes while pipeline is in motion; static when terminal.
+  const isMoving = !isFailed && !isDone
+
+  const barColor =
+    isFailed ? 'bg-danger'
+    : isDone   ? 'bg-brand-500'
+    :            'bg-brand-400'
 
   return (
     <section className="card p-6 animate-fade-in">
-      <div className="flex items-center justify-between mb-5">
-        <div>
+      <div className="flex items-center justify-between mb-4 gap-4">
+        <div className="min-w-0">
           <div className="eyebrow">Текущая загрузка</div>
-          <div className="font-mono text-sm truncate max-w-xs mt-1" title={upload.filename}>
+          <div className="font-mono text-sm truncate mt-1" title={upload.filename}>
             {upload.filename}
           </div>
         </div>
-        <span className={STATUS_BADGE[upload.status]}>
-          {STATUS_LABEL[upload.status]}
-        </span>
+        <div className="flex items-baseline gap-3 shrink-0">
+          <span className="font-display text-brand-700 text-2xl tabular-nums">
+            {pct}%
+          </span>
+          <span className={STATUS_BADGE[upload.status]}>
+            {STATUS_LABEL[upload.status]}
+          </span>
+        </div>
       </div>
 
-      <ol className="flex items-center gap-2 text-[11px]">
-        {[
-          { label: 'Приём' },
-          { label: 'Антивирус' },
-          { label: 'Карантин' },
-          { label: 'Парсер' },
-          { label: 'Готов' },
-        ].map((step, i) => {
-          const done    = currentIdx >= i && currentIdx !== -1
-          const current = currentIdx === i
-          return (
-            <li key={i} className="flex-1 flex items-center gap-2">
-              <div className={[
-                'h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-semibold',
-                done    ? 'bg-brand-500 text-ink-invert' :
-                current ? 'bg-brand-100 text-brand-700 ring-2 ring-brand-500' :
-                          'bg-surface-muted text-ink-subtle',
-              ].join(' ')}>
-                {done ? '✓' : i + 1}
-              </div>
-              <span className={[
-                'hidden sm:inline',
-                current ? 'text-ink font-medium' : 'text-ink-muted',
-              ].join(' ')}>{step.label}</span>
-              {i < 4 && <div className="flex-1 h-px bg-surface-border" />}
-            </li>
-          )
-        })}
-      </ol>
+      {/* Single continuous progress bar */}
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+        <div
+          className={[
+            barColor,
+            'h-full rounded-full transition-[width] duration-700 ease-out',
+            isMoving && 'animate-pulse',
+          ].filter(Boolean).join(' ')}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="mt-3 text-xs text-ink-muted">
+        {STATUS_CAPTION[upload.status]}
+      </div>
 
       {upload.error_message && (
         <div className="mt-4 rounded-md bg-danger-bg text-danger px-3 py-2 text-sm">
