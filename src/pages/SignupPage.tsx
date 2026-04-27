@@ -36,7 +36,14 @@ export default function SignupPage() {
     }),
     onSuccess: (resp) => {
       toast.success(`Код отправлен на ${resp.email}`)
-      nav(`/signup/verify?email=${encodeURIComponent(resp.email)}`, { replace: true })
+      // Pass desired_client_id along — /signup/verify needs it for the
+      // in-place "resend" flow (re-POST to /auth/signup without bouncing
+      // the user back to step 1).
+      const cid = clientId.trim().toLowerCase()
+      nav(
+        `/signup/verify?email=${encodeURIComponent(resp.email)}&client_id=${encodeURIComponent(cid)}`,
+        { replace: true },
+      )
     },
     onError: (e) => toast.error(errorMessage(e, 'Регистрация не удалась')),
   })

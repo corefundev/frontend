@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -7,6 +7,9 @@ import { authApi } from '../features/auth/api'
 import { useAuthStore } from '../features/auth/store'
 import { OtpInput } from '../components/OtpInput'
 import { errorMessage } from '../shared/api/client'
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined
+const RESEND_COOLDOWN_S = 60
 
 // ─────────────────────────────────────────────────────────────────────────
 //  SignupVerifyPage — step 2 of email-OTP registration.
@@ -23,15 +26,63 @@ export default function SignupVerifyPage() {
   const nav = useNavigate()
   const [params] = useSearchParams()
   const email = useMemo(() => (params.get('email') ?? '').toLowerCase(), [params])
+  const clientId = useMemo(() => (params.get('client_id') ?? '').toLowerCase(), [params])
   const setAuth = useAuthStore((s) => s.setAuth)
 
   const [code, setCode] = useState('')
   const [issued, setIssued] = useState<{ clientId: string; apiKey: string } | null>(null)
 
+  // Resend state — captcha solved by user + countdown counter.
+  const [resendCaptcha, setResendCaptcha] = useState('')
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_S)
+
   // Bounce back to /signup if email param missing — we can't verify without it.
   useEffect(() => {
     if (!email) nav('/signup', { replace: true })
   }, [email, nav])
+
+  // Countdown ticker — stops at 0, lets the resend button enable.
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setInterval(() => setCooldown((s) => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(t)
+  }, [cooldown])
+
+  const resendMut = useMutation({
+    mutationFn: () =>
+      authApi.signup({
+        email,
+        desired_client_id: clientId,
+        captcha_token: resendCaptcha || undefined,
+      }),
+    onSuccess: () => {
+      toast.success('Новый код отправлен')
+      setResendCaptcha('')
+      setCooldown(RESEND_COOLDOWN_S)
+      // Reset the Turnstile widget too so user can re-solve next time.
+      const turnstile = (window as any).turnstile
+      if (turnstile && turnstile.reset) {
+        try { turnstile.reset() } catch { /* widget was unmounted already */ }
+      }
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Не удалось отправить код')),
+  })
+
+  function handleResend() {
+    if (cooldown > 0 || resendMut.isPending) return
+    if (TURNSTILE_SITE_KEY && !resendCaptcha) {
+      toast.error('Пройдите captcha')
+      return
+    }
+    if (!clientId) {
+      // No client_id means user came back via deep-link or stale URL —
+      // bounce them to /signup to refill the form.
+      toast.error('Вернитесь на шаг 1, чтобы запросить новый код')
+      nav(`/signup?email=${encodeURIComponent(email)}`)
+      return
+    }
+    resendMut.mutate()
+  }
 
   const { mutate, isPending } = useMutation({
     mutationFn: () => authApi.signupVerify({ email, code }),
@@ -95,30 +146,96 @@ export default function SignupVerifyPage() {
           {isPending ? 'Проверка…' : 'Подтвердить'}
         </button>
 
-        <div className="flex items-center justify-between text-xs mt-5">
+        {/* Resend block — captcha + countdown + button. Captcha widget
+            stays mounted; user re-solves it before each resend so the
+            backend's signup endpoint gets a fresh Turnstile token. */}
+        <div className="mt-7 pt-5 border-t border-paper-deep">
+          <div className="text-xs text-ink-subtle text-center mb-3">
+            Не пришёл код? Проверьте спам или отправьте новый.
+          </div>
+
+          {TURNSTILE_SITE_KEY && (
+            <div className="mb-3">
+              <TurnstileWidget
+                siteKey={TURNSTILE_SITE_KEY}
+                onToken={setResendCaptcha}
+              />
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="btn-secondary w-full"
+            onClick={handleResend}
+            disabled={cooldown > 0 || resendMut.isPending}
+          >
+            {resendMut.isPending
+              ? 'Отправляем…'
+              : cooldown > 0
+                ? `Отправить ещё раз через ${cooldown} с`
+                : 'Отправить ещё раз'}
+          </button>
+        </div>
+
+        <div className="text-xs mt-5 text-center">
           <Link to="/signup" className="text-ink-subtle hover:text-ink">
             ← Изменить email
           </Link>
-          <ResendLink email={email} />
         </div>
       </div>
     </div>
   )
 }
 
-// Resend link — re-runs /auth/signup with the same email + (no client_id?
-// see note). For simplicity, we ask the user to go back if they want to
-// resend — the /auth/signup endpoint requires desired_client_id which we
-// don't have here.
-function ResendLink({ email }: { email: string }) {
-  return (
-    <Link
-      to={`/signup?email=${encodeURIComponent(email)}`}
-      className="text-ink-subtle hover:text-ink"
-    >
-      Отправить новый код →
-    </Link>
-  )
+// ── Turnstile widget — useEffect-mounted (callback-ref version remounts
+//    on every parent re-render and creates dozens of widget instances).
+//    Same shape as the helper in SignupPage / LoginPage; lifted here too
+//    so /signup/verify can request a fresh token before each resend.
+function TurnstileWidget({
+  siteKey, onToken,
+}: {
+  siteKey: string
+  onToken: (t: string) => void
+}) {
+  const elRef = useRef<HTMLDivElement | null>(null)
+  const cbRef = useRef(onToken)
+  cbRef.current = onToken
+
+  useEffect(() => {
+    const el = elRef.current
+    if (!el) return
+    if (!document.querySelector('script[data-turnstile]')) {
+      const s = document.createElement('script')
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+      s.async = true; s.defer = true
+      s.dataset.turnstile = '1'
+      document.head.appendChild(s)
+    }
+    let widgetId: string | undefined
+    let cancelled = false
+    const tryRender = () => {
+      if (cancelled) return
+      const turnstile = (window as any).turnstile
+      if (!turnstile) { setTimeout(tryRender, 100); return }
+      el.innerHTML = ''
+      widgetId = turnstile.render(el, {
+        sitekey: siteKey,
+        callback: (t: string) => cbRef.current(t),
+        'error-callback': () => cbRef.current(''),
+        'expired-callback': () => cbRef.current(''),
+      })
+    }
+    tryRender()
+    return () => {
+      cancelled = true
+      const turnstile = (window as any).turnstile
+      if (turnstile && widgetId) {
+        try { turnstile.remove(widgetId) } catch { /* widget already gone */ }
+      }
+    }
+  }, [siteKey])
+
+  return <div ref={elRef} className="flex justify-center" />
 }
 
 // ─────────────────────────────────────────────────────────────────────────
