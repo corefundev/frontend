@@ -9,6 +9,12 @@ export interface TrainRequest {
   // Optional — if provided, backend reads the upload manifest to enforce
   // SKU limits per plan. Added in Phase 4.
   upload_id?: string
+  // Optional — id of a previously processed upload to merge with this
+  // one before training. The worker concatenates both datasets,
+  // dedupes by (sku, date) keeping the new value, and retrains from
+  // scratch on the combined set. Used by the "Продолжить обучение
+  // свежими данными" toggle.
+  extend_from_upload_id?: string
 }
 
 export interface TrainResponse {

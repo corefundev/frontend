@@ -50,8 +50,12 @@ export default function TrainingPage() {
   const processedUploads = uploads.filter((u) => u.status === 'processed')
 
   // ── Form state ───────────────────────────────────────────────────
-  const [uploadId, setUploadId] = useState<string>('')
-  const [jobId,    setJobId]    = useState<string | null>(null)
+  const [uploadId,     setUploadId]     = useState<string>('')
+  const [jobId,        setJobId]        = useState<string | null>(null)
+  // When the user has at least one finished training, default to
+  // "продолжить с предыдущим набором". They can untick if they want
+  // a clean retrain on just the new file.
+  const [extendFromPrev, setExtendFromPrev] = useState<boolean>(true)
 
   const selectedUpload: UploadRecord | undefined = useMemo(
     () => processedUploads.find((u) => u.upload_id === uploadId),
@@ -75,19 +79,28 @@ export default function TrainingPage() {
     false  // placeholder — real check is server-side
 
   const { mutate: train, isPending } = useMutation({
-    mutationFn: () =>
+    mutationFn: () => {
+      // Find the most recent finished run with a different upload_id —
+      // that's what we'd merge with when "extend from previous" is on.
+      const prevUploadId = lastFinishedDifferentUploadId
+      const extendFrom =
+        extendFromPrev && prevUploadId && prevUploadId !== uploadId
+          ? prevUploadId
+          : undefined
       // We pass only upload_id — backend resolves the actual s3:// URI
       // from the upload registry. Hardcoding "s3://processed/..." here
       // (as we used to) was wrong: "processed" isn't the real bucket
       // name on Beget. data_path stays as a stub so the request
       // satisfies the schema; the backend ignores it when upload_id
       // is present.
-      trainingApi.startTraining(clientId, {
+      return trainingApi.startTraining(clientId, {
         data_path: selectedUpload?.upload_id
           ? `upload://${selectedUpload.upload_id}`
           : '',
         upload_id: uploadId || undefined,
-      }),
+        extend_from_upload_id: extendFrom,
+      })
+    },
     onSuccess: (res) => {
       setJobId(res.job_id)
       toast.success(
@@ -119,6 +132,29 @@ export default function TrainingPage() {
     },
   })
   const runs = history?.runs ?? []
+
+  // Most recent successful training that used a different upload from
+  // the one currently selected — that's the one we'd merge with.
+  const lastFinishedDifferentUploadId = useMemo(() => {
+    for (const r of runs) {
+      if (r.status === 'finished' && r.upload_id && r.upload_id !== uploadId) {
+        return r.upload_id
+      }
+    }
+    return null
+  }, [runs, uploadId])
+
+  const lastFinishedRun = useMemo(
+    () => runs.find((r) => r.status === 'finished' && r.upload_id) ?? null,
+    [runs],
+  )
+  const lastFinishedUpload: UploadRecord | undefined = useMemo(
+    () =>
+      lastFinishedRun?.upload_id
+        ? processedUploads.find((u) => u.upload_id === lastFinishedRun.upload_id)
+        : undefined,
+    [lastFinishedRun, processedUploads],
+  )
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -158,6 +194,34 @@ export default function TrainingPage() {
               </option>
             ))}
           </select>
+        )}
+
+        {/* Continue-training toggle — appears only when there's a
+            prior finished training run on a different upload.
+            Default ON: typical workflow is "user re-uploads delta,
+            wants combined training". They can untick for clean retrain. */}
+        {!!lastFinishedDifferentUploadId && !!uploadId && (
+          <label className="mt-4 flex items-start gap-3 cursor-pointer rounded-md border border-surface-border p-3 hover:bg-surface-muted/40">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-brand-500"
+              checked={extendFromPrev}
+              onChange={(e) => setExtendFromPrev(e.target.checked)}
+            />
+            <div className="flex-1 text-sm">
+              <div className="text-ink font-medium">
+                Продолжить обучение с предыдущим набором
+              </div>
+              <div className="text-ink-subtle text-xs mt-0.5">
+                Объединит выбранный файл{selectedUpload?.row_count != null && ` (${selectedUpload.row_count.toLocaleString('ru-RU')} строк)`}
+                {' '}с предыдущим обученным датасетом
+                {lastFinishedUpload?.filename && ` «${lastFinishedUpload.filename}»`}
+                {lastFinishedUpload?.row_count != null && ` (${lastFinishedUpload.row_count.toLocaleString('ru-RU')} строк)`}
+                {' '}и переобучит модель на полном объёме.
+                Совпадающие даты по SKU заменятся новыми значениями.
+              </div>
+            </div>
+          </label>
         )}
 
         {/* Plan-driven warnings */}
