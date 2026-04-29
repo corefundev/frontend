@@ -10,27 +10,14 @@ import { OAuthButtons } from '../components/OAuthButtons'
 import { errorMessage } from '../shared/api/client'
 
 // ─────────────────────────────────────────────────────────────────────────
-//  LoginPage — two parallel ways to sign in.
-//
-//  Tab 1: Email + OTP   (default — Claude.ai-style, recommended)
-//         a) submit email → backend sends 6-digit code
-//         b) enter code   → JWT
-//
-//  Tab 2: Client ID + API key  (classic — for ops scripts and admins)
-//         single-step exchange; admin via ADMIN_API_KEY also goes here
-//
-//  We keep the classic tab for two reasons:
-//    1. ADMIN_API_KEY login (back-office tooling)
-//    2. CI / cron jobs that already store an api_key
+//  LoginPage — email + OTP. The previous Client ID + API key tab has
+//  moved to /login/admin (linked from API docs and ops runbooks). End
+//  users no longer see token-shaped fields here.
 // ─────────────────────────────────────────────────────────────────────────
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined
 
-type Tab = 'email' | 'classic'
-
 export default function LoginPage() {
-  const [tab, setTab] = useState<Tab>('email')
-
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center p-6">
       <div className="w-full max-w-md card p-8 animate-fade-in">
@@ -46,20 +33,8 @@ export default function LoginPage() {
           </h1>
         </div>
 
-        {/* Tab switcher */}
-        <div role="tablist" className="grid grid-cols-2 mb-6 rounded-md bg-surface-muted p-1">
-          <TabButton active={tab === 'email'}   onClick={() => setTab('email')}>
-            Email-код
-          </TabButton>
-          <TabButton active={tab === 'classic'} onClick={() => setTab('classic')}>
-            Client&nbsp;ID&nbsp;+&nbsp;ключ
-          </TabButton>
-        </div>
+        <EmailLoginForm />
 
-        {tab === 'email'   && <EmailTab />}
-        {tab === 'classic' && <ClassicTab />}
-
-        {/* OAuth buttons live below both tabs — they apply to either path */}
         <div className="mt-6">
           <OAuthButtons />
         </div>
@@ -75,34 +50,9 @@ export default function LoginPage() {
   )
 }
 
-function TabButton({
-  active, onClick, children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={[
-        'rounded-[5px] py-1.5 text-xs font-medium transition-colors',
-        active
-          ? 'bg-surface-raised text-ink shadow-sm ring-1 ring-surface-border'
-          : 'text-ink-muted hover:text-ink',
-      ].join(' ')}
-    >
-      {children}
-    </button>
-  )
-}
+// ── Email + OTP — the only flow users see here ──────────────────────────
 
-// ── Tab 1: email + OTP ───────────────────────────────────────────────────
-
-function EmailTab() {
+function EmailLoginForm() {
   const nav = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
 
@@ -216,64 +166,6 @@ function EmailTab() {
   )
 }
 
-// ── Tab 2: classic client_id + api_key ──────────────────────────────────
-
-function ClassicTab() {
-  const nav = useNavigate()
-  const setAuth = useAuthStore((s) => s.setAuth)
-  const [clientId, setClientId] = useState('')
-  const [secret,   setSecret]   = useState('')
-
-  const { mutate, isPending } = useMutation({
-    mutationFn: () => authApi.login({ client_id: clientId.trim(), secret }),
-    onSuccess: (data) => {
-      setAuth(data.access_token, clientId.trim())
-      toast.success('Вход выполнен')
-      nav('/app', { replace: true })
-    },
-    onError: (e) => toast.error(errorMessage(e, 'Не удалось войти')),
-  })
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (!clientId.trim() || !secret) return toast.error('Заполните оба поля')
-        mutate()
-      }}
-      autoComplete="off"
-    >
-      <label className="label" htmlFor="cid">Client ID</label>
-      <input
-        id="cid"
-        className="input font-mono"
-        value={clientId}
-        onChange={(e) => setClientId(e.target.value)}
-        autoComplete="username"
-        spellCheck={false}
-        autoCapitalize="off"
-        required
-      />
-
-      <label className="label mt-4" htmlFor="secret">API-ключ</label>
-      <input
-        id="secret"
-        className="input font-mono"
-        type="password"
-        value={secret}
-        onChange={(e) => setSecret(e.target.value)}
-        autoComplete="new-password"
-        required
-        placeholder="sku_..."
-      />
-
-      <button type="submit" className="btn-primary w-full mt-6" disabled={isPending}>
-        {isPending ? 'Вход…' : 'Войти'}
-      </button>
-    </form>
-  )
-}
-
 // ── Turnstile widget (duplicate of SignupPage's helper, kept local
 //    to LoginPage so dropping signup wouldn't dead-code this) ─────────────
 
@@ -283,10 +175,9 @@ function TurnstileWidget({
   siteKey: string
   onToken: (t: string) => void
 }) {
-  // See SignupPage.tsx — useEffect-based mount, NOT a callback ref. A
-  // callback ref's identity changes on every parent re-render, which
-  // makes turnstile.render() fire on every keystroke (severe lag + the
-  // widget keeps resetting).
+  // useEffect-based mount, NOT a callback ref. A callback ref's identity
+  // changes on every parent re-render, which makes turnstile.render()
+  // fire on every keystroke (severe lag + the widget keeps resetting).
   const elRef = useRef<HTMLDivElement | null>(null)
   const cbRef = useRef(onToken)
   cbRef.current = onToken

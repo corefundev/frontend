@@ -5,6 +5,7 @@ import { useAuthStore } from './features/auth/store'
 import AppLayout from './components/AppLayout'
 import AdminGuard from './components/AdminGuard'
 import LoginPage from './pages/LoginPage'
+import AdminLoginPage from './pages/AdminLoginPage'
 import LandingPage from './pages/LandingPage'
 
 // Code-split client pages — keeps the initial bundle small (login first).
@@ -41,6 +42,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/login/admin" element={<AdminLoginPage />} />
       <Route
         path="/signup"
         element={
