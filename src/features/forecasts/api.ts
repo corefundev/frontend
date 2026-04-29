@@ -13,11 +13,30 @@ export interface HistoryRow {
   stock?: number
 }
 
-// Mirrors PredictRequest from backend
+// Mirrors PredictRequest from backend.
+// Either `history` (>=30 rows) or `upload_id` must be provided —
+// when upload_id is set, the backend reads history from the processed
+// parquet for that upload and ignores `history`.
 export interface PredictRequest {
   sku: string
-  history: HistoryRow[]  // min 30 rows required by backend
-  horizon?: number       // 1–28, optional (uses client config default if omitted)
+  history?: HistoryRow[]
+  upload_id?: string
+  horizon?: number
+}
+
+// One row in the upload's SKU catalogue, returned by
+// GET /clients/{id}/uploads/{upload_id}/skus.
+export interface UploadSku {
+  sku:        string
+  row_count:  number
+  first_date: string
+  last_date:  string
+}
+
+export interface UploadSkusResponse {
+  upload_id: string
+  count:     number
+  skus:      UploadSku[]
 }
 
 // Mirrors PredictResponse from backend
@@ -55,5 +74,12 @@ export const forecastsApi = {
 
   batchPredict: (clientId: string, payload: BatchPredictRequest) =>
     apiClient.post<BatchPredictResponse>(`/clients/${clientId}/predict/batch`, payload)
+      .then((r) => r.data),
+
+  // GET /clients/{id}/uploads/{upload_id}/skus — populates the SKU
+  // dropdown after the user picks a processed upload.
+  listUploadSkus: (clientId: string, uploadId: string) =>
+    apiClient
+      .get<UploadSkusResponse>(`/clients/${clientId}/uploads/${uploadId}/skus`)
       .then((r) => r.data),
 }

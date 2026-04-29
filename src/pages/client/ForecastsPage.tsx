@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
 import { useAuthStore } from '../../features/auth/store'
@@ -9,6 +9,7 @@ import {
   type PredictResponse,
 } from '../../features/forecasts/api'
 import { ForecastChart } from '../../features/forecasts/ForecastChart'
+import { uploadsApi } from '../../features/uploads/api'
 import { useUsage } from '../../features/plans/useUsage'
 import {
   LockOverlay,
@@ -35,14 +36,20 @@ function parseCSV(text: string): HistoryRow[] {
   })
 }
 
+type Mode = 'upload' | 'manual'
+
 export default function ForecastsPage() {
   const clientId = useAuthStore((s) => s.clientId)!
   const { data: usage } = useUsage()
 
-  const [sku,      setSku]     = useState('')
-  const [csvText,  setCsvText] = useState('')
-  const [horizon,  setHorizon] = useState<number>(14)
-  const [result,   setResult]  = useState<PredictResponse | null>(null)
+  // Default: forecast from a previously uploaded + processed dataset.
+  // Manual CSV is kept as a fallback for one-off SKUs without an upload.
+  const [mode,      setMode]     = useState<Mode>('upload')
+  const [uploadId,  setUploadId] = useState('')
+  const [sku,       setSku]      = useState('')
+  const [csvText,   setCsvText]  = useState('')
+  const [horizon,   setHorizon]  = useState<number>(14)
+  const [result,    setResult]   = useState<PredictResponse | null>(null)
   const [showFirstWinTeaser, setShowFirstWinTeaser] = useState(false)
 
   const planMaxHorizon  = usage?.max_horizon_days ?? 365
@@ -50,8 +57,46 @@ export default function ForecastsPage() {
   const isFree    = usage?.plan === 'free'
   const isStart   = usage?.plan === 'start'
 
+  // ── Upload list — only processed ones can be used for forecasting
+  const { data: uploads = [] } = useQuery({
+    queryKey: ['uploads', clientId],
+    queryFn:  () => uploadsApi.list(clientId),
+  })
+  const processedUploads = useMemo(
+    () => uploads.filter((u) => u.status === 'processed'),
+    [uploads],
+  )
+
+  // ── SKU catalogue for the selected upload — populates the dropdown
+  const { data: skuCat, isLoading: skuLoading } = useQuery({
+    queryKey: ['upload-skus', clientId, uploadId],
+    queryFn:  () => forecastsApi.listUploadSkus(clientId, uploadId),
+    enabled:  mode === 'upload' && !!uploadId,
+  })
+  const selectedSku = useMemo(
+    () => skuCat?.skus.find((s) => s.sku === sku),
+    [skuCat, sku],
+  )
+
+  // Reset SKU when the user switches uploads — the new file will have
+  // a different catalogue, and stale SKU values just confuse the UI.
+  useEffect(() => { setSku('') }, [uploadId])
+
   const { mutate: predict, isPending } = useMutation({
     mutationFn: async () => {
+      const skuStr = sku.trim()
+      if (!skuStr) throw new Error('Не выбран SKU')
+
+      if (mode === 'upload') {
+        if (!uploadId) throw new Error('Не выбран набор данных')
+        return forecastsApi.predict(clientId, {
+          sku:        skuStr,
+          upload_id:  uploadId,
+          horizon:    effectiveHorizon,
+        })
+      }
+
+      // Manual mode — parse CSV inline as before.
       let history: HistoryRow[]
       try {
         history = parseCSV(csvText)
@@ -62,7 +107,7 @@ export default function ForecastsPage() {
         throw new Error(`Нужно минимум 30 строк истории (сейчас ${history.length})`)
       }
       return forecastsApi.predict(clientId, {
-        sku: sku.trim(),
+        sku:     skuStr,
         history,
         horizon: effectiveHorizon,
       })
@@ -76,6 +121,11 @@ export default function ForecastsPage() {
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось получить прогноз')),
   })
+
+  const canPredict =
+    mode === 'upload'
+      ? !!uploadId && !!sku.trim() && !isPending
+      : !!sku.trim() && !!csvText.trim() && !isPending
 
   return (
     <div className="max-w-6xl space-y-8">
@@ -91,23 +141,32 @@ export default function ForecastsPage() {
         </p>
       </header>
 
-      {/* ── Input form — asymmetric, left-weighted ────────────── */}
+      {/* ── Input form ─────────────────────────────────────────── */}
       <section className="grid gap-6 lg:grid-cols-12">
         <div className="card p-6 sm:p-8 lg:col-span-8 space-y-6">
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div>
-              <label className="label" htmlFor="sku">SKU</label>
-              <input
-                id="sku"
-                className="input font-mono"
-                value={sku}
-                onChange={(e) => setSku(e.target.value)}
-                placeholder="SKU-001"
-                spellCheck={false}
-              />
-            </div>
+          {mode === 'upload' ? (
+            <UploadModeForm
+              uploads={processedUploads}
+              uploadId={uploadId}
+              onUploadChange={setUploadId}
+              skus={skuCat?.skus ?? []}
+              skuLoading={skuLoading}
+              sku={sku}
+              onSkuChange={setSku}
+              selectedSkuMeta={selectedSku}
+            />
+          ) : (
+            <ManualModeForm
+              sku={sku}
+              onSkuChange={setSku}
+              csvText={csvText}
+              onCsvTextChange={setCsvText}
+            />
+          )}
 
-            <div>
+          {/* Horizon + Predict — common to both modes */}
+          <div className="grid sm:grid-cols-3 gap-4 pt-2 border-t border-surface-border">
+            <div className="sm:col-span-1">
               <label className="label" htmlFor="horizon">
                 Горизонт (дней)
                 {usage?.max_horizon_days !== null && (
@@ -131,34 +190,33 @@ export default function ForecastsPage() {
                 </p>
               )}
             </div>
-
-            <div className="flex items-end">
+            <div className="sm:col-span-2 flex items-end">
               <button
                 type="button"
                 className="btn-primary w-full"
-                onClick={() => {
-                  if (!sku.trim())     return toast.error('Укажите SKU')
-                  if (!csvText.trim()) return toast.error('Вставьте историю продаж')
-                  predict()
-                }}
-                disabled={isPending}
+                onClick={() => predict()}
+                disabled={!canPredict}
               >
                 {isPending ? 'Считаю…' : 'Спрогнозировать'}
               </button>
             </div>
           </div>
 
-          <div>
-            <label className="label" htmlFor="csv">История продаж (CSV)</label>
-            <textarea
-              id="csv"
-              className="input font-mono text-xs"
-              rows={8}
-              spellCheck={false}
-              value={csvText}
-              onChange={(e) => setCsvText(e.target.value)}
-              placeholder="date,sales,price,promo,stock&#10;2024-01-01,10,5.5,0,100&#10;2024-01-02,12,5.5,0,98&#10;…"
-            />
+          {/* Mode toggle — minor, lives at the bottom so it doesn't
+              compete with the primary upload-driven flow. */}
+          <div className="pt-1">
+            <button
+              type="button"
+              className="text-xs text-ink-muted hover:text-ink underline-offset-2 hover:underline"
+              onClick={() => {
+                setMode(mode === 'upload' ? 'manual' : 'upload')
+                setResult(null)
+              }}
+            >
+              {mode === 'upload'
+                ? 'Нет загруженного датасета? Вставить историю вручную →'
+                : '← Использовать обученный датасет'}
+            </button>
           </div>
         </div>
 
@@ -173,10 +231,11 @@ export default function ForecastsPage() {
             диапазон возможных отклонений.
           </p>
           <div className="rule-dot !my-2" />
-          <div className="eyebrow">Минимум истории</div>
+          <div className="eyebrow">Откуда история</div>
           <p className="text-sm text-ink-muted">
-            <span className="num font-display text-brand-700 text-xl">30</span>
-            {' '}дней подряд — чтобы уловить недельную сезонность.
+            {mode === 'upload'
+              ? 'Из обработанного CSV/XLSX, который вы уже загрузили во вкладке «Загрузки».'
+              : 'Минимум 30 дней подряд — чтобы уловить недельную сезонность.'}
           </p>
         </aside>
       </section>
@@ -238,6 +297,150 @@ export default function ForecastsPage() {
           )}
         </section>
       )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  Upload-driven forecast form — the primary path. User picks an
+//  already-processed dataset, picks an SKU from its catalogue, and
+//  the backend fetches history from S3. No manual paste.
+// ══════════════════════════════════════════════════════════════════════════
+
+import type { UploadRecord } from '../../features/uploads/api'
+import type { UploadSku }    from '../../features/forecasts/api'
+
+function UploadModeForm({
+  uploads,
+  uploadId,
+  onUploadChange,
+  skus,
+  skuLoading,
+  sku,
+  onSkuChange,
+  selectedSkuMeta,
+}: {
+  uploads:         UploadRecord[]
+  uploadId:        string
+  onUploadChange:  (id: string) => void
+  skus:            UploadSku[]
+  skuLoading:      boolean
+  sku:             string
+  onSkuChange:     (sku: string) => void
+  selectedSkuMeta: UploadSku | undefined
+}) {
+  if (uploads.length === 0) {
+    return (
+      <div className="rounded-md bg-surface-muted px-4 py-3 text-sm text-ink-muted">
+        У вас пока нет обработанных загрузок. Загрузите CSV/XLSX
+        во вкладке <a className="text-brand-700 underline" href="/app/uploads">«Загрузки»</a>{' '}
+        — после автоматической проверки набор данных появится здесь.
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="label" htmlFor="upload">Набор данных</label>
+        <select
+          id="upload"
+          className="input"
+          value={uploadId}
+          onChange={(e) => onUploadChange(e.target.value)}
+        >
+          <option value="">— выберите —</option>
+          {uploads.map((u) => (
+            <option key={u.upload_id} value={u.upload_id}>
+              {u.filename}
+              {u.row_count != null && ` · ${u.row_count.toLocaleString('ru-RU')} строк`}
+              {u.sku_count != null && ` · ${u.sku_count} SKU`}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="label" htmlFor="sku">SKU</label>
+        {!uploadId ? (
+          <div className="rounded-md bg-surface-muted px-3 py-2 text-sm text-ink-subtle">
+            Сначала выберите набор данных
+          </div>
+        ) : skuLoading ? (
+          <div className="rounded-md bg-surface-muted px-3 py-2 text-sm text-ink-subtle">
+            Загружаем каталог SKU…
+          </div>
+        ) : skus.length === 0 ? (
+          <div className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn">
+            В этом наборе данных не найдено ни одного SKU
+          </div>
+        ) : (
+          <select
+            id="sku"
+            className="input font-mono"
+            value={sku}
+            onChange={(e) => onSkuChange(e.target.value)}
+          >
+            <option value="">— выберите —</option>
+            {skus.map((s) => (
+              <option key={s.sku} value={s.sku}>
+                {s.sku} · {s.row_count} строк
+              </option>
+            ))}
+          </select>
+        )}
+
+        {selectedSkuMeta && (
+          <p className="mt-1 text-xs text-ink-subtle">
+            История: {selectedSkuMeta.first_date} → {selectedSkuMeta.last_date}
+            {' · '}
+            {selectedSkuMeta.row_count} строк
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ManualModeForm({
+  sku,
+  onSkuChange,
+  csvText,
+  onCsvTextChange,
+}: {
+  sku:             string
+  onSkuChange:     (s: string) => void
+  csvText:         string
+  onCsvTextChange: (t: string) => void
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="label" htmlFor="sku">SKU</label>
+        <input
+          id="sku"
+          className="input font-mono"
+          value={sku}
+          onChange={(e) => onSkuChange(e.target.value)}
+          placeholder="SKU-001"
+          spellCheck={false}
+        />
+      </div>
+      <div>
+        <label className="label" htmlFor="csv">История продаж (CSV)</label>
+        <textarea
+          id="csv"
+          className="input font-mono text-xs"
+          rows={8}
+          spellCheck={false}
+          value={csvText}
+          onChange={(e) => onCsvTextChange(e.target.value)}
+          placeholder="date,sales,price,promo,stock&#10;2024-01-01,10,5.5,0,100&#10;2024-01-02,12,5.5,0,98&#10;…"
+        />
+        <p className="mt-1 text-xs text-ink-subtle">
+          Минимум 30 строк подряд. Колонки — date, sales, опционально price/promo/stock.
+        </p>
+      </div>
     </div>
   )
 }
