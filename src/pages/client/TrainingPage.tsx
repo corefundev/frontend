@@ -171,7 +171,20 @@ export default function TrainingPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Обучение модели</h1>
+      {/* Success card lives ABOVE the launch form so the user sees
+          "Обучение прошло успешно" first, then the form to start a
+          new run sits beneath it — the obvious next-action place. */}
+      {jobId && jobStatus?.status === 'finished' && (
+        <FinishedCard
+          ended={jobStatus.ended}
+          elapsedSec={
+            typeof (jobStatus.result as { elapsed_sec?: number } | null)?.elapsed_sec === 'number'
+              ? (jobStatus.result as { elapsed_sec?: number }).elapsed_sec ?? null
+              : null
+          }
+          onDismiss={() => setJobId(null)}
+        />
+      )}
 
       {/* ── Form ─────────────────────────────────────────────── */}
       {/* Hide the launch form while a job is actively running so the
@@ -287,19 +300,9 @@ export default function TrainingPage() {
         )
       })()}
 
-      {/* ── Active job status ────────────────────────────────── */}
-      {jobId && jobStatus?.status === 'finished' && (
-        <FinishedCard
-          ended={jobStatus.ended}
-          elapsedSec={
-            typeof (jobStatus.result as { elapsed_sec?: number } | null)?.elapsed_sec === 'number'
-              ? (jobStatus.result as { elapsed_sec?: number }).elapsed_sec ?? null
-              : null
-          }
-          onDismiss={() => setJobId(null)}
-        />
-      )}
-
+      {/* ── Active job status — progress / errors only.
+          The "finished" success card moved to the very top of the
+          page so it doesn't sit below the launch form. ─────────── */}
       {jobId && jobStatus?.status !== 'finished' && (
         <section className="card p-5 animate-fade-in">
           <div className="flex items-center justify-between mb-3">

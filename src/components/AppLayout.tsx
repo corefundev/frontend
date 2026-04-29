@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../features/auth/store'
 import { useUsage } from '../features/plans/useUsage'
 import { PlanBadge } from '../features/plans/PlanBadge'
@@ -6,23 +6,27 @@ import { QuotaMeter, LockTag } from '../features/plans/upsell'
 import type { PlanId } from '../features/plans/api'
 
 // Sidebar entries; `minPlan` controls whether the item is clickable
-// for the current user's plan.
+// for the current user's plan. `pageTitle` (when present) shows in
+// the top header bar in place of the section's nav label — same
+// section name on the sidebar, slightly more descriptive name
+// above the workspace.
 const NAV = [
-  { to: '',            label: 'Главная',       icon: IconHome,    minPlan: 'free'     },
-  { to: 'uploads',     label: 'Загрузки',      icon: IconUpload,  minPlan: 'free'     },
-  { to: 'forecasts',   label: 'Прогнозы',      icon: IconChart,   minPlan: 'free'     },
-  { to: 'training',    label: 'Обучение',      icon: IconCog,     minPlan: 'free'     },
-  { to: 'scenarios',   label: 'Сценарии',      icon: IconSplit,   minPlan: 'business' },
-  { to: 'promo',       label: 'Промо',         icon: IconSpark,   minPlan: 'business' },
-  { to: 'settings',    label: 'Настройки',     icon: IconSlider,  minPlan: 'free'     },
-  { to: 'upgrade',     label: 'Апгрейд',       icon: IconStar,    minPlan: 'free'     },
-  { to: 'admin/clients', label: 'Клиенты',     icon: IconUsers,   minPlan: 'free', adminOnly: true },
+  { to: '',            label: 'Главная',       pageTitle: 'Панель управления',  icon: IconHome,    minPlan: 'free'     },
+  { to: 'uploads',     label: 'Загрузки',      pageTitle: 'Загрузки данных',    icon: IconUpload,  minPlan: 'free'     },
+  { to: 'forecasts',   label: 'Прогнозы',      pageTitle: 'Прогноз',            icon: IconChart,   minPlan: 'free'     },
+  { to: 'training',    label: 'Обучение',      pageTitle: 'Обучение модели',    icon: IconCog,     minPlan: 'free'     },
+  { to: 'scenarios',   label: 'Сценарии',      pageTitle: 'Сценарии',           icon: IconSplit,   minPlan: 'business' },
+  { to: 'promo',       label: 'Промо',         pageTitle: 'Промо-планировщик',  icon: IconSpark,   minPlan: 'business' },
+  { to: 'settings',    label: 'Настройки',     pageTitle: 'Настройки модели',   icon: IconSlider,  minPlan: 'free'     },
+  { to: 'upgrade',     label: 'Апгрейд',       pageTitle: 'Тариф',              icon: IconStar,    minPlan: 'free'     },
+  { to: 'admin/clients', label: 'Клиенты',     pageTitle: 'Клиенты',            icon: IconUsers,   minPlan: 'free', adminOnly: true },
 ] as const
 
 const PLAN_RANK: Record<PlanId, number> = { free: 0, start: 1, business: 2 }
 
 export default function AppLayout() {
   const nav      = useNavigate()
+  const location = useLocation()
   const clientId = useAuthStore((s) => s.clientId)
   const logout   = useAuthStore((s) => s.logout)
   const isAdmin  = useAuthStore((s) => s.isAdmin())
@@ -30,6 +34,17 @@ export default function AppLayout() {
 
   const userRank = usage ? PLAN_RANK[usage.plan] : 0
   const visibleNav = NAV.filter((item) => !('adminOnly' in item) || !item.adminOnly || isAdmin)
+
+  // Pick the longest matching nav entry for the current path so
+  // /app/admin/clients beats the empty "Главная" entry (which would
+  // otherwise prefix-match the root /app path).
+  const pageTitle = (() => {
+    const path = location.pathname.replace(/^\/app\/?/, '')
+    const matches = NAV.filter((n) => n.to !== '' && path.startsWith(n.to))
+    matches.sort((a, b) => b.to.length - a.to.length)
+    if (matches.length > 0) return matches[0].pageTitle
+    return NAV[0].pageTitle  // root → "Панель управления"
+  })()
 
   return (
     <div className="min-h-screen flex bg-surface">
@@ -101,7 +116,7 @@ export default function AppLayout() {
       {/* ── Main column ─────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="flex items-center justify-between bg-surface-raised border-b border-surface-border px-6 h-16 shrink-0 gap-6">
-          <div className="eyebrow">Панель управления</div>
+          <h1 className="text-lg font-semibold tracking-tight text-ink">{pageTitle}</h1>
 
           <div className="flex items-center gap-6">
             {usage && (
