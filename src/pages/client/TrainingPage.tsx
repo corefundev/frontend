@@ -182,6 +182,17 @@ export default function TrainingPage() {
       </div>
 
       {/* ── Form ─────────────────────────────────────────────── */}
+      {/* Hide the launch form while a job is actively running so the
+          user can't accidentally trigger a second training. The
+          progress section below stays visible instead. Form returns
+          once status reaches finished/failed. */}
+      {(() => {
+        const isTraining =
+          !!jobId &&
+          jobStatus?.status !== 'finished' &&
+          jobStatus?.status !== 'failed'
+        if (isTraining) return null
+        return (
       <section className="card p-6">
         <h2 className="text-sm font-semibold text-ink-muted uppercase tracking-wide mb-4">
           Параметры запуска
@@ -281,6 +292,8 @@ export default function TrainingPage() {
           )}
         </div>
       </section>
+        )
+      })()}
 
       {/* ── Active job status ────────────────────────────────── */}
       {jobId && (
