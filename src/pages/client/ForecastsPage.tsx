@@ -1,478 +1,278 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { format, parseISO } from 'date-fns'
+import { ru } from 'date-fns/locale'
 
 import { useAuthStore } from '../../features/auth/store'
 import {
   forecastsApi,
-  type HistoryRow,
-  type PredictResponse,
+  type ForecastSku,
+  type ForecastsResponse,
 } from '../../features/forecasts/api'
 import { ForecastChart } from '../../features/forecasts/ForecastChart'
-import { uploadsApi } from '../../features/uploads/api'
 import { useUsage } from '../../features/plans/useUsage'
 import {
   LockOverlay,
   UpgradeTrigger,
   PlanGateBadge,
 } from '../../features/plans/upsell'
-import { errorMessage } from '../../shared/api/client'
-
-function parseCSV(text: string): HistoryRow[] {
-  const lines = text.trim().split('\n')
-  if (lines.length < 2) throw new Error('CSV пустой')
-  const header = lines[0].split(',').map((h) => h.trim().toLowerCase())
-  return lines.slice(1).map((line) => {
-    const vals = line.split(',')
-    const row: Record<string, string> = {}
-    header.forEach((h, i) => { row[h] = (vals[i] ?? '').trim() })
-    return {
-      date:  row.date ?? '',
-      sales: Number(row.sales ?? 0),
-      price: row.price !== undefined && row.price !== '' ? Number(row.price) : undefined,
-      promo: row.promo !== undefined && row.promo !== '' ? Number(row.promo) : undefined,
-      stock: row.stock !== undefined && row.stock !== '' ? Number(row.stock) : undefined,
-    }
-  })
-}
-
-type Mode = 'upload' | 'manual'
 
 export default function ForecastsPage() {
   const clientId = useAuthStore((s) => s.clientId)!
   const { data: usage } = useUsage()
-
-  // Default: forecast from a previously uploaded + processed dataset.
-  // Manual CSV is kept as a fallback for one-off SKUs without an upload.
-  const [mode,      setMode]     = useState<Mode>('upload')
-  const [uploadId,  setUploadId] = useState('')
-  const [sku,       setSku]      = useState('')
-  const [csvText,   setCsvText]  = useState('')
-  const [horizon,   setHorizon]  = useState<number>(14)
-  const [result,    setResult]   = useState<PredictResponse | null>(null)
-  const [showFirstWinTeaser, setShowFirstWinTeaser] = useState(false)
-
-  const planMaxHorizon  = usage?.max_horizon_days ?? 365
-  const effectiveHorizon = Math.min(horizon, planMaxHorizon)
   const isFree    = usage?.plan === 'free'
   const isStart   = usage?.plan === 'start'
 
-  // ── Upload list — only processed ones can be used for forecasting
-  const { data: uploads = [] } = useQuery({
-    queryKey: ['uploads', clientId],
-    queryFn:  () => uploadsApi.list(clientId),
-  })
-  const processedUploads = useMemo(
-    () => uploads.filter((u) => u.status === 'processed'),
-    [uploads],
-  )
-
-  // ── SKU catalogue for the selected upload — populates the dropdown
-  const { data: skuCat, isLoading: skuLoading } = useQuery({
-    queryKey: ['upload-skus', clientId, uploadId],
-    queryFn:  () => forecastsApi.listUploadSkus(clientId, uploadId),
-    enabled:  mode === 'upload' && !!uploadId,
-  })
-  const selectedSku = useMemo(
-    () => skuCat?.skus.find((s) => s.sku === sku),
-    [skuCat, sku],
-  )
-
-  // Reset SKU when the user switches uploads — the new file will have
-  // a different catalogue, and stale SKU values just confuse the UI.
-  useEffect(() => { setSku('') }, [uploadId])
-
-  const { mutate: predict, isPending } = useMutation({
-    mutationFn: async () => {
-      const skuStr = sku.trim()
-      if (!skuStr) throw new Error('Не выбран SKU')
-
-      if (mode === 'upload') {
-        if (!uploadId) throw new Error('Не выбран набор данных')
-        return forecastsApi.predict(clientId, {
-          sku:        skuStr,
-          upload_id:  uploadId,
-          horizon:    effectiveHorizon,
-        })
-      }
-
-      // Manual mode — parse CSV inline as before.
-      let history: HistoryRow[]
-      try {
-        history = parseCSV(csvText)
-      } catch {
-        throw new Error('Не удалось разобрать CSV. Проверьте формат.')
-      }
-      if (history.length < 30) {
-        throw new Error(`Нужно минимум 30 строк истории (сейчас ${history.length})`)
-      }
-      return forecastsApi.predict(clientId, {
-        sku:     skuStr,
-        history,
-        horizon: effectiveHorizon,
-      })
-    },
-    onSuccess: (res) => {
-      setResult(res)
-      if (isFree) setShowFirstWinTeaser(true)
-      if (res.horizon_limited_by_plan) {
-        toast(`Горизонт уменьшен до ${res.horizon} дн. лимитом тарифа`, { icon: 'ℹ️' })
-      }
-    },
-    onError: (e) => toast.error(errorMessage(e, 'Не удалось получить прогноз')),
+  // The viewer reads pre-computed forecasts written by the worker
+  // after every training run. No input form, no triggers — refetch
+  // on a slow interval so a freshly-finished training shows up
+  // without a manual reload.
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['forecasts', clientId],
+    queryFn:  () => forecastsApi.listForecasts(clientId),
+    refetchInterval: 15_000,
   })
 
-  const canPredict =
-    mode === 'upload'
-      ? !!uploadId && !!sku.trim() && !isPending
-      : !!sku.trim() && !!csvText.trim() && !isPending
-
-  return (
-    <div className="max-w-6xl space-y-8">
-      {/* ── Page header ───────────────────────────────────────── */}
-      <header>
-        <div className="eyebrow">Прогноз</div>
-        <h1 className="display-em text-brand-700 text-4xl sm:text-5xl mt-2 leading-tight">
-          Что продастся на следующей неделе?
-        </h1>
-        <p className="mt-3 text-ink-muted max-w-2xl">
-          Укажите SKU и историю продаж — получите прогноз. Чем больше
-          настроек модели подключено, тем глубже будет объяснение «почему».
-        </p>
-      </header>
-
-      {/* ── Input form ─────────────────────────────────────────── */}
-      <section className="grid gap-6 lg:grid-cols-12">
-        <div className="card p-6 sm:p-8 lg:col-span-8 space-y-6">
-          {mode === 'upload' ? (
-            <UploadModeForm
-              uploads={processedUploads}
-              uploadId={uploadId}
-              onUploadChange={setUploadId}
-              skus={skuCat?.skus ?? []}
-              skuLoading={skuLoading}
-              sku={sku}
-              onSkuChange={setSku}
-              selectedSkuMeta={selectedSku}
-            />
-          ) : (
-            <ManualModeForm
-              sku={sku}
-              onSkuChange={setSku}
-              csvText={csvText}
-              onCsvTextChange={setCsvText}
-            />
-          )}
-
-          {/* Horizon + Predict — common to both modes */}
-          <div className="grid sm:grid-cols-3 gap-4 pt-2 border-t border-surface-border">
-            <div className="sm:col-span-1">
-              <label className="label" htmlFor="horizon">
-                Горизонт (дней)
-                {usage?.max_horizon_days !== null && (
-                  <span className="ml-1 text-ink-subtle text-xs font-normal">
-                    · лимит {planMaxHorizon}
-                  </span>
-                )}
-              </label>
-              <input
-                id="horizon"
-                type="number"
-                min={1}
-                max={planMaxHorizon}
-                className="input num"
-                value={horizon}
-                onChange={(e) => setHorizon(Number(e.target.value))}
-              />
-              {horizon > planMaxHorizon && (
-                <p className="text-xs text-warn mt-1">
-                  Будет урезан до {planMaxHorizon} дн.
-                </p>
-              )}
-            </div>
-            <div className="sm:col-span-2 flex items-end">
-              <button
-                type="button"
-                className="btn-primary w-full"
-                onClick={() => predict()}
-                disabled={!canPredict}
-              >
-                {isPending ? 'Считаю…' : 'Спрогнозировать'}
-              </button>
-            </div>
-          </div>
-
-          {/* Mode toggle — minor, lives at the bottom so it doesn't
-              compete with the primary upload-driven flow. */}
-          <div className="pt-1">
-            <button
-              type="button"
-              className="text-xs text-ink-muted hover:text-ink underline-offset-2 hover:underline"
-              onClick={() => {
-                setMode(mode === 'upload' ? 'manual' : 'upload')
-                setResult(null)
-              }}
-            >
-              {mode === 'upload'
-                ? 'Нет загруженного датасета? Вставить историю вручную →'
-                : '← Использовать обученный датасет'}
-            </button>
-          </div>
-        </div>
-
-        {/* Sidecard: quick rule for the user */}
-        <aside className="lg:col-span-4 card p-6 sm:p-7 space-y-4 self-start">
-          <div className="eyebrow">Как читать</div>
-          <div className="display-em text-brand-700 text-2xl leading-snug">
-            Линия — ожидание.<br/>Тон — уверенность.
-          </div>
-          <p className="text-sm text-ink-muted leading-relaxed">
-            Чёткая линия — модель уверена. Размытая область вокруг —
-            диапазон возможных отклонений.
-          </p>
-          <div className="rule-dot !my-2" />
-          <div className="eyebrow">Откуда история</div>
-          <p className="text-sm text-ink-muted">
-            {mode === 'upload'
-              ? 'Из обработанного CSV/XLSX, который вы уже загрузили во вкладке «Загрузки».'
-              : 'Минимум 30 дней подряд — чтобы уловить недельную сезонность.'}
-          </p>
-        </aside>
-      </section>
-
-      {/* ── Result ────────────────────────────────────────────── */}
-      {result && (
-        <section className="space-y-6 animate-rise">
-          {/* Result header card */}
-          <div className="card p-6 flex flex-wrap gap-6 justify-between items-start">
-            <div>
-              <div className="eyebrow">Прогноз для</div>
-              <div className="font-mono text-2xl mt-1">{result.sku}</div>
-              <div className="eyebrow mt-2">на ближайшие</div>
-              <div className="num font-display text-brand-700 text-3xl mt-0.5">
-                {result.horizon} <span className="text-ink-subtle text-lg">дн.</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="eyebrow">Модель</div>
-              <div className="display-em text-brand-700 text-3xl leading-none mt-1">
-                {result.model_name}
-              </div>
-              <div className="text-xs text-ink-muted capitalize mt-1">
-                источник: {result.model_source}
-              </div>
-            </div>
-          </div>
-
-          {result.horizon_limited_by_plan && (
-            <div className="rounded-md bg-warn-bg text-warn px-4 py-2.5 text-sm">
-              Горизонт урезан до {result.horizon} дн. лимитом тарифа
-              «{usage?.display_name}». На более высоких тарифах доступен
-              более длинный прогноз.
-            </div>
-          )}
-
-          <ForecastChart
-            dates={result.forecast_dates}
-            values={result.forecast}
-          />
-
-          {/* ── WHY PANEL ─ plan-gated ────────────────────────── */}
-          <WhyPanel
-            result={result}
-            plan={usage?.plan ?? 'free'}
-          />
-
-          {/* ── First-forecast teaser for Free ──────────────── */}
-          {showFirstWinTeaser && isFree && (
-            <UpgradeTrigger
-              variant="first-forecast"
-              onDismiss={() => setShowFirstWinTeaser(false)}
-            />
-          )}
-
-          {/* ── Start users: tease Business via "what-if" ───── */}
-          {isStart && (
-            <UpgradeTrigger variant="save-scenario" />
-          )}
-        </section>
-      )}
-    </div>
-  )
-}
-
-// ══════════════════════════════════════════════════════════════════════════
-//  Upload-driven forecast form — the primary path. User picks an
-//  already-processed dataset, picks an SKU from its catalogue, and
-//  the backend fetches history from S3. No manual paste.
-// ══════════════════════════════════════════════════════════════════════════
-
-import type { UploadRecord } from '../../features/uploads/api'
-import type { UploadSku }    from '../../features/forecasts/api'
-
-function UploadModeForm({
-  uploads,
-  uploadId,
-  onUploadChange,
-  skus,
-  skuLoading,
-  sku,
-  onSkuChange,
-  selectedSkuMeta,
-}: {
-  uploads:         UploadRecord[]
-  uploadId:        string
-  onUploadChange:  (id: string) => void
-  skus:            UploadSku[]
-  skuLoading:      boolean
-  sku:             string
-  onSkuChange:     (sku: string) => void
-  selectedSkuMeta: UploadSku | undefined
-}) {
-  if (uploads.length === 0) {
+  if (isLoading) {
     return (
-      <div className="rounded-md bg-surface-muted px-4 py-3 text-sm text-ink-muted">
-        У вас пока нет обработанных загрузок. Загрузите CSV/XLSX
-        во вкладке <a className="text-brand-700 underline" href="/app/uploads">«Загрузки»</a>{' '}
-        — после автоматической проверки набор данных появится здесь.
+      <div className="max-w-6xl py-12">
+        <div className="text-ink-muted">Загружаем прогнозы…</div>
+      </div>
+    )
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="max-w-6xl py-12">
+        <div className="text-danger">Не удалось загрузить прогнозы.</div>
+      </div>
+    )
+  }
+
+  if (data.count === 0) {
+    return (
+      <div className="max-w-3xl py-12 space-y-6">
+        <header>
+          <div className="eyebrow">Прогноз</div>
+          <h1 className="display-em text-brand-700 text-4xl mt-2 leading-tight">
+            Пока нечего показать
+          </h1>
+        </header>
+        <div className="card p-6 sm:p-8 space-y-3">
+          <p className="text-ink-muted">
+            Прогнозы появятся здесь автоматически после первого обучения модели.
+          </p>
+          <p className="text-ink-muted">
+            Загрузите данные во вкладке{' '}
+            <a className="text-brand-700 underline" href="/app/uploads">«Загрузки»</a>,
+            затем запустите обучение во вкладке{' '}
+            <a className="text-brand-700 underline" href="/app/training">«Обучение»</a>.
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <label className="label" htmlFor="upload">Набор данных</label>
-        <select
-          id="upload"
-          className="input"
-          value={uploadId}
-          onChange={(e) => onUploadChange(e.target.value)}
-        >
-          <option value="">— выберите —</option>
-          {uploads.map((u) => (
-            <option key={u.upload_id} value={u.upload_id}>
-              {u.filename}
-              {u.row_count != null && ` · ${u.row_count.toLocaleString('ru-RU')} строк`}
-              {u.sku_count != null && ` · ${u.sku_count} SKU`}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="label" htmlFor="sku">SKU</label>
-        {!uploadId ? (
-          <div className="rounded-md bg-surface-muted px-3 py-2 text-sm text-ink-subtle">
-            Сначала выберите набор данных
-          </div>
-        ) : skuLoading ? (
-          <div className="rounded-md bg-surface-muted px-3 py-2 text-sm text-ink-subtle">
-            Загружаем каталог SKU…
-          </div>
-        ) : skus.length === 0 ? (
-          <div className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn">
-            В этом наборе данных не найдено ни одного SKU
-          </div>
-        ) : (
-          <select
-            id="sku"
-            className="input font-mono"
-            value={sku}
-            onChange={(e) => onSkuChange(e.target.value)}
-          >
-            <option value="">— выберите —</option>
-            {skus.map((s) => (
-              <option key={s.sku} value={s.sku}>
-                {s.sku} · {s.row_count} строк
-              </option>
-            ))}
-          </select>
-        )}
-
-        {selectedSkuMeta && (
-          <p className="mt-1 text-xs text-ink-subtle">
-            История: {selectedSkuMeta.first_date} → {selectedSkuMeta.last_date}
-            {' · '}
-            {selectedSkuMeta.row_count} строк
-          </p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function ManualModeForm({
-  sku,
-  onSkuChange,
-  csvText,
-  onCsvTextChange,
-}: {
-  sku:             string
-  onSkuChange:     (s: string) => void
-  csvText:         string
-  onCsvTextChange: (t: string) => void
-}) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="label" htmlFor="sku">SKU</label>
-        <input
-          id="sku"
-          className="input font-mono"
-          value={sku}
-          onChange={(e) => onSkuChange(e.target.value)}
-          placeholder="SKU-001"
-          spellCheck={false}
-        />
-      </div>
-      <div>
-        <label className="label" htmlFor="csv">История продаж (CSV)</label>
-        <textarea
-          id="csv"
-          className="input font-mono text-xs"
-          rows={8}
-          spellCheck={false}
-          value={csvText}
-          onChange={(e) => onCsvTextChange(e.target.value)}
-          placeholder="date,sales,price,promo,stock&#10;2024-01-01,10,5.5,0,100&#10;2024-01-02,12,5.5,0,98&#10;…"
-        />
-        <p className="mt-1 text-xs text-ink-subtle">
-          Минимум 30 строк подряд. Колонки — date, sales, опционально price/promo/stock.
-        </p>
-      </div>
-    </div>
+    <ForecastViewer
+      data={data}
+      isFree={isFree}
+      isStart={isStart}
+      planName={usage?.display_name ?? ''}
+    />
   )
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-//  WhyPanel — interpretability, the heart of the Start upsell.
-//
-//  On Free: shows a stylized preview behind a paper LockOverlay — the user
-//  can literally SEE what they're missing (factor names visible, values
-//  blurred). This is the moment that sells Start.
-//
-//  On Start: renders actual factors (tree-based feature importance would
-//  ideally come from the backend; we mock it deterministically from the
-//  forecast response for now).
-//
-//  On Business: same as Start plus two extra cards (competitor promo
-//  influence, cannibalization).
+//  Viewer — list of SKUs on the left, chart of selected SKU on the right.
+//  Refreshed automatically by react-query, no user input.
+// ══════════════════════════════════════════════════════════════════════════
+
+function ForecastViewer({
+  data,
+  isFree,
+  isStart,
+  planName,
+}: {
+  data:     ForecastsResponse
+  isFree:   boolean
+  isStart:  boolean
+  planName: string
+}) {
+  const [selectedSku, setSelectedSku] = useState<string>(() => data.skus[0]?.sku ?? '')
+  const [search,      setSearch]      = useState('')
+
+  // Build the date axis once — every SKU's values array is aligned to
+  // it index-by-index.
+  const dates = useMemo(() => {
+    if (!data.first_date || !data.last_date) return []
+    const start = parseISO(data.first_date)
+    const end   = parseISO(data.last_date)
+    const out: string[] = []
+    const cursor = new Date(start)
+    while (cursor <= end) {
+      out.push(format(cursor, 'yyyy-MM-dd'))
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    return out
+  }, [data.first_date, data.last_date])
+
+  const filteredSkus = useMemo(() => {
+    if (!search.trim()) return data.skus
+    const q = search.trim().toLowerCase()
+    return data.skus.filter((s) => s.sku.toLowerCase().includes(q))
+  }, [data.skus, search])
+
+  const selected: ForecastSku | undefined = useMemo(
+    () => data.skus.find((s) => s.sku === selectedSku),
+    [data.skus, selectedSku],
+  )
+
+  return (
+    <div className="max-w-6xl space-y-6">
+      {/* ── Header ──────────────────────────────────────────── */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="eyebrow">Прогноз</div>
+          <h1 className="display-em text-brand-700 text-4xl sm:text-5xl mt-2 leading-tight">
+            Что продастся
+          </h1>
+        </div>
+        <div className="text-right text-sm">
+          {data.generated_at && (
+            <>
+              <div className="text-ink-muted">
+                Обновлено {formatTs(data.generated_at)}
+              </div>
+              <div className="text-ink-subtle text-xs mt-0.5">
+                до {formatDate(data.last_date)} · горизонт {data.horizon_days} дн. · {data.count} SKU
+              </div>
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* ── List + chart ────────────────────────────────────── */}
+      <section className="grid gap-6 lg:grid-cols-12">
+        <aside className="lg:col-span-4 card p-4 space-y-3 self-start">
+          <input
+            type="search"
+            placeholder="Поиск SKU…"
+            className="input text-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="text-xs text-ink-subtle">
+            {filteredSkus.length === data.skus.length
+              ? `${data.skus.length} SKU`
+              : `${filteredSkus.length} из ${data.skus.length}`}
+          </div>
+          <ul className="max-h-[28rem] overflow-y-auto -mx-4 px-2 divide-y divide-surface-border">
+            {filteredSkus.map((s) => {
+              const total = s.values.reduce<number>((sum, v) => sum + (v ?? 0), 0)
+              const isActive = s.sku === selectedSku
+              return (
+                <li key={s.sku}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSku(s.sku)}
+                    className={[
+                      'w-full text-left px-2 py-2 rounded-md transition-colors',
+                      isActive
+                        ? 'bg-brand-50 text-brand-700'
+                        : 'hover:bg-surface-muted text-ink',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="font-mono text-sm truncate">{s.sku}</span>
+                      <span className="text-xs tabular-nums text-ink-muted">
+                        Σ {total.toFixed(0)}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </aside>
+
+        <div className="lg:col-span-8 space-y-4">
+          {selected ? (
+            <>
+              <div className="card p-6 flex flex-wrap gap-6 justify-between items-start">
+                <div>
+                  <div className="eyebrow">Прогноз для</div>
+                  <div className="font-mono text-2xl mt-1">{selected.sku}</div>
+                  <div className="eyebrow mt-3">на ближайшие</div>
+                  <div className="num font-display text-brand-700 text-3xl mt-0.5">
+                    {data.horizon_days} <span className="text-ink-subtle text-lg">дн.</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="eyebrow">Тариф</div>
+                  <div className="display-em text-brand-700 text-2xl leading-none mt-1">
+                    {planName}
+                  </div>
+                </div>
+              </div>
+
+              <ForecastChart
+                dates={dates}
+                values={selected.values.map((v) => v ?? 0)}
+              />
+
+              {/* Plan-gated explanation panel — same as the old
+                  page so we don't lose the upsell story. */}
+              <WhyPanel
+                skuTotal={selected.values.reduce<number>((s, v) => s + (v ?? 0), 0)}
+                sku={selected.sku}
+                plan={isFree ? 'free' : isStart ? 'start' : 'business'}
+              />
+
+              {isFree   && <UpgradeTrigger variant="first-forecast" />}
+              {isStart  && <UpgradeTrigger variant="save-scenario" />}
+            </>
+          ) : (
+            <div className="card p-6 text-ink-muted">Выберите SKU слева</div>
+          )}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────
+
+function formatTs(iso: string | null): string {
+  if (!iso) return '—'
+  try { return format(parseISO(iso), "d MMM yyyy 'в' HH:mm", { locale: ru }) }
+  catch { return iso }
+}
+function formatDate(iso: string | null): string {
+  if (!iso) return '—'
+  try { return format(parseISO(iso), 'd MMM yyyy', { locale: ru }) }
+  catch { return iso }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  WhyPanel — kept from the previous version. Tariff-gated breakdown of
+//  what drove the forecast. Values are deterministically synthesised from
+//  the SKU+sum so they look consistent within a session — replace with
+//  real SHAP outputs when /explain endpoint exists.
 // ══════════════════════════════════════════════════════════════════════════
 
 type Plan = 'free' | 'start' | 'business'
 
 function WhyPanel({
-  result,
+  skuTotal,
+  sku,
   plan,
 }: {
-  result: PredictResponse
-  plan:   Plan
+  skuTotal: number
+  sku:      string
+  plan:     Plan
 }) {
-  // Deterministic pseudo-factors derived from the forecast — these are
-  // illustrative. Replace with real SHAP values from the backend when
-  // the /explain endpoint is added.
-  const factors = synthesizeFactors(result)
+  const factors = synthesizeFactors(sku, skuTotal)
 
   const content = (
     <>
@@ -483,7 +283,7 @@ function WhyPanel({
             Почему столько?
           </h3>
         </div>
-        {plan === 'free' && <PlanGateBadge required="start" />}
+        {plan === 'free'  && <PlanGateBadge required="start" />}
         {plan === 'start' && <PlanGateBadge required="business" />}
       </div>
 
@@ -514,28 +314,9 @@ function WhyPanel({
           </li>
         ))}
       </ul>
-
-      {plan === 'business' && (
-        <div className="mt-5 pt-5 border-t border-surface-border">
-          <div className="eyebrow mb-2">Дополнительные факторы</div>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <FactorCard
-              title="Каннибализация"
-              value="−2.1%"
-              blurb="от близких SKU в той же категории"
-            />
-            <FactorCard
-              title="Промо конкурента"
-              value="−0.8%"
-              blurb="по данным открытых источников"
-            />
-          </div>
-        </div>
-      )}
     </>
   )
 
-  // Free — lock with paper overlay but still render preview behind
   if (plan === 'free') {
     return (
       <div className="card p-6 sm:p-8 relative">
@@ -549,63 +330,20 @@ function WhyPanel({
       </div>
     )
   }
-
   return <div className="card p-6 sm:p-8">{content}</div>
 }
 
-function FactorCard({
-  title,
-  value,
-  blurb,
-}: {
-  title: string
-  value: string
-  blurb: string
-}) {
-  return (
-    <div className="rounded-md bg-surface-muted/70 p-3">
-      <div className="eyebrow">{title}</div>
-      <div className="num font-display text-brand-700 text-xl mt-0.5">{value}</div>
-      <div className="text-xs text-ink-muted mt-1">{blurb}</div>
-    </div>
-  )
-}
-
-// Generate plausible factor contributions from a forecast response.
-// Each call is deterministic for a given (sku, mean forecast) pair.
-function synthesizeFactors(r: PredictResponse) {
-  const mean = r.forecast.reduce((s, v) => s + v, 0) / Math.max(1, r.forecast.length)
-  const h    = hashString(r.sku + ':' + Math.round(mean))
-  const trend = (((h & 0xff) / 255) - 0.5) * 30            // -15..+15
-  const season = (((h >> 8) & 0xff) / 255) * 20 - 5        // -5..+15
-  const holiday = (((h >> 16) & 0xff) / 255) * 12          // 0..+12
-  const price = -(((h >> 24) & 0x7f) / 127) * 10           // -10..0
-
+function synthesizeFactors(sku: string, mean: number) {
+  const h       = hashString(sku + ':' + Math.round(mean))
+  const trend   = (((h & 0xff) / 255) - 0.5) * 30
+  const season  = (((h >> 8)  & 0xff) / 255) * 20 - 5
+  const holiday = (((h >> 16) & 0xff) / 255) * 12
+  const price   = -(((h >> 24) & 0x7f) / 127) * 10
   return [
-    {
-      label: 'Тренд продаж',
-      detail: trend > 0 ? 'восходящий за последние 4 недели' : 'ослабление за последние 4 недели',
-      pct: trend,
-      direction: trend > 0 ? 'up' : 'down',
-    },
-    {
-      label: 'Сезонность',
-      detail: 'недельный + годовой паттерны',
-      pct: season,
-      direction: season > 0 ? 'up' : 'down',
-    },
-    {
-      label: 'Праздники и переносы',
-      detail: 'по календарю РФ',
-      pct: holiday,
-      direction: holiday > 2 ? 'up' : 'flat',
-    },
-    {
-      label: 'Ценовая эластичность',
-      detail: 'реакция на уровень цен',
-      pct: price,
-      direction: 'down',
-    },
+    { label: 'Тренд продаж',         detail: trend > 0 ? 'восходящий за последние 4 недели' : 'ослабление за последние 4 недели', pct: trend,   direction: trend > 0 ? 'up' : 'down' },
+    { label: 'Сезонность',           detail: 'недельный + годовой паттерны',                                                       pct: season,  direction: season > 0 ? 'up' : 'down' },
+    { label: 'Праздники и переносы', detail: 'по календарю РФ',                                                                    pct: holiday, direction: holiday > 2 ? 'up' : 'flat' },
+    { label: 'Ценовая эластичность', detail: 'реакция на уровень цен',                                                              pct: price,   direction: 'down' },
   ] as Array<{ label: string; detail: string; pct: number; direction: 'up' | 'down' | 'flat' }>
 }
 

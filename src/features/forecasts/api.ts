@@ -68,6 +68,27 @@ export interface BatchPredictResponse {
   count: number
 }
 
+// One per-SKU forecast track returned by GET /clients/{id}/forecasts.
+// `values[i]` is the predicted sales for the date at the same index in
+// the response's [first_date..last_date] range. `null` means "no point
+// for this date" — never seen in current backend, included for safety.
+export interface ForecastSku {
+  sku:    string
+  values: (number | null)[]
+}
+
+// GET /clients/{id}/forecasts — produced automatically after every
+// successful training run; the user doesn't trigger this manually.
+export interface ForecastsResponse {
+  client_id:    string
+  generated_at: string | null
+  first_date:   string | null
+  last_date:    string | null
+  horizon_days: number
+  count:        number
+  skus:         ForecastSku[]
+}
+
 export const forecastsApi = {
   predict: (clientId: string, payload: PredictRequest) =>
     apiClient.post<PredictResponse>(`/clients/${clientId}/predict`, payload).then((r) => r.data),
@@ -81,5 +102,11 @@ export const forecastsApi = {
   listUploadSkus: (clientId: string, uploadId: string) =>
     apiClient
       .get<UploadSkusResponse>(`/clients/${clientId}/uploads/${uploadId}/skus`)
+      .then((r) => r.data),
+
+  // GET /clients/{id}/forecasts — read-only viewer endpoint
+  listForecasts: (clientId: string) =>
+    apiClient
+      .get<ForecastsResponse>(`/clients/${clientId}/forecasts`)
       .then((r) => r.data),
 }
