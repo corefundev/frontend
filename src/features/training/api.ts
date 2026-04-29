@@ -21,6 +21,12 @@ export interface TrainResponse {
 // rq job statuses: queued | started | finished | failed | unknown
 export type JobStatus = 'queued' | 'started' | 'finished' | 'failed' | 'unknown'
 
+export interface JobProgress {
+  step: number
+  total: number
+  label: string
+}
+
 export interface JobStatusResponse {
   job_id: string
   status: JobStatus
@@ -29,6 +35,40 @@ export interface JobStatusResponse {
   enqueued: string
   started: string
   ended: string
+  // Written by src/pipeline/train.py:_progress(...) before each stage.
+  // null when the worker hasn't reached step 1 yet.
+  progress: JobProgress | null
+}
+
+// One row from GET /clients/{id}/training-runs.
+// Persistent — survives RQ's 24h result_ttl, so users can see history
+// for as long as the row stays in sku_training_runs.
+export interface TrainingRun {
+  run_id:        string
+  client_id:     string
+  plan:          string
+  data_path:     string
+  status:        'queued' | 'running' | 'finished' | 'failed'
+  job_id:        string | null
+  upload_id:     string | null
+  enqueued_at:   string
+  started_at:    string | null
+  ended_at:      string | null
+  elapsed_sec:   number | null
+  n_skus:        number | null
+  n_features:    number | null
+  n_rows:        number | null
+  wmape:         number | null
+  mase:          number | null
+  smape:         number | null
+  model_path:    string | null
+  mlflow_run_id: string | null
+  error:         string | null
+}
+
+export interface TrainingRunsResponse {
+  runs:  TrainingRun[]
+  count: number
 }
 
 export const trainingApi = {
@@ -39,4 +79,10 @@ export const trainingApi = {
   // GET /jobs/{job_id}
   getJobStatus: (jobId: string) =>
     apiClient.get<JobStatusResponse>(`/jobs/${jobId}`).then((r) => r.data),
+
+  // GET /clients/{id}/training-runs
+  listRuns: (clientId: string, limit = 50) =>
+    apiClient
+      .get<TrainingRunsResponse>(`/clients/${clientId}/training-runs`, { params: { limit } })
+      .then((r) => r.data),
 }
