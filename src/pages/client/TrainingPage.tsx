@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -132,6 +132,18 @@ export default function TrainingPage() {
     },
   })
   const runs = history?.runs ?? []
+
+  // Resume an in-flight job after a page reload. Local state lost the
+  // jobId, but the server still has a `running`/`queued` row with the
+  // RQ job_id — pick it up and re-attach polling so the progress bar
+  // reappears instead of looking like training was lost.
+  useEffect(() => {
+    if (jobId) return
+    const active = runs.find(
+      (r) => (r.status === 'running' || r.status === 'queued') && r.job_id,
+    )
+    if (active?.job_id) setJobId(active.job_id)
+  }, [runs, jobId])
 
   // Most recent successful training that used a different upload from
   // the one currently selected — that's the one we'd merge with.
