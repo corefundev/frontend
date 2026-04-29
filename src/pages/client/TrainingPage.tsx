@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -170,16 +171,7 @@ export default function TrainingPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Обучение модели</h1>
-          <p className="text-ink-muted mt-1 text-sm">
-            Запустите обучение на уже загруженном и проверенном наборе данных.
-            Результат станет активной моделью для прогнозов.
-          </p>
-        </div>
-        {usage && <UsageCard usage={usage} />}
-      </div>
+      <h1 className="text-2xl font-semibold tracking-tight">Обучение модели</h1>
 
       {/* ── Form ─────────────────────────────────────────────── */}
       {/* Hide the launch form while a job is actively running so the
@@ -296,12 +288,24 @@ export default function TrainingPage() {
       })()}
 
       {/* ── Active job status ────────────────────────────────── */}
-      {jobId && (
+      {jobId && jobStatus?.status === 'finished' && (
+        <FinishedCard
+          ended={jobStatus.ended}
+          elapsedSec={
+            typeof (jobStatus.result as { elapsed_sec?: number } | null)?.elapsed_sec === 'number'
+              ? (jobStatus.result as { elapsed_sec?: number }).elapsed_sec ?? null
+              : null
+          }
+          onDismiss={() => setJobId(null)}
+        />
+      )}
+
+      {jobId && jobStatus?.status !== 'finished' && (
         <section className="card p-5 animate-fade-in">
           <div className="flex items-center justify-between mb-3">
             <div>
               <div className="text-sm text-ink-muted">Текущая задача</div>
-              <div className="font-mono text-sm">{jobId}</div>
+              <div className="font-mono text-xs text-ink-subtle">{jobId}</div>
             </div>
             {jobStatus && (
               <span className={STATUS_BADGE[jobStatus.status] ?? 'badge-neutral'}>
@@ -310,7 +314,7 @@ export default function TrainingPage() {
             )}
           </div>
 
-          {jobStatus && jobStatus.status !== 'finished' && jobStatus.status !== 'failed' && (
+          {jobStatus && jobStatus.status !== 'failed' && (
             <>
               <ProgressBar progress={jobStatus.progress} status={jobStatus.status} />
               <div className="grid sm:grid-cols-3 gap-3 text-sm">
@@ -330,9 +334,6 @@ export default function TrainingPage() {
             </div>
           )}
 
-          {jobStatus?.status === 'finished' && jobStatus.result && (
-            <FinishedSummary result={jobStatus.result} ended={jobStatus.ended} />
-          )}
         </section>
       )}
 
@@ -344,46 +345,42 @@ export default function TrainingPage() {
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function UsageCard({
-  usage,
+function FinishedCard({
+  ended,
+  elapsedSec,
+  onDismiss,
 }: {
-  usage: NonNullable<ReturnType<typeof useUsage>['data']>
+  ended:      string
+  elapsedSec: number | null
+  onDismiss:  () => void
 }) {
   return (
-    <div className="card p-4 shrink-0 w-64">
-      <div className="text-xs uppercase tracking-wider text-ink-subtle">
-        Тариф
+    <section className="card p-5 animate-fade-in border border-success/30 bg-success-bg/40">
+      <div className="flex items-center gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success text-ink-invert text-base font-semibold">
+          ✓
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-ink">Обучение прошло успешно</div>
+          <div className="text-xs text-ink-muted mt-0.5">
+            Завершено {safeFormat(ended)}
+            {elapsedSec != null && <> · заняло {formatDuration(elapsedSec)}</>}
+            . Модель активна, прогноз обновлён.
+          </div>
+        </div>
+        <Link to="/app/forecasts" className="btn-primary text-sm whitespace-nowrap">
+          Открыть прогноз →
+        </Link>
+        <button
+          type="button"
+          aria-label="Скрыть"
+          onClick={onDismiss}
+          className="text-ink-subtle hover:text-ink transition-colors text-lg leading-none px-1"
+        >
+          ×
+        </button>
       </div>
-      <div className="text-lg font-semibold mt-0.5">
-        {usage.display_name}{' '}
-        <span className="text-ink-muted text-sm font-normal">
-          · {usage.model_display_name}
-        </span>
-      </div>
-      <dl className="mt-3 space-y-1.5 text-xs">
-        <Row label="Лимит SKU"  value={usage.max_skus ?? 'без ограничений'} />
-        <Row label="Горизонт"   value={
-          usage.max_horizon_days ? `до ${usage.max_horizon_days} дн.` : 'без ограничений'
-        } />
-        <Row label="Кулдаун"    value={
-          usage.training_cooldown_hours ? `${usage.training_cooldown_hours} ч.` : '—'
-        } />
-        <Row label="В месяц"    value={
-          usage.training_runs_per_month !== null
-            ? `${usage.training_runs_used}/${usage.training_runs_per_month}`
-            : 'без ограничений'
-        } />
-      </dl>
-    </div>
-  )
-}
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex justify-between gap-2">
-      <dt className="text-ink-subtle">{label}</dt>
-      <dd className="text-ink font-medium truncate">{value}</dd>
-    </div>
+    </section>
   )
 }
 
@@ -401,136 +398,6 @@ function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60)
   const s = Math.round(sec - m * 60)
   return m === 0 ? `${s} сек` : `${m} мин ${s.toString().padStart(2, '0')} сек`
-}
-
-function FinishedSummary({
-  result,
-  ended,
-}: {
-  result: Record<string, unknown>
-  ended: string
-}) {
-  const metrics  = (result.metrics  as Record<string, number> | undefined) ?? {}
-  const wmape    = metrics.wmape_mean
-  const mase     = metrics.mase_mean
-  const smape    = metrics.smape_mean
-  const elapsed  = typeof result.elapsed_sec === 'number' ? result.elapsed_sec : null
-  const nSkus    = typeof result.n_skus      === 'number' ? result.n_skus     : null
-  const nRows    = typeof result.n_rows      === 'number' ? result.n_rows     : null
-  const nFeats   = typeof result.n_features  === 'number' ? result.n_features : null
-
-  return (
-    <div className="space-y-5 animate-fade-in">
-      {/* ── Hero ───────────────────────────────────────────────── */}
-      <div className="flex items-start gap-3 rounded-lg bg-success-bg/60 border border-success/20 p-4">
-        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success text-ink-invert text-sm font-semibold">
-          ✓
-        </div>
-        <div className="flex-1">
-          <div className="font-semibold text-ink">Модель обучена и активна</div>
-          <div className="text-xs text-ink-muted mt-0.5">
-            {safeFormat(ended)}
-            {elapsed != null && <> · обучение заняло {formatDuration(elapsed)}</>}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Metrics ────────────────────────────────────────────── */}
-      <div>
-        <div className="text-xs uppercase tracking-wider text-ink-subtle mb-2">
-          Точность модели
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <MetricCard
-            label="WMAPE"
-            value={wmape}
-            hint="Средняя ошибка по всем SKU. Ниже — точнее."
-            quality={qualityWMAPE(wmape)}
-          />
-          <MetricCard
-            label="MASE"
-            value={mase}
-            hint="Сравнение с наивным прогнозом. < 1 — модель лучше базовой."
-            quality={qualityMASE(mase)}
-          />
-          <MetricCard
-            label="sMAPE"
-            value={smape}
-            hint="Симметричная относительная ошибка, %."
-            quality={qualityWMAPE(smape)}
-            isPercent
-          />
-        </div>
-      </div>
-
-      {/* ── Dataset summary ────────────────────────────────────── */}
-      <div className="text-sm text-ink-muted">
-        Обучено на{' '}
-        <span className="text-ink font-medium">{nSkus ?? '—'} SKU</span>
-        {nRows != null && (
-          <> · <span className="text-ink font-medium">{nRows.toLocaleString('ru-RU')}</span> строк</>
-        )}
-        {nFeats != null && (
-          <> · <span className="text-ink font-medium">{nFeats}</span> признаков</>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// Quality bands — used for the colour bar under the metric value.
-//   green — модель точная
-//   yellow — приемлемо
-//   red — слабо, надо больше данных или другие признаки
-function qualityWMAPE(v: number | undefined): 'good' | 'ok' | 'poor' | null {
-  if (v == null || !Number.isFinite(v)) return null
-  if (v < 0.20) return 'good'
-  if (v < 0.40) return 'ok'
-  return 'poor'
-}
-function qualityMASE(v: number | undefined): 'good' | 'ok' | 'poor' | null {
-  if (v == null || !Number.isFinite(v)) return null
-  if (v < 0.80) return 'good'
-  if (v < 1.10) return 'ok'
-  return 'poor'
-}
-
-function MetricCard({
-  label,
-  value,
-  hint,
-  quality,
-  isPercent = false,
-}: {
-  label: string
-  value: number | undefined
-  hint: string
-  quality: 'good' | 'ok' | 'poor' | null
-  isPercent?: boolean
-}) {
-  const display =
-    value == null || !Number.isFinite(value)
-      ? '—'
-      : isPercent
-        ? `${(value * 100).toFixed(1)}%`
-        : value.toFixed(3)
-
-  const qualityClass =
-    quality === 'good' ? 'bg-success'
-      : quality === 'ok'   ? 'bg-warn'
-      : quality === 'poor' ? 'bg-danger'
-      : 'bg-surface-border'
-
-  return (
-    <div className="rounded-lg border border-surface-border p-4">
-      <div className="flex items-baseline justify-between">
-        <div className="text-sm font-medium text-ink-muted">{label}</div>
-        <div className="font-display text-2xl tabular-nums text-ink">{display}</div>
-      </div>
-      <div className={`mt-2 h-1 w-full rounded-full ${qualityClass}`} />
-      <div className="mt-2 text-xs text-ink-subtle leading-snug">{hint}</div>
-    </div>
-  )
 }
 
 function ProgressBar({
