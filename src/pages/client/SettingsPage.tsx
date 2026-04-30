@@ -322,20 +322,14 @@ function SettingsContent({
             />
           </Field>
           <Field
-            label="Метод обучения модели"
-            hint="как модель измеряет свою ошибку при обучении"
+            label="Профиль вашего товарного каталога"
+            hint="Это поможет модели правильно расставить приоритеты при обучении. Если не уверены — оставьте «Универсальный»."
           >
-            <select
-              className="input max-w-[280px]"
+            <ObjectivePicker
               value={state.objective}
-              onChange={(e) => update('objective', e.target.value as Objective)}
+              onChange={(v) => update('objective', v)}
               disabled={!canEdit('objective')}
-            >
-              <option value="tweedie">Tweedie — рекомендуется для розницы</option>
-              <option value="mae">MAE — равные веса всем ошибкам</option>
-              <option value="mse">MSE — классика, штрафует крупные ошибки</option>
-            </select>
-            <ObjectiveExplainer choice={state.objective} />
+            />
           </Field>
         </Section>
 
@@ -474,16 +468,85 @@ function SettingsContent({
 //  UI primitives
 // ═════════════════════════════════════════════════════════════════════════
 
-function ObjectiveExplainer({ choice }: { choice: Objective }) {
-  const text =
-    choice === 'tweedie'
-      ? 'Лучше всего для типичной розницы: подходит для товаров с редкими продажами и днями нулевого спроса. Используется в Amazon Forecast.'
-      : choice === 'mae'
-        ? 'Простая средняя ошибка по абсолютному значению. Все промахи весят одинаково — устойчиво к выбросам, но не учитывает форму распределения спроса.'
-        : 'Минимизирует квадрат ошибки. Подходит когда продажи распределены гладко и без длинных пауз. Сильнее штрафует крупные промахи.'
+// Card-based picker for the loss objective. The actual ML choice
+// (Tweedie / MAE / MSE) is hidden behind business-language labels —
+// "what does your product catalogue look like" instead of "pick a
+// distribution family". Tech name shown small at the bottom for
+// transparency, not for primary recognition.
+function ObjectivePicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: Objective
+  onChange: (v: Objective) => void
+  disabled?: boolean
+}) {
+  const cards: Array<{
+    id: Objective
+    title: string
+    badge?: string
+    body: string
+    example: string
+    techName: string
+  }> = [
+    {
+      id: 'tweedie',
+      title: 'Универсальный',
+      badge: 'Рекомендуется',
+      body: 'Подходит большинству магазинов. Хорошо работает когда часть товаров продаётся часто, а часть — редко или с длинными перерывами.',
+      example: 'Например: смешанный каталог одежды, товары для дома, продукты с разной популярностью.',
+      techName: 'Tweedie',
+    },
+    {
+      id: 'mae',
+      title: 'Равномерный спрос',
+      body: 'Все товары продаются примерно с одинаковой частотой. Все ошибки одинаково важны.',
+      example: 'Например: ежедневный спрос FMCG (хлеб, молоко), товары первой необходимости.',
+      techName: 'MAE',
+    },
+    {
+      id: 'mse',
+      title: 'Дорогие или критичные товары',
+      body: 'Сильнее штрафует крупные промахи. Подходит когда ошибка прогноза обходится дорого — упущенная выручка или утилизация.',
+      example: 'Например: бытовая техника, скоропортящиеся, ювелирка, лекарства.',
+      techName: 'MSE',
+    },
+  ]
   return (
-    <div className="mt-2 max-w-[280px] rounded-md bg-surface-muted/60 px-3 py-2 text-xs text-ink-muted leading-snug">
-      {text}
+    <div className="grid gap-3 sm:grid-cols-3 mt-1">
+      {cards.map((c) => {
+        const active = value === c.id
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => !disabled && onChange(c.id)}
+            disabled={disabled}
+            className={[
+              'text-left rounded-lg border p-4 transition-all',
+              active
+                ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20'
+                : 'border-surface-border bg-surface-raised hover:border-brand-300',
+              disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+            ].join(' ')}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="font-semibold text-ink leading-tight">{c.title}</div>
+              {c.badge && (
+                <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-brand-500 text-ink-invert whitespace-nowrap shrink-0">
+                  {c.badge}
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-ink-muted leading-snug">{c.body}</p>
+            <p className="mt-2 text-xs text-ink-subtle italic leading-snug">{c.example}</p>
+            <div className="mt-3 pt-2 border-t border-surface-border/60 text-[10px] uppercase tracking-wider text-ink-subtle">
+              ML-метод: <span className="font-mono normal-case">{c.techName}</span>
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }
