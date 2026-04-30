@@ -29,7 +29,7 @@ import { errorMessage } from '../../shared/api/client'
 
 // Business-regulator UI state — what the sliders and toggles look like to
 // the user. Each entry maps back to one or more dotted config keys.
-type Objective = 'mse' | 'mae' | 'tweedie'
+type Objective = 'ensemble' | 'mse' | 'mae' | 'tweedie'
 
 interface RegulatorState {
   horizon:         number      // 1–365
@@ -52,7 +52,7 @@ interface RegulatorState {
 
 const DEFAULTS: RegulatorState = {
   horizon:         14,
-  objective:       'tweedie',
+  objective:       'ensemble',
   historyWeight:   55,
   seasonalStrength:70,
   holidaysOn:      true,
@@ -118,7 +118,7 @@ function overrideToState(raw: Record<string, any>): RegulatorState {
                    84
   const rawObj = raw.model?.objective
   const objective: Objective =
-    rawObj === 'mse' || rawObj === 'mae' || rawObj === 'tweedie'
+    rawObj === 'ensemble' || rawObj === 'mse' || rawObj === 'mae' || rawObj === 'tweedie'
       ? rawObj
       : DEFAULTS.objective
   return {
@@ -468,11 +468,11 @@ function SettingsContent({
 //  UI primitives
 // ═════════════════════════════════════════════════════════════════════════
 
-// Card-based picker for the loss objective. The actual ML choice
-// (Tweedie / MAE / MSE) is hidden behind business-language labels —
-// "what does your product catalogue look like" instead of "pick a
-// distribution family". Tech name shown small at the bottom for
-// transparency, not for primary recognition.
+// Card-based picker for the loss objective. ML jargon (Tweedie/MAE/
+// MSE/Ensemble) is hidden behind business-language labels. The new
+// default — "Умный" — trains all three children and blends them per
+// SKU; the manual options stay accessible under "Расширенные настройки"
+// for users who know what they're doing.
 function ObjectivePicker({
   value,
   onChange,
@@ -482,10 +482,15 @@ function ObjectivePicker({
   onChange: (v: Objective) => void
   disabled?: boolean
 }) {
-  const cards: Array<{
+  // Auto-expand the manual block when the user has already chosen a
+  // manual option — no point hiding their current selection behind
+  // a "show advanced" link.
+  const [manualOpen, setManualOpen] = useState(value !== 'ensemble')
+  const isSmart = value === 'ensemble'
+
+  const manual: Array<{
     id: Objective
     title: string
-    badge?: string
     body: string
     example: string
     techName: string
@@ -493,7 +498,6 @@ function ObjectivePicker({
     {
       id: 'tweedie',
       title: 'Универсальный',
-      badge: 'Рекомендуется',
       body: 'Подходит большинству магазинов. Хорошо работает когда часть товаров продаётся часто, а часть — редко или с длинными перерывами.',
       example: 'Например: смешанный каталог одежды, товары для дома, продукты с разной популярностью.',
       techName: 'Tweedie',
@@ -513,40 +517,92 @@ function ObjectivePicker({
       techName: 'MSE',
     },
   ]
+
   return (
-    <div className="grid gap-3 sm:grid-cols-3 mt-1">
-      {cards.map((c) => {
-        const active = value === c.id
-        return (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => !disabled && onChange(c.id)}
-            disabled={disabled}
-            className={[
-              'text-left rounded-lg border p-4 transition-all',
-              active
-                ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20'
-                : 'border-surface-border bg-surface-raised hover:border-brand-300',
-              disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
-            ].join(' ')}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="font-semibold text-ink leading-tight">{c.title}</div>
-              {c.badge && (
-                <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-brand-500 text-ink-invert whitespace-nowrap shrink-0">
-                  {c.badge}
-                </span>
-              )}
+    <div className="space-y-3 mt-1">
+      {/* ── Hero: Smart / Ensemble ─────────────────────────── */}
+      <button
+        type="button"
+        onClick={() => !disabled && onChange('ensemble')}
+        disabled={disabled}
+        className={[
+          'w-full text-left rounded-lg border p-5 transition-all',
+          isSmart
+            ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20'
+            : 'border-surface-border bg-surface-raised hover:border-brand-300',
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+        ].join(' ')}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-ink text-base">
+                Умный — модель сама подберёт
+              </span>
+              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-brand-500 text-ink-invert whitespace-nowrap">
+                Рекомендуется
+              </span>
             </div>
-            <p className="mt-2 text-xs text-ink-muted leading-snug">{c.body}</p>
-            <p className="mt-2 text-xs text-ink-subtle italic leading-snug">{c.example}</p>
-            <div className="mt-3 pt-2 border-t border-surface-border/60 text-[10px] uppercase tracking-wider text-ink-subtle">
-              ML-метод: <span className="font-mono normal-case">{c.techName}</span>
+            <p className="mt-2 text-sm text-ink-muted leading-snug">
+              Система обучает три модели сразу (для частых, равномерных и дорогих товаров)
+              и для каждого артикула отдельно подбирает ту, которая работает лучше всего на
+              последних 4 неделях. Подходит абсолютному большинству каталогов.
+            </p>
+            <p className="mt-2 text-xs text-ink-subtle italic leading-snug">
+              Обучение займёт примерно в 3 раза дольше, но точность прогноза выше — это уже
+              не компромисс, а лучший выбор для каждого товара.
+            </p>
+          </div>
+          {isSmart && (
+            <div className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-ink-invert text-sm">
+              ✓
             </div>
-          </button>
-        )
-      })}
+          )}
+        </div>
+        <div className="mt-3 pt-2 border-t border-surface-border/60 text-[10px] uppercase tracking-wider text-ink-subtle">
+          ML-метод: <span className="font-mono normal-case">Ensemble (Tweedie + MAE + MSE)</span>
+        </div>
+      </button>
+
+      {/* ── Toggle: advanced ────────────────────────────────── */}
+      <button
+        type="button"
+        onClick={() => setManualOpen((v) => !v)}
+        className="text-xs text-ink-muted hover:text-ink underline-offset-2 hover:underline"
+      >
+        {manualOpen ? '↑ Скрыть ручную настройку' : '↓ Расширенные настройки — выбрать метод вручную'}
+      </button>
+
+      {/* ── Manual options ──────────────────────────────────── */}
+      {manualOpen && (
+        <div className="grid gap-3 sm:grid-cols-3 pt-1">
+          {manual.map((c) => {
+            const active = value === c.id
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => !disabled && onChange(c.id)}
+                disabled={disabled}
+                className={[
+                  'text-left rounded-lg border p-4 transition-all',
+                  active
+                    ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20'
+                    : 'border-surface-border bg-surface-raised hover:border-brand-300',
+                  disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                ].join(' ')}
+              >
+                <div className="font-semibold text-ink leading-tight">{c.title}</div>
+                <p className="mt-2 text-xs text-ink-muted leading-snug">{c.body}</p>
+                <p className="mt-2 text-xs text-ink-subtle italic leading-snug">{c.example}</p>
+                <div className="mt-3 pt-2 border-t border-surface-border/60 text-[10px] uppercase tracking-wider text-ink-subtle">
+                  ML-метод: <span className="font-mono normal-case">{c.techName}</span>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
