@@ -29,8 +29,14 @@ import { errorMessage } from '../../shared/api/client'
 
 // Business-regulator UI state — what the sliders and toggles look like to
 // the user. Each entry maps back to one or more dotted config keys.
+type Objective = 'mse' | 'mae' | 'tweedie'
+
 interface RegulatorState {
   horizon:         number      // 1–365
+  // Loss objective the model is trained against. Plan-tier defaults
+  // backfill this on the server (Free→mse, Start/Business→tweedie),
+  // explicit user choice always wins.
+  objective:       Objective
   historyWeight:   number      // 0–100, "вес истории" — lower = fast reaction
   seasonalStrength:number      // 0–100, "сезонный коэффициент"
   holidaysOn:      boolean
@@ -46,6 +52,7 @@ interface RegulatorState {
 
 const DEFAULTS: RegulatorState = {
   horizon:         14,
+  objective:       'tweedie',
   historyWeight:   55,
   seasonalStrength:70,
   holidaysOn:      true,
@@ -78,7 +85,10 @@ function stateToOverride(s: RegulatorState): Record<string, any> {
     s.historyWeight < 66 ? [1, 7, 14] :
                            [1, 7, 14, 28]
   return {
-    model: { horizon: s.horizon },
+    model: {
+      horizon: s.horizon,
+      objective: s.objective,
+    },
     features: {
       rolling_windows: windows,
       lags,
@@ -106,8 +116,14 @@ function overrideToState(raw: Record<string, any>): RegulatorState {
     wind[0] <= 3 ? 16 :
     wind[0] <= 7 ? 50 :
                    84
+  const rawObj = raw.model?.objective
+  const objective: Objective =
+    rawObj === 'mse' || rawObj === 'mae' || rawObj === 'tweedie'
+      ? rawObj
+      : DEFAULTS.objective
   return {
     horizon:          raw.model?.horizon          ?? DEFAULTS.horizon,
+    objective,
     historyWeight:    hist,
     seasonalStrength: DEFAULTS.seasonalStrength,  // currently not round-tripped
     holidaysOn:       features.holidays?.enabled  ?? DEFAULTS.holidaysOn,
@@ -293,8 +309,8 @@ function SettingsContent({
     <div className="grid gap-6 lg:grid-cols-12">
       {/* Left — settings */}
       <div className="lg:col-span-7 space-y-6">
-        <Section title="Горизонт прогноза" eyebrow="— 01">
-          <Field label="Дней вперёд" hint="на сколько дней строить прогноз">
+        <Section title="Параметры обучения" eyebrow="— 01">
+          <Field label="Горизонт (дней вперёд)" hint="на сколько дней строить прогноз">
             <input
               type="number"
               min={1}
@@ -304,6 +320,22 @@ function SettingsContent({
               onChange={(e) => update('horizon', Math.max(1, Number(e.target.value) || 1))}
               disabled={!canEdit('horizon')}
             />
+          </Field>
+          <Field
+            label="Метод обучения модели"
+            hint="как модель измеряет свою ошибку при обучении"
+          >
+            <select
+              className="input max-w-[280px]"
+              value={state.objective}
+              onChange={(e) => update('objective', e.target.value as Objective)}
+              disabled={!canEdit('objective')}
+            >
+              <option value="tweedie">Tweedie — рекомендуется для розницы</option>
+              <option value="mae">MAE — равные веса всем ошибкам</option>
+              <option value="mse">MSE — классика, штрафует крупные ошибки</option>
+            </select>
+            <ObjectiveExplainer choice={state.objective} />
           </Field>
         </Section>
 
@@ -441,6 +473,20 @@ function SettingsContent({
 // ═════════════════════════════════════════════════════════════════════════
 //  UI primitives
 // ═════════════════════════════════════════════════════════════════════════
+
+function ObjectiveExplainer({ choice }: { choice: Objective }) {
+  const text =
+    choice === 'tweedie'
+      ? 'Лучше всего для типичной розницы: подходит для товаров с редкими продажами и днями нулевого спроса. Используется в Amazon Forecast.'
+      : choice === 'mae'
+        ? 'Простая средняя ошибка по абсолютному значению. Все промахи весят одинаково — устойчиво к выбросам, но не учитывает форму распределения спроса.'
+        : 'Минимизирует квадрат ошибки. Подходит когда продажи распределены гладко и без длинных пауз. Сильнее штрафует крупные промахи.'
+  return (
+    <div className="mt-2 max-w-[280px] rounded-md bg-surface-muted/60 px-3 py-2 text-xs text-ink-muted leading-snug">
+      {text}
+    </div>
+  )
+}
 
 function Section({
   title, eyebrow, children,
