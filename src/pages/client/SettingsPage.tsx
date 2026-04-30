@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 
 import { useAuthStore } from '../../features/auth/store'
 import { configApi } from '../../features/config/api'
+import { notificationsApi } from '../../features/notifications/api'
 import { useUsage } from '../../features/plans/useUsage'
 import {
   LockOverlay,
@@ -452,6 +453,10 @@ function SettingsContent({
             </div>
           )}
         </Section>
+
+        <Section title="Уведомления" eyebrow="— 04">
+          <NotificationsBlock />
+        </Section>
       </div>
 
       {/* Right — live preview (sticky) */}
@@ -473,6 +478,109 @@ function SettingsContent({
 // default — "Умный" — trains all three children and blends them per
 // SKU; the manual options stay accessible under "Расширенные настройки"
 // for users who know what they're doing.
+function NotificationsBlock() {
+  const clientId = useAuthStore((s) => s.clientId)!
+  const qc = useQueryClient()
+  const { data: status, isLoading } = useQuery({
+    queryKey: ['telegram-status', clientId],
+    queryFn:  () => notificationsApi.getTelegramStatus(clientId),
+  })
+
+  const linkMut = useMutation({
+    mutationFn: () => notificationsApi.createLinkToken(clientId),
+    onSuccess: (data) => {
+      // Open the bot link in a new tab. The user clicks Start there,
+      // bot's poll loop receives /start <token>, stores chat_id, and
+      // the next status refetch will show "Привязано".
+      window.open(data.url, '_blank', 'noopener')
+      toast(
+        'Откройте бота и нажмите Start. Через несколько секунд статус обновится.',
+        { icon: '✈', duration: 6000 },
+      )
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Не удалось создать ссылку')),
+  })
+
+  const unlinkMut = useMutation({
+    mutationFn: () => notificationsApi.unlink(clientId),
+    onSuccess: () => {
+      toast.success('Telegram отвязан')
+      qc.invalidateQueries({ queryKey: ['telegram-status', clientId] })
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Не удалось отвязать')),
+  })
+
+  // Light polling so the status flips to "Привязано" within a few
+  // seconds after the user finishes the bot dialog.
+  useEffect(() => {
+    if (status?.linked) return
+    const id = setInterval(
+      () => qc.invalidateQueries({ queryKey: ['telegram-status', clientId] }),
+      5000,
+    )
+    return () => clearInterval(id)
+  }, [status?.linked, clientId, qc])
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md bg-surface-muted/40 px-4 py-3">
+        <div className="flex items-start gap-3">
+          <div className="text-2xl leading-none">✉</div>
+          <div className="flex-1">
+            <div className="font-medium text-ink">Email — всегда включён</div>
+            <p className="text-xs text-ink-muted mt-0.5">
+              Письмо о завершении обучения приходит на адрес вашего аккаунта.
+              Работает даже если вкладка браузера закрыта.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-md border border-surface-border p-4">
+        <div className="flex items-start gap-3">
+          <div className="text-2xl leading-none">✈</div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="font-medium text-ink">Telegram</div>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Уведомления приходят в личные сообщения от бота{' '}
+                  <span className="font-mono">@{status?.bot ?? 'syntheicbot'}</span>
+                  {'.'} Удобнее всего — открыть Telegram прямо с телефона.
+                </p>
+              </div>
+              {isLoading ? (
+                <span className="text-xs text-ink-subtle">…</span>
+              ) : status?.linked ? (
+                <div className="flex items-center gap-2">
+                  <span className="badge-success text-xs">Привязано</span>
+                  <button
+                    type="button"
+                    onClick={() => unlinkMut.mutate()}
+                    disabled={unlinkMut.isPending}
+                    className="text-xs text-ink-subtle hover:text-danger underline-offset-2 hover:underline"
+                  >
+                    Отвязать
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => linkMut.mutate()}
+                  disabled={linkMut.isPending}
+                  className="btn-primary text-sm whitespace-nowrap"
+                >
+                  {linkMut.isPending ? 'Готовлю ссылку…' : 'Привязать Telegram →'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ObjectivePicker({
   value,
   onChange,
