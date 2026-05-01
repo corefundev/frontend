@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
@@ -437,20 +437,37 @@ function TimingRow({
 
   // Estimated remaining seconds.
   //
-  // Naive algorithm: total ≈ elapsed × (total_steps / current_step).
-  // That implicitly assumes every step costs the same. Reality: the
-  // pipeline has 9 steps but ~90% of time is in steps 5-7 (HPO,
-  // walk-forward, ensemble fit). On a long step the naive ETA
-  // GROWS as elapsed grows — counterintuitive and wrong.
+  // Two-stage logic so the counter never grows on a wall-clock tick:
   //
-  // The fix: anchor expected_total at the average of past finished
-  // runs (good prior — same dataset shape, same plan, same profile).
-  // ETA = expected_total - elapsed → naturally counts down with the
-  // wall clock. Linear projection is used only when the run is
-  // ALREADY exceeding the past average (then ETA legitimately grows
-  // — "сегодня медленнее обычного").
+  // 1. RECALIBRATE only when the worker reports a NEW step (or on
+  //    first sight of progress). At that moment we compute a fresh
+  //    estimate from elapsed + step + past-runs prior, store it as
+  //    a "base" with timestamp.
+  //
+  // 2. BETWEEN step transitions, the displayed ETA is just
+  //    base_remaining − (now − base_timestamp). Pure countdown,
+  //    monotonically decreasing.
+  //
+  // Why not the naive elapsed × (total/step − 1) every tick:
+  // when a step lingers (HPO, walk-forward), elapsed keeps growing
+  // while step stays put → projection inflates with the clock and
+  // remaining GROWS. Counterintuitive: "I waited 1 more minute,
+  // why is the ETA bigger?". Locking the estimate between step
+  // events fixes that.
+  //
+  // The base estimate uses max(past_avg, linear_projection) so a
+  // genuinely-slower-than-usual run can update upward — but only
+  // at a step transition, not by mere wall-clock.
+  const baseRemainingRef = useRef<number | null>(null)
+  const baseTimestampRef = useRef<number>(Date.now())
+  const lastStepRef      = useRef<number>(-1)
+
   const remainingSec = (() => {
-    if (!started || started === 'None') return null
+    if (!started || started === 'None') {
+      lastStepRef.current = -1
+      baseRemainingRef.current = null
+      return null
+    }
     let startedAt: number
     try { startedAt = parseISO(started).getTime() }
     catch { return null }
@@ -460,24 +477,29 @@ function TimingRow({
     const step  = progress?.step ?? 0
     const total = progress?.total ?? 9
 
-    // Linear projection — only meaningful when step is reported.
-    const linearTotal =
-      step > 0 && total > 0 ? elapsedSec * (total / step) : null
+    // Recalibrate base only on step change (or first observation).
+    if (step !== lastStepRef.current) {
+      lastStepRef.current = step
+      baseTimestampRef.current = Date.now()
 
-    // Pick the best estimate of total time. Past avg wins when
-    // the run is on schedule; linear wins when current run is
-    // slower than past.
-    let expectedTotal: number | null = null
-    if (avgPastSec != null && linearTotal != null) {
-      expectedTotal = Math.max(avgPastSec, linearTotal)
-    } else if (avgPastSec != null) {
-      expectedTotal = avgPastSec
-    } else if (linearTotal != null) {
-      expectedTotal = linearTotal
+      const linearTotal =
+        step > 0 && total > 0 ? elapsedSec * (total / step) : null
+      let expectedTotal: number | null = null
+      if (avgPastSec != null && linearTotal != null) {
+        expectedTotal = Math.max(avgPastSec, linearTotal)
+      } else if (avgPastSec != null) {
+        expectedTotal = avgPastSec
+      } else if (linearTotal != null) {
+        expectedTotal = linearTotal
+      }
+      baseRemainingRef.current =
+        expectedTotal != null ? Math.max(0, expectedTotal - elapsedSec) : null
     }
-    if (expectedTotal == null) return null
 
-    return Math.max(0, expectedTotal - elapsedSec)
+    // Steady-state: countdown from the locked base.
+    if (baseRemainingRef.current == null) return null
+    const sinceBaseSec = (Date.now() - baseTimestampRef.current) / 1000
+    return Math.max(0, baseRemainingRef.current - sinceBaseSec)
   })()
 
   const etaText = (() => {
