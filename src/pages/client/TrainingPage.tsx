@@ -320,11 +320,12 @@ export default function TrainingPage() {
           {jobStatus && jobStatus.status !== 'failed' && (
             <>
               <ProgressBar progress={jobStatus.progress} status={jobStatus.status} />
-              <div className="grid sm:grid-cols-3 gap-3 text-sm">
-                <KV label="Поставлена" value={safeFormat(jobStatus.enqueued)} />
-                <KV label="Начата"     value={safeFormat(jobStatus.started)} />
-                <KV label="Завершена"  value={safeFormat(jobStatus.ended)} />
-              </div>
+              <TimingRow
+                started={jobStatus.started}
+                ended={jobStatus.ended}
+                progress={jobStatus.progress}
+                pastRuns={runs}
+              />
             </>
           )}
 
@@ -403,6 +404,94 @@ function formatDuration(sec: number): string {
   return m === 0 ? `${s} сек` : `${m} мин ${s.toString().padStart(2, '0')} сек`
 }
 
+function TimingRow({
+  started,
+  ended,
+  progress,
+  pastRuns,
+}: {
+  started:  string
+  ended:    string
+  progress: JobProgress | null
+  pastRuns: TrainingRun[]
+}) {
+  // Tick "now" every 30s so the ETA stays accurate without
+  // re-rendering the whole page.
+  const [, forceTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => forceTick((t) => t + 1), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Average elapsed across past finished runs — our prior on how
+  // long this client's trainings usually take. Falls back to a
+  // sane default if there's no history yet (first training).
+  const avgPastSec = useMemo(() => {
+    const finished = pastRuns.filter(
+      (r) => r.status === 'finished' && typeof r.elapsed_sec === 'number',
+    )
+    if (finished.length === 0) return null
+    const sum = finished.reduce<number>((s, r) => s + (r.elapsed_sec ?? 0), 0)
+    return sum / finished.length
+  }, [pastRuns])
+
+  // Estimated remaining seconds.
+  // Strategy:
+  //   1. If we know step/total + start time, project from current
+  //      rate: total_sec ≈ elapsed / (step/total).
+  //   2. Otherwise use the avg of past runs minus elapsed-so-far.
+  //   3. Otherwise show "—".
+  const remainingSec = (() => {
+    if (!started || started === 'None') return null
+    let startedAt: number
+    try { startedAt = parseISO(started).getTime() }
+    catch { return null }
+    const elapsedMs = Date.now() - startedAt
+    if (elapsedMs < 0) return null
+    const elapsedSec = elapsedMs / 1000
+    const step  = progress?.step ?? 0
+    const total = progress?.total ?? 9
+    if (step > 0 && total > 0) {
+      const projected = elapsedSec / (step / total)
+      return Math.max(0, projected - elapsedSec)
+    }
+    if (avgPastSec != null) {
+      return Math.max(0, avgPastSec - elapsedSec)
+    }
+    return null
+  })()
+
+  const etaText = (() => {
+    if (remainingSec == null) return '—'
+    if (remainingSec < 60) return 'осталось < 1 мин'
+    const min = Math.round(remainingSec / 60)
+    return `осталось ~${min} мин`
+  })()
+
+  const etaArrival = (() => {
+    if (remainingSec == null) return null
+    const arrival = new Date(Date.now() + remainingSec * 1000)
+    return format(arrival, 'HH:mm', { locale: ru })
+  })()
+
+  return (
+    <div className="grid sm:grid-cols-3 gap-3 text-sm">
+      <KV label="Начата" value={safeFormat(started)} />
+      <div>
+        <div className="text-xs uppercase text-ink-subtle">Прогноз</div>
+        <div className="font-mono text-ink">{etaText}</div>
+        {etaArrival && (
+          <div className="text-xs text-ink-subtle mt-0.5">
+            ≈ {etaArrival}
+          </div>
+        )}
+      </div>
+      <KV label="Завершена" value={safeFormat(ended)} />
+    </div>
+  )
+}
+
+
 function ProgressBar({
   progress,
   status,
@@ -417,19 +506,47 @@ function ProgressBar({
   const label = progress?.label
     ?? (status === 'queued' ? 'Ожидание свободного воркера…' : 'Запуск…')
 
+  // While the backend hasn't reported a step yet (queued, or just-
+  // started), we use an indeterminate "marching" bar so the UI doesn't
+  // look frozen. Once a step lands, we switch to a determinate fill
+  // that grows with progress; a soft moving stripe pattern keeps the
+  // whole thing visually alive even when the percentage is stable.
+  const indeterminate = pct === 0
+
   return (
     <div className="mb-4">
       <div className="flex items-baseline justify-between mb-1.5 text-sm">
-        <span className="text-ink">{label}</span>
+        {/* Tiny pulsing dot so the eye picks up "still running"
+            even before reading the label. */}
+        <span className="flex items-center gap-2 text-ink">
+          <span
+            aria-hidden
+            className="h-1.5 w-1.5 rounded-full bg-brand-500 animate-ping-slow"
+          />
+          <span>{label}</span>
+        </span>
         <span className="font-mono text-xs text-ink-muted tabular-nums">
-          {step}/{total} · {pct}%
+          {indeterminate ? '…' : `${step}/${total} · ${pct}%`}
         </span>
       </div>
-      <div className="h-2 w-full rounded-full bg-surface-muted overflow-hidden">
-        <div
-          className="h-full bg-brand-500 transition-[width] duration-500 ease-out"
-          style={{ width: `${pct}%` }}
-        />
+      <div className="relative h-2 w-full rounded-full bg-surface-muted overflow-hidden">
+        {indeterminate ? (
+          // Indeterminate: a slim chip slides across the track.
+          <div
+            className="absolute top-0 h-full w-1/3 bg-brand-500/80 rounded-full animate-progress-indeterminate"
+            aria-label="идёт подготовка"
+          />
+        ) : (
+          <div
+            className="relative h-full bg-brand-500 transition-[width] duration-500 ease-out overflow-hidden"
+            style={{ width: `${pct}%` }}
+          >
+            {/* Marching diagonal stripes inside the filled portion —
+                guarantees visible movement even when step lingers
+                (e.g. 5-min HPO at Step 5/9). */}
+            <div className="absolute inset-0 progress-stripes opacity-30" />
+          </div>
+        )}
       </div>
     </div>
   )

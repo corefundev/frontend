@@ -232,3 +232,19 @@ body {
       0 2px 6px rgba(124,93,10,0.35);
   }
 }
+
+/* Animated diagonal stripes for the determinate progress fill —
+   pure CSS, no JS overhead, plays as long as the element is mounted. */
+@layer utilities {
+  .progress-stripes {
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.45) 0px,
+      rgba(255, 255, 255, 0.45) 8px,
+      transparent             8px,
+      transparent             20px
+    );
+    background-size: 28px 28px;
+    animation: progress-stripes 0.9s linear infinite;
+  }
+}

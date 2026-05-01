@@ -153,11 +153,28 @@ export default {
           '0%':   { opacity: '0', transform: 'rotate(-4deg) scale(0.92)' },
           '100%': { opacity: '1', transform: 'rotate(-4deg) scale(1)' },
         },
+        // Progress-bar lifesigns. Slow ping for the "still working"
+        // dot; sliding chip for indeterminate state; marching
+        // diagonal stripes for the determinate fill.
+        'ping-slow': {
+          '0%, 100%': { transform: 'scale(1)',   opacity: '1' },
+          '50%':      { transform: 'scale(1.4)', opacity: '0.5' },
+        },
+        'progress-indeterminate': {
+          '0%':   { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(400%)' },
+        },
+        'progress-stripes': {
+          '0%':   { backgroundPosition: '0 0' },
+          '100%': { backgroundPosition: '40px 0' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 200ms ease-out',
         'rise':    'rise 360ms cubic-bezier(0.22, 1, 0.36, 1)',
         'seal-in': 'seal-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both',
+        'ping-slow':              'ping-slow 1.4s ease-in-out infinite',
+        'progress-indeterminate': 'progress-indeterminate 1.6s ease-in-out infinite',
       },
     },
   },
