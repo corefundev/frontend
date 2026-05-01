@@ -321,6 +321,7 @@ export default function TrainingPage() {
             <>
               <ProgressBar progress={jobStatus.progress} status={jobStatus.status} />
               <TimingRow
+                jobId={jobId}
                 started={jobStatus.started}
                 ended={jobStatus.ended}
                 progress={jobStatus.progress}
@@ -405,11 +406,13 @@ function formatDuration(sec: number): string {
 }
 
 function TimingRow({
+  jobId,
   started,
   ended,
   progress,
   pastRuns,
 }: {
+  jobId:    string | null
   started:  string
   ended:    string
   progress: JobProgress | null
@@ -442,7 +445,8 @@ function TimingRow({
   // 1. RECALIBRATE only when the worker reports a NEW step (or on
   //    first sight of progress). At that moment we compute a fresh
   //    estimate from elapsed + step + past-runs prior, store it as
-  //    a "base" with timestamp.
+  //    a "base" with timestamp. Persisted in localStorage keyed by
+  //    jobId so a Cmd+R doesn't reset the lock.
   //
   // 2. BETWEEN step transitions, the displayed ETA is just
   //    base_remaining − (now − base_timestamp). Pure countdown,
@@ -451,16 +455,41 @@ function TimingRow({
   // Why not the naive elapsed × (total/step − 1) every tick:
   // when a step lingers (HPO, walk-forward), elapsed keeps growing
   // while step stays put → projection inflates with the clock and
-  // remaining GROWS. Counterintuitive: "I waited 1 more minute,
-  // why is the ETA bigger?". Locking the estimate between step
-  // events fixes that.
-  //
-  // The base estimate uses max(past_avg, linear_projection) so a
-  // genuinely-slower-than-usual run can update upward — but only
-  // at a step transition, not by mere wall-clock.
+  // remaining GROWS. Same story on a fresh page mount if we don't
+  // persist — that's why localStorage matters.
+  const storageKey = jobId ? `eta-base:${jobId}` : null
+
+  // Restore once when jobId becomes known. Defaults are fresh
+  // refs that get filled on first observation if nothing in storage.
   const baseRemainingRef = useRef<number | null>(null)
   const baseTimestampRef = useRef<number>(Date.now())
   const lastStepRef      = useRef<number>(-1)
+
+  // Hydrate from localStorage on jobId change. Doing this in an
+  // effect so refs match the active job before the first render
+  // computes the displayed value.
+  useEffect(() => {
+    if (!storageKey) {
+      baseRemainingRef.current = null
+      baseTimestampRef.current = Date.now()
+      lastStepRef.current = -1
+      return
+    }
+    try {
+      const raw = localStorage.getItem(storageKey)
+      if (!raw) return
+      const saved = JSON.parse(raw) as {
+        step: number
+        baseRemaining: number | null
+        baseTimestamp: number
+      }
+      if (typeof saved.step === 'number') lastStepRef.current = saved.step
+      if (typeof saved.baseTimestamp === 'number') baseTimestampRef.current = saved.baseTimestamp
+      baseRemainingRef.current = saved.baseRemaining ?? null
+    } catch {
+      // Ignore — a corrupt entry just means we recalibrate now.
+    }
+  }, [storageKey])
 
   const remainingSec = (() => {
     if (!started || started === 'None') {
@@ -477,7 +506,9 @@ function TimingRow({
     const step  = progress?.step ?? 0
     const total = progress?.total ?? 9
 
-    // Recalibrate base only on step change (or first observation).
+    // Recalibrate base only on step change (or first observation
+    // for this jobId — if storage was empty, lastStepRef started
+    // at -1 and any reported step counts as a change).
     if (step !== lastStepRef.current) {
       lastStepRef.current = step
       baseTimestampRef.current = Date.now()
@@ -494,6 +525,19 @@ function TimingRow({
       }
       baseRemainingRef.current =
         expectedTotal != null ? Math.max(0, expectedTotal - elapsedSec) : null
+
+      // Persist so a page reload doesn't blow the lock away.
+      if (storageKey) {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({
+            step,
+            baseRemaining: baseRemainingRef.current,
+            baseTimestamp: baseTimestampRef.current,
+          }))
+        } catch {
+          // Quota / private mode — ignore, we just lose persistence.
+        }
+      }
     }
 
     // Steady-state: countdown from the locked base.
@@ -501,6 +545,14 @@ function TimingRow({
     const sinceBaseSec = (Date.now() - baseTimestampRef.current) / 1000
     return Math.max(0, baseRemainingRef.current - sinceBaseSec)
   })()
+
+  // Tidy up storage when this job hits a terminal state.
+  useEffect(() => {
+    if (!storageKey) return
+    if (ended && ended !== 'None') {
+      try { localStorage.removeItem(storageKey) } catch {}
+    }
+  }, [storageKey, ended])
 
   const etaText = (() => {
     if (remainingSec == null) return '—'
