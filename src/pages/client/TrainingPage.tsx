@@ -436,11 +436,19 @@ function TimingRow({
   }, [pastRuns])
 
   // Estimated remaining seconds.
-  // Strategy:
-  //   1. If we know step/total + start time, project from current
-  //      rate: total_sec ≈ elapsed / (step/total).
-  //   2. Otherwise use the avg of past runs minus elapsed-so-far.
-  //   3. Otherwise show "—".
+  //
+  // Naive algorithm: total ≈ elapsed × (total_steps / current_step).
+  // That implicitly assumes every step costs the same. Reality: the
+  // pipeline has 9 steps but ~90% of time is in steps 5-7 (HPO,
+  // walk-forward, ensemble fit). On a long step the naive ETA
+  // GROWS as elapsed grows — counterintuitive and wrong.
+  //
+  // The fix: anchor expected_total at the average of past finished
+  // runs (good prior — same dataset shape, same plan, same profile).
+  // ETA = expected_total - elapsed → naturally counts down with the
+  // wall clock. Linear projection is used only when the run is
+  // ALREADY exceeding the past average (then ETA legitimately grows
+  // — "сегодня медленнее обычного").
   const remainingSec = (() => {
     if (!started || started === 'None') return null
     let startedAt: number
@@ -451,14 +459,25 @@ function TimingRow({
     const elapsedSec = elapsedMs / 1000
     const step  = progress?.step ?? 0
     const total = progress?.total ?? 9
-    if (step > 0 && total > 0) {
-      const projected = elapsedSec / (step / total)
-      return Math.max(0, projected - elapsedSec)
+
+    // Linear projection — only meaningful when step is reported.
+    const linearTotal =
+      step > 0 && total > 0 ? elapsedSec * (total / step) : null
+
+    // Pick the best estimate of total time. Past avg wins when
+    // the run is on schedule; linear wins when current run is
+    // slower than past.
+    let expectedTotal: number | null = null
+    if (avgPastSec != null && linearTotal != null) {
+      expectedTotal = Math.max(avgPastSec, linearTotal)
+    } else if (avgPastSec != null) {
+      expectedTotal = avgPastSec
+    } else if (linearTotal != null) {
+      expectedTotal = linearTotal
     }
-    if (avgPastSec != null) {
-      return Math.max(0, avgPastSec - elapsedSec)
-    }
-    return null
+    if (expectedTotal == null) return null
+
+    return Math.max(0, expectedTotal - elapsedSec)
   })()
 
   const etaText = (() => {
