@@ -126,17 +126,49 @@ export default function TrainingPage() {
   })
   const runs = history?.runs ?? []
 
+  // Failed jobs the user has dismissed via × — persisted across reloads
+  // so the resume-active-job effect doesn't grab a stale `running` row
+  // (which can linger in DB if the worker died before the FAILED update
+  // landed) and re-show the red frame the user just closed.
+  const dismissedKey = `dismissedFailedJobs:${clientId}`
+  const [dismissedJobs, setDismissedJobs] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(dismissedKey)
+      if (!raw) return new Set()
+      return new Set(JSON.parse(raw) as string[])
+    } catch {
+      return new Set()
+    }
+  })
+  const dismissJob = (id: string) => {
+    setDismissedJobs((prev) => {
+      const next = new Set(prev)
+      next.add(id)
+      try {
+        localStorage.setItem(dismissedKey, JSON.stringify([...next]))
+      } catch {
+        /* quota / Safari private — best-effort only */
+      }
+      return next
+    })
+    setJobId(null)
+  }
+
   // Resume an in-flight job after a page reload. Local state lost the
   // jobId, but the server still has a `running`/`queued` row with the
   // RQ job_id — pick it up and re-attach polling so the progress bar
-  // reappears instead of looking like training was lost.
+  // reappears instead of looking like training was lost. Skip any job
+  // the user has already dismissed.
   useEffect(() => {
     if (jobId) return
     const active = runs.find(
-      (r) => (r.status === 'running' || r.status === 'queued') && r.job_id,
+      (r) =>
+        (r.status === 'running' || r.status === 'queued') &&
+        r.job_id != null &&
+        !dismissedJobs.has(r.job_id),
     )
     if (active?.job_id) setJobId(active.job_id)
-  }, [runs, jobId])
+  }, [runs, jobId, dismissedJobs])
 
   // Most recent successful training that used a different upload from
   // the one currently selected — that's the one we'd merge with.
@@ -308,15 +340,16 @@ export default function TrainingPage() {
                   {STATUS_LABEL[jobStatus.status] ?? jobStatus.status}
                 </span>
               )}
-              {/* Dismiss × — only for terminal failed jobs. The frame
-                  used to linger forever after a failure (until the user
-                  started a NEW training, which dropped the stale jobId).
-                  Now the user can clear it themselves. */}
-              {jobStatus?.status === 'failed' && (
+              {/* Dismiss × — only for terminal failed jobs. dismissJob
+                  also persists the jobId so the resume-active-job effect
+                  doesn't re-attach a stale `running` row from the DB
+                  (the worker can die mid-run before the FAILED update
+                  lands, leaving the row in `running` forever). */}
+              {jobStatus?.status === 'failed' && jobId && (
                 <button
                   type="button"
                   aria-label="Скрыть"
-                  onClick={() => setJobId(null)}
+                  onClick={() => dismissJob(jobId)}
                   className="text-ink-subtle hover:text-ink transition-colors text-lg leading-none px-1"
                   title="Скрыть"
                 >
