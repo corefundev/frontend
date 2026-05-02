@@ -219,6 +219,8 @@ function ForecastViewer({
               <ForecastChart
                 dates={dates}
                 values={selected.values.map((v) => v ?? 0)}
+                p10={selected.p10}
+                p90={selected.p90}
               />
 
               {/* Plan-gated explanation panel — same as the old

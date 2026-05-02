@@ -72,9 +72,14 @@ export interface BatchPredictResponse {
 // `values[i]` is the predicted sales for the date at the same index in
 // the response's [first_date..last_date] range. `null` means "no point
 // for this date" — never seen in current backend, included for safety.
+// `p10` / `p90` are the 80% confidence band (added in backend v0.8.26).
+// They may be null per-point when the model lacks quantile sub-models
+// (e.g. fallback) or when the row was produced before the migration.
 export interface ForecastSku {
   sku:    string
   values: (number | null)[]
+  p10?:   (number | null)[]
+  p90?:   (number | null)[]
 }
 
 // GET /clients/{id}/forecasts — produced automatically after every
