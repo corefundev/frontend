@@ -302,11 +302,28 @@ export default function TrainingPage() {
               <div className="text-sm text-ink-muted">Текущая задача</div>
               <div className="font-mono text-xs text-ink-subtle">{jobId}</div>
             </div>
-            {jobStatus && (
-              <span className={STATUS_BADGE[jobStatus.status] ?? 'badge-neutral'}>
-                {STATUS_LABEL[jobStatus.status] ?? jobStatus.status}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {jobStatus && (
+                <span className={STATUS_BADGE[jobStatus.status] ?? 'badge-neutral'}>
+                  {STATUS_LABEL[jobStatus.status] ?? jobStatus.status}
+                </span>
+              )}
+              {/* Dismiss × — only for terminal failed jobs. The frame
+                  used to linger forever after a failure (until the user
+                  started a NEW training, which dropped the stale jobId).
+                  Now the user can clear it themselves. */}
+              {jobStatus?.status === 'failed' && (
+                <button
+                  type="button"
+                  aria-label="Скрыть"
+                  onClick={() => setJobId(null)}
+                  className="text-ink-subtle hover:text-ink transition-colors text-lg leading-none px-1"
+                  title="Скрыть"
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
 
           {jobStatus && jobStatus.status !== 'failed' && (
