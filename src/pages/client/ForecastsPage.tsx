@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
 import { useAuthStore } from '../../features/auth/store'
+import { anomaliesApi, type AnomalyRow } from '../../features/anomalies/api'
 import {
   forecastsApi,
   type ForecastSku,
@@ -99,8 +100,19 @@ function ForecastViewer({
   isStart:  boolean
   planName: string
 }) {
+  const clientId = useAuthStore((s) => s.clientId)!
   const [selectedSku, setSelectedSku] = useState<string>(() => data.skus[0]?.sku ?? '')
   const [search,      setSearch]      = useState('')
+
+  // Anomalies for the selected SKU — fetched lazily and cached per SKU.
+  // Falls back gracefully when the endpoint is empty (no anomalies, or
+  // pre-v0.8.27 training runs without persisted detection).
+  const { data: anomaliesPayload } = useQuery({
+    queryKey: ['anomalies', clientId, selectedSku],
+    queryFn:  () => anomaliesApi.list(clientId, selectedSku || undefined),
+    enabled:  !!selectedSku,
+  })
+  const anomalies: AnomalyRow[] = anomaliesPayload?.anomalies ?? []
 
   // Build the date axis once — every SKU's values array is aligned to
   // it index-by-index.
@@ -231,6 +243,8 @@ function ForecastViewer({
                 plan={isFree ? 'free' : isStart ? 'start' : 'business'}
               />
 
+              <AnomaliesPanel anomalies={anomalies} sku={selected.sku} />
+
               {isFree   && <UpgradeTrigger variant="first-forecast" />}
               {isStart  && <UpgradeTrigger variant="save-scenario" />}
             </>
@@ -254,6 +268,86 @@ function formatDate(iso: string | null): string {
   if (!iso) return '—'
   try { return format(parseISO(iso), 'd MMM yyyy', { locale: ru }) }
   catch { return iso }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  AnomaliesPanel — surfaces sales days the per-SKU IQR detector and the
+//  global IsolationForest both flagged during training. Capped to the last
+//  90 days of history; older flags aren't actionable for the buyer today.
+// ══════════════════════════════════════════════════════════════════════════
+
+function AnomaliesPanel({
+  anomalies,
+  sku,
+}: {
+  anomalies: AnomalyRow[]
+  sku:       string
+}) {
+  const filtered = useMemo(
+    () => anomalies.filter((a) => a.sku === sku),
+    [anomalies, sku],
+  )
+
+  if (filtered.length === 0) {
+    return (
+      <div className="card p-6 sm:p-8">
+        <div className="eyebrow">Аномалии</div>
+        <h3 className="display-em text-brand-700 text-2xl mt-1">
+          Подозрительных дней за последние 90 дней не найдено
+        </h3>
+        <p className="text-sm text-ink-muted mt-3">
+          Модель училась на чистых данных — ни IQR-детектор, ни IsolationForest
+          не пометили продажи этого SKU как выбросы.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card p-6 sm:p-8">
+      <div className="flex items-baseline justify-between gap-4 mb-4">
+        <div>
+          <div className="eyebrow">Аномалии</div>
+          <h3 className="display-em text-brand-700 text-2xl mt-1">
+            {filtered.length}{' '}
+            <span className="text-ink-subtle text-base">{wordEnding(filtered.length, ['день', 'дня', 'дней'])} с выбросами</span>
+          </h3>
+        </div>
+        <span className="text-xs text-ink-subtle">за последние 90 дней</span>
+      </div>
+
+      <p className="text-sm text-ink-muted mb-3">
+        В эти дни фактические продажи сильно отличались от обычного диапазона
+        этого SKU — модель учла их с пониженным весом, чтобы шум не портил
+        прогноз. Стоит проверить, не было ли акции, оверстока или ошибки в данных.
+      </p>
+
+      <ul className="divide-y divide-surface-border -mx-2">
+        {filtered.slice(0, 12).map((a) => (
+          <li key={a.anomaly_date} className="py-2 px-2 flex items-baseline justify-between gap-4">
+            <span className="font-mono text-sm text-ink">{formatDate(a.anomaly_date)}</span>
+            <span className="num font-display text-lg tabular-nums text-terra">
+              {a.value.toFixed(0)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {filtered.length > 12 && (
+        <p className="mt-2 text-xs text-ink-subtle text-center">
+          + ещё {filtered.length - 12}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function wordEnding(n: number, forms: [string, string, string]): string {
+  // Russian plural — 1 день, 2-4 дня, 5+ дней.
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return forms[0]
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms[1]
+  return forms[2]
 }
 
 // ══════════════════════════════════════════════════════════════════════════
