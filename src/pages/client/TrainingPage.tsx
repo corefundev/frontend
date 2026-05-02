@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from '../../features/auth/store'
 import { trainingApi, type JobProgress, type JobStatus, type TrainingRun } from '../../features/training/api'
 import { useJobPolling } from '../../features/training/useJobPolling'
+import { safeFormat, formatDuration } from '../../features/training/format'
 import { uploadsApi, type UploadRecord } from '../../features/uploads/api'
 import { useUsage } from '../../features/plans/useUsage'
 import { errorMessage } from '../../shared/api/client'
@@ -25,15 +26,6 @@ const STATUS_BADGE: Record<JobStatus, string> = {
   finished: 'badge-success',
   failed:   'badge-danger',
   unknown:  'badge-neutral',
-}
-
-function safeFormat(iso: string | null | undefined): string {
-  if (!iso || iso === 'None') return '—'
-  try {
-    return format(parseISO(iso), 'dd MMM yyyy HH:mm', { locale: ru })
-  } catch {
-    return iso
-  }
 }
 
 export default function TrainingPage() {
@@ -342,8 +334,17 @@ export default function TrainingPage() {
         </section>
       )}
 
-      {/* ── Training history ─────────────────────────────────── */}
-      {runs.length > 0 && <HistorySection runs={runs} uploads={uploads} />}
+      {/* ── Link to full history (separate page) ─────────────── */}
+      {runs.length > 0 && (
+        <div className="text-right">
+          <Link
+            to="/app/training/history"
+            className="text-sm text-ink-muted hover:text-ink underline-offset-4 hover:underline"
+          >
+            Открыть полную историю обучений →
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
@@ -396,13 +397,6 @@ function KV({ label, value }: { label: string; value: string }) {
       <div className="font-mono text-ink">{value}</div>
     </div>
   )
-}
-
-function formatDuration(sec: number): string {
-  if (!Number.isFinite(sec) || sec < 0) return '—'
-  const m = Math.floor(sec / 60)
-  const s = Math.round(sec - m * 60)
-  return m === 0 ? `${s} сек` : `${m} мин ${s.toString().padStart(2, '0')} сек`
 }
 
 function TimingRow({
@@ -642,99 +636,6 @@ function ProgressBar({
         )}
       </div>
     </div>
-  )
-}
-
-const RUN_STATUS_LABEL: Record<TrainingRun['status'], string> = {
-  queued:   'В очереди',
-  running:  'Выполняется',
-  finished: 'Готово',
-  failed:   'Ошибка',
-}
-const RUN_STATUS_BADGE: Record<TrainingRun['status'], string> = {
-  queued:   'badge-neutral',
-  running:  'badge-info',
-  finished: 'badge-success',
-  failed:   'badge-danger',
-}
-
-function HistorySection({
-  runs,
-  uploads,
-}: {
-  runs: TrainingRun[]
-  uploads: UploadRecord[]
-}) {
-  // Map upload_id → human filename so the row can show "promo_q1.csv"
-  // instead of an opaque hash. Falls back to the hash if the upload
-  // was deleted.
-  const uploadName = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const u of uploads) map.set(u.upload_id, u.filename)
-    return map
-  }, [uploads])
-
-  return (
-    <section className="card p-5">
-      <div className="flex items-baseline justify-between mb-4">
-        <h2 className="text-sm font-semibold text-ink-muted uppercase tracking-wide">
-          История запусков
-        </h2>
-        <span className="text-xs text-ink-subtle">всего: {runs.length}</span>
-      </div>
-
-      <div className="overflow-x-auto -mx-5 px-5">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs uppercase text-ink-subtle border-b border-surface-border">
-              <th className="text-left py-2 pr-3 font-medium">Когда</th>
-              <th className="text-left py-2 pr-3 font-medium">Датасет</th>
-              <th className="text-left py-2 pr-3 font-medium">Тариф</th>
-              <th className="text-right py-2 pr-3 font-medium">SKU</th>
-              <th className="text-right py-2 pr-3 font-medium">WMAPE</th>
-              <th className="text-right py-2 pr-3 font-medium">MASE</th>
-              <th className="text-right py-2 pr-3 font-medium">Длит.</th>
-              <th className="text-right py-2 font-medium">Статус</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-surface-border">
-            {runs.map((r) => {
-              const dsName = r.upload_id
-                ? (uploadName.get(r.upload_id) ?? `${r.upload_id.slice(0, 8)}…`)
-                : '—'
-              return (
-                <tr key={r.run_id} className="hover:bg-surface-muted/40">
-                  <td className="py-2 pr-3 text-ink whitespace-nowrap">
-                    {safeFormat(r.enqueued_at)}
-                  </td>
-                  <td className="py-2 pr-3 text-ink truncate max-w-[14rem]" title={dsName}>
-                    {dsName}
-                  </td>
-                  <td className="py-2 pr-3 text-ink-muted text-xs uppercase">{r.plan}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums">
-                    {r.n_skus ?? '—'}
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums font-mono">
-                    {r.wmape != null ? r.wmape.toFixed(3) : '—'}
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums font-mono">
-                    {r.mase != null ? r.mase.toFixed(3) : '—'}
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums text-ink-muted">
-                    {r.elapsed_sec != null ? formatDuration(r.elapsed_sec) : '—'}
-                  </td>
-                  <td className="py-2 text-right">
-                    <span className={RUN_STATUS_BADGE[r.status] ?? 'badge-neutral'}>
-                      {RUN_STATUS_LABEL[r.status] ?? r.status}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
   )
 }
 

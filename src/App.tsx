@@ -15,6 +15,7 @@ const ScenariosPage     = lazy(() => import('./pages/client/ScenariosPage'))
 const PromoPage         = lazy(() => import('./pages/client/PromoPage'))
 const ForecastsPage     = lazy(() => import('./pages/client/ForecastsPage'))
 const TrainingPage      = lazy(() => import('./pages/client/TrainingPage'))
+const TrainingHistoryPage = lazy(() => import('./pages/client/TrainingHistoryPage'))
 const SettingsPage      = lazy(() => import('./pages/client/SettingsPage'))
 const UploadsPage       = lazy(() => import('./pages/client/UploadsPage'))
 const PlansPage         = lazy(() => import('./pages/PlansPage'))
@@ -122,6 +123,14 @@ export default function App() {
           element={
             <Suspense fallback={<SuspenseFallback />}>
               <TrainingPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="training/history"
+          element={
+            <Suspense fallback={<SuspenseFallback />}>
+              <TrainingHistoryPage />
             </Suspense>
           }
         />

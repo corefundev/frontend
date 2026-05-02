@@ -15,6 +15,7 @@ const NAV = [
   { to: 'uploads',     label: 'Загрузки',      pageTitle: 'Загрузки данных',    icon: IconUpload,  minPlan: 'free'     },
   { to: 'forecasts',   label: 'Прогнозы',      pageTitle: 'Прогноз',            icon: IconChart,   minPlan: 'free'     },
   { to: 'training',    label: 'Обучение',      pageTitle: 'Обучение модели',    icon: IconCog,     minPlan: 'free'     },
+  { to: 'training/history', label: 'История обучений', pageTitle: 'История обучений', icon: IconHistory, minPlan: 'free' },
   { to: 'scenarios',   label: 'Сценарии',      pageTitle: 'Сценарии',           icon: IconSplit,   minPlan: 'business' },
   { to: 'promo',       label: 'Промо',         pageTitle: 'Промо-планировщик',  icon: IconSpark,   minPlan: 'business' },
   { to: 'settings',    label: 'Настройки',     pageTitle: 'Настройки модели',   icon: IconSlider,  minPlan: 'free'     },
@@ -84,7 +85,10 @@ export default function AppLayout() {
                 key={to}
                 to={locked ? undefined as any : to}
                 {...(locked ? {} : {
-                  end: to === '',          // "Главная" matches only on "/", not on every child
+                  // Strict-match every nav entry so a parent (e.g. "Обучение")
+                  // doesn't also light up while the user is on a child route
+                  // (e.g. "Обучение → История").
+                  end: true,
                   className: ({ isActive }: { isActive: boolean }) => [
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm',
                     'transition-colors',
@@ -241,6 +245,16 @@ function IconSpark({ className }: IconProps) {
       <path d="M17 12h5" />
       <path d="M4.22 19.78l3.54-3.54" />
       <path d="M16.24 7.76l3.54-3.54" />
+    </svg>
+  )
+}
+function IconHistory({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <polyline points="3 4 3 9 8 9" />
+      <polyline points="12 7 12 12 15 14" />
     </svg>
   )
 }
