@@ -63,11 +63,14 @@ server {
     index index.html;
 
     # Vite builds assets under /assets with content-hashed filenames —
-    # they're safely immutable for a year.
+    # they're safely immutable for a year. Don't use `expires 1y;` here:
+    # it emits its own `Cache-Control: max-age=31536000` and that
+    # duplicates with the explicit add_header below, leaving the response
+    # with two Cache-Control values (cosmetic, but Cloudflare picks the
+    # last one at random across versions). One add_header = one header.
     location /assets/ {
         try_files $uri =404;
         access_log off;
-        expires 1y;
         add_header Cache-Control "public, max-age=31536000, immutable";
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
         add_header X-Content-Type-Options    "nosniff" always;
