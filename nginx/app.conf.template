@@ -20,6 +20,15 @@ server {
         root /var/www/certbot;
         default_type "text/plain";
     }
+    # Docker healthcheck hits this over plain HTTP — must be reachable
+    # without TLS (the in-container wget can't verify the LE cert chain
+    # against 127.0.0.1, which would otherwise mark the container
+    # unhealthy and trip CD smoke).
+    location = /nginx-healthz {
+        access_log off;
+        return 200 "ok\n";
+        default_type text/plain;
+    }
     location / {
         return 301 https://$host$request_uri;
     }
