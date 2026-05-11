@@ -24,6 +24,8 @@ const SignupPage        = lazy(() => import('./pages/SignupPage'))
 const SignupVerifyPage  = lazy(() => import('./pages/SignupVerifyPage'))
 const OAuthReturnPage   = lazy(() => import('./pages/OAuthReturnPage'))
 const AdminClientsPage  = lazy(() => import('./pages/admin/AdminClientsPage'))
+const AdminLegalPage    = lazy(() => import('./pages/admin/AdminLegalPage'))
+const PrivacyPage       = lazy(() => import('./pages/PrivacyPage'))
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const isAuthed = useAuthStore((s) => s.isAuthenticated())
@@ -85,6 +87,16 @@ export default function App() {
               <OnboardingPage />
             </Suspense>
           </ProtectedRoute>
+        }
+      />
+
+      {/* Public legal — privacy policy (admin-editable via /app/admin/legal) */}
+      <Route
+        path="/privacy"
+        element={
+          <Suspense fallback={<SuspenseFallback />}>
+            <PrivacyPage />
+          </Suspense>
         }
       />
 
@@ -180,6 +192,16 @@ export default function App() {
             <AdminGuard>
               <Suspense fallback={<SuspenseFallback />}>
                 <AdminClientsPage />
+              </Suspense>
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/legal"
+          element={
+            <AdminGuard>
+              <Suspense fallback={<SuspenseFallback />}>
+                <AdminLegalPage />
               </Suspense>
             </AdminGuard>
           }

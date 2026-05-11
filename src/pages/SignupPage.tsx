@@ -27,6 +27,7 @@ export default function SignupPage() {
   const [email,    setEmail]    = useState('')
   const [clientId, setClientId] = useState('')
   const [captcha,  setCaptcha]  = useState<string>('')
+  const [agreed,   setAgreed]   = useState<boolean>(false)
 
   const { mutate, isPending } = useMutation({
     mutationFn: () => authApi.signup({
@@ -52,6 +53,7 @@ export default function SignupPage() {
     e.preventDefault()
     if (!email.trim())    return toast.error('Введите email')
     if (!clientId.trim()) return toast.error('Введите идентификатор организации')
+    if (!agreed)          return toast.error('Подтвердите согласие с политикой конфиденциальности')
     if (TURNSTILE_SITE_KEY && !captcha) return toast.error('Пройдите captcha')
     mutate()
   }
@@ -113,10 +115,31 @@ export default function SignupPage() {
           </div>
         )}
 
+        <label className="flex items-start gap-2 mt-5 cursor-pointer text-sm select-none">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-ink-subtle/40 text-brand-600 focus:ring-brand-500"
+          />
+          <span className="text-ink-muted leading-snug">
+            Я согласен с{' '}
+            <Link
+              to="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-500 underline underline-offset-2"
+            >
+              политикой конфиденциальности
+            </Link>{' '}
+            и даю согласие на обработку персональных данных.
+          </span>
+        </label>
+
         <button
           type="submit"
-          className="btn-primary w-full mt-7"
-          disabled={isPending}
+          className="btn-primary w-full mt-5"
+          disabled={isPending || !agreed}
         >
           {isPending ? 'Отправка кода…' : 'Получить код'}
         </button>
