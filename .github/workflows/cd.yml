@@ -91,9 +91,42 @@ jobs:
           cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
           cache-to:   type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
 
+  # "Approval needed" Telegram ping. Fires immediately after build,
+  # has no environment gate, so it runs without waiting. The deploy
+  # job that follows has `environment: production` (required reviewers)
+  # — this ping is the human's notification that an approval is pending.
+  notify-approval-needed:
+    name: Notify → Telegram (approval needed)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Post approval-needed to Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_ALERT_BOT_TOKEN }}
+          CHAT_ID:   ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
+          TAG:       ${{ needs.build.outputs.tag }}
+          RUN_URL:   ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BOT_TOKEN:-}" ] || [ -z "${CHAT_ID:-}" ]; then
+              echo "TELEGRAM_ALERT_* not set — skipping"; exit 0
+          fi
+          MSG=$(printf '%s\n' \
+              '⏸ <b>frontend: approval needed</b>' \
+              '' \
+              "<i>tag:</i>     <code>${TAG}</code>" \
+              "<i>cluster:</i> <code>skusystem.ru</code>" \
+              "<a href=\"${RUN_URL}\">Approve in GitHub</a>")
+          curl -fsS -X POST \
+              -H 'Content-Type: application/json' \
+              --data "$(jq -n --arg chat "$CHAT_ID" --arg text "$MSG" \
+                       '{chat_id:$chat, text:$text, message_thread_id:44, parse_mode:"HTML", disable_web_page_preview:true}')" \
+              "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"
+
   deploy:
     name: Deploy → skusystem.ru
-    needs: build
+    needs: [build, notify-approval-needed]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
