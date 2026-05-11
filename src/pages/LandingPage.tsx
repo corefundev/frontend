@@ -1,94 +1,24 @@
 // src/pages/LandingPage.tsx
 //
-// Публичная главная — стиль referest.ru: чистый SaaS-лендинг с
-// hero / 3-up feature cards / 3-up audience cards / pricing teaser /
-// шапка + подвал с 168-ФЗ заявлением.
-//
-// Дизайн опирается на наши токены (brand #004743 как акцент, surface
-// #FAFAFA фон), но эстетика — современная и сдержанная, без editorial
-// magazine элементов прошлой версии.
-//
-// Compliance: с 01.03.2026 Федеральный закон №168-ФЗ требует, чтобы
-// вся публичная неreklamная информация для потребителей размещалась
-// на русском языке. Этот лендинг — full RU; футер содержит явное
-// заявление о соответствии.
+// Публичная главная — стиль referest.ru, цветовая схема royal blue
+// (#2462EA). Header + Footer вынесены в PublicLayout — общие для всех
+// публичных маршрутов.
 
 import { Link } from 'react-router-dom'
+import PublicLayout from '../components/PublicLayout'
 import { useAuthStore } from '../features/auth/store'
 
 export default function LandingPage() {
   const isAuthed = useAuthStore((s) => s.isAuthenticated())
-
   return (
-    <div className="min-h-screen bg-white text-ink flex flex-col">
-      <Header isAuthed={isAuthed} />
-
-      <main className="flex-1">
-        <Hero    isAuthed={isAuthed} />
-        <QuickNav />
-        <Benefits />
-        <Audience />
-        <PlansTeaser />
-        <FinalCta isAuthed={isAuthed} />
-      </main>
-
-      <Footer />
-    </div>
-  )
-}
-
-// ── Header ─────────────────────────────────────────────────────────────
-
-function Header({ isAuthed }: { isAuthed: boolean }) {
-  return (
-    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-ink/10">
-      <div className="mx-auto max-w-6xl px-5 lg:px-8 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-brand-500 grid place-items-center text-white font-bold text-sm">
-            S
-          </div>
-          <span className="text-lg font-semibold text-ink">SKU Forecasting</span>
-        </Link>
-
-        <nav className="hidden md:flex items-center gap-7 text-sm text-ink-muted">
-          <a href="#benefits" className="hover:text-ink transition-colors">
-            Возможности
-          </a>
-          <a href="#audience" className="hover:text-ink transition-colors">
-            Для кого
-          </a>
-          <Link to="/plans" className="hover:text-ink transition-colors">
-            Тарифы
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-2">
-          {isAuthed ? (
-            <Link
-              to="/app"
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors"
-            >
-              В кабинет →
-            </Link>
-          ) : (
-            <>
-              <Link
-                to="/login"
-                className="hidden sm:inline-flex px-4 py-2 text-sm text-ink-muted hover:text-ink transition-colors"
-              >
-                Войти
-              </Link>
-              <Link
-                to="/signup"
-                className="inline-flex items-center px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors"
-              >
-                Регистрация
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
+    <PublicLayout>
+      <Hero    isAuthed={isAuthed} />
+      <QuickNav />
+      <Benefits />
+      <Audience />
+      <PlansTeaser />
+      <FinalCta isAuthed={isAuthed} />
+    </PublicLayout>
   )
 }
 
@@ -273,9 +203,9 @@ function Audience() {
 
 function PlansTeaser() {
   const plans = [
-    { name: 'Free',     skus: 30,       horizon: '7 дней',  badge: 'Старт',     featured: false },
-    { name: 'Start',    skus: 1500,     horizon: '30 дней', badge: 'Бизнес',    featured: true  },
-    { name: 'Business', skus: '∞',      horizon: '90 дней', badge: 'Корпорат',  featured: false },
+    { name: 'Free',     skus: 30,   horizon: '7 дней',  badge: 'Старт',    featured: false },
+    { name: 'Start',    skus: 1500, horizon: '30 дней', badge: 'Бизнес',   featured: true  },
+    { name: 'Business', skus: '∞',  horizon: '90 дней', badge: 'Корпорат', featured: false },
   ]
   return (
     <section className="py-16 lg:py-24">
@@ -369,105 +299,5 @@ function FinalCta({ isAuthed }: { isAuthed: boolean }) {
         </div>
       </div>
     </section>
-  )
-}
-
-// ── Footer ─────────────────────────────────────────────────────────────
-
-function Footer() {
-  return (
-    <footer className="bg-ink/[0.03] border-t border-ink/10 mt-auto">
-      <div className="mx-auto max-w-6xl px-5 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
-          <FooterCol
-            title="Продукт"
-            links={[
-              { label: 'Возможности', href: '/#benefits' },
-              { label: 'Тарифы',       href: '/plans'    },
-              { label: 'Регистрация',  href: '/signup'   },
-              { label: 'Вход',         href: '/login'    },
-            ]}
-          />
-          <FooterCol
-            title="Документы"
-            links={[
-              { label: 'Политика конфиденциальности', href: '/privacy' },
-            ]}
-          />
-          <FooterCol
-            title="Контакты"
-            links={[
-              { label: 'dochub.org@gmail.com', href: 'mailto:dochub.org@gmail.com', external: true },
-              { label: 'Telegram',             href: 'https://t.me/dochub_support', external: true },
-            ]}
-          />
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-4">
-              Компания
-            </h4>
-            <p className="text-sm text-ink-muted leading-relaxed">
-              SKU Forecasting — платформа машинного обучения для прогноза продаж в рознице и e-commerce.
-            </p>
-          </div>
-        </div>
-
-        <hr className="border-ink/10 my-6" />
-
-        {/* 168-ФЗ — Federal Law of 24.06.2025: public consumer-facing
-            information must be in Russian. We're full-RU on the landing
-            and explicitly attest it here. */}
-        <div className="space-y-3 text-xs text-ink-subtle leading-relaxed">
-          <p>
-            © {new Date().getFullYear()} SKU Forecasting. Все права защищены.
-          </p>
-          <p>
-            В соответствии с Федеральным законом от 24.06.2025 № 168-ФЗ информация,
-            предназначенная для публичного ознакомления потребителей и не относящаяся
-            к рекламе, размещена на сайте на русском языке.
-          </p>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
-interface FooterLink {
-  label:    string
-  href:     string
-  external?: boolean
-}
-
-function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
-  return (
-    <div>
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-4">
-        {title}
-      </h4>
-      <ul className="space-y-2.5">
-        {links.map((l) =>
-          l.external ? (
-            <li key={l.label}>
-              <a
-                href={l.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-ink hover:text-brand-500 transition-colors"
-              >
-                {l.label}
-              </a>
-            </li>
-          ) : (
-            <li key={l.label}>
-              <Link
-                to={l.href}
-                className="text-sm text-ink hover:text-brand-500 transition-colors"
-              >
-                {l.label}
-              </Link>
-            </li>
-          ),
-        )}
-      </ul>
-    </div>
   )
 }

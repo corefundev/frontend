@@ -5,9 +5,9 @@
 /* ── Root tokens ────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --brand-500: #004743;
-  --brand-600: #003E3A;
-  --brand-700: #002B29;
+  --brand-500: #2462EA;
+  --brand-600: #1B4FC8;
+  --brand-700: #163FA0;
   --gold-500:  #C79A33;
   --gold-600:  #A37C10;
   --paper:     #F4EFE5;
@@ -219,7 +219,7 @@ body {
     width: 84px; height: 84px;
     background-image:
       radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12), transparent 40%),
-      linear-gradient(135deg, #002B29 0%, #004743 80%);
+      linear-gradient(135deg, #163FA0 0%, #2462EA 80%);
   }
   .seal-gold {
     @apply inline-flex items-center justify-center

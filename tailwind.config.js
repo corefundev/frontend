@@ -5,20 +5,20 @@ export default {
     extend: {
       colors: {
         // ─────────────────────────────────────────────────────────────
-        //  Brand — deep editorial teal
-        //  #004743 against surface #FAFAFA: contrast 10.2:1 (WCAG AAA).
+        //  Brand — royal blue (referest.ru palette)
+        //  #2462EA against white: contrast 5.4:1 (WCAG AA).
         // ─────────────────────────────────────────────────────────────
         brand: {
-          50:  '#E6EEED',
-          100: '#C2D4D2',
-          200: '#8CA9A6',
-          300: '#4D7F7A',
-          400: '#1F615B',
-          500: '#004743',
-          600: '#003E3A',
-          700: '#002B29',
-          800: '#001F1D',
-          900: '#001311',
+          50:  '#EEF3FE',
+          100: '#D5E1FC',
+          200: '#ABBFF7',
+          300: '#7C99F1',
+          400: '#527AED',
+          500: '#2462EA',
+          600: '#1B4FC8',
+          700: '#163FA0',
+          800: '#112F78',
+          900: '#0B1F50',
         },
 
         // Neutral surfaces — cool side
@@ -132,8 +132,8 @@ export default {
           transparent 0%,
           #E2E5E5 20%,
           #E2E5E5 48%,
-          #004743 48%,
-          #004743 52%,
+          #2462EA 48%,
+          #2462EA 52%,
           #E2E5E5 52%,
           #E2E5E5 80%,
           transparent 100%)`,
