@@ -1,4 +1,4 @@
-# CD retrigger 2026-05-11 (verify GH secrets are set)
+# CD retrigger 2026-05-11 (GH secrets configured by user)
 # ─────────────────────────────────────────────────────────────────────────────
 # Production compose for the FRONTEND VPS.
 #
