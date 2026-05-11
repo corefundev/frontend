@@ -193,12 +193,20 @@ jobs:
       - name: Smoke — skusystem.ru returns 200
         run: |
           set -euo pipefail
-          for i in $(seq 1 24); do
-              code=$(curl -sf -o /dev/null -w "%{http_code}" https://skusystem.ru/ || echo 000)
+          # Drop -f: it short-circuits on 4xx/5xx before -w prints the
+          # actual status (returns just the curl exit code). Also retry
+          # window 36×5=180s so a brief CF/runner-IP flap doesn't trip
+          # the gate. Cloudflare occasionally serves 5xx for ~10s
+          # right after origin recreate while edge caches reconfigure.
+          for i in $(seq 1 36); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
+                     -H "User-Agent: github-actions-cd-smoke/1.0" \
+                     https://skusystem.ru/ 2>/dev/null || echo 000)
               if [ "$code" = "200" ]; then
                   echo "smoke ok ($code) after ${i} attempts"
                   exit 0
               fi
+              echo "  attempt $i: $code"
               sleep 5
           done
           echo "::error::smoke failed — skusystem.ru never returned 200"
