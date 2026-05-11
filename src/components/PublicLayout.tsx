@@ -27,24 +27,38 @@ export default function PublicLayout({ children }: Props) {
 // ── Header ─────────────────────────────────────────────────────────────
 
 function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
+  // Header palette spec:
+  //   • foreground (all text)  #020817  (slate-950)
+  //   • link hover background  #f1f5f9  (slate-100), 2px radius
+  //   • Регистрация CTA bg     #0f172a  (slate-900)
+  //   • Регистрация CTA text   #f8fafc  (slate-50)
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-ink/10">
-      <div className="mx-auto max-w-6xl px-5 lg:px-8 h-16 flex items-center justify-between">
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 h-16 flex items-center justify-between text-[#020817]">
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-brand-500 grid place-items-center text-white font-bold text-sm">
+          <div className="h-8 w-8 rounded bg-brand-500 grid place-items-center text-white font-bold text-sm">
             S
           </div>
-          <span className="text-lg font-semibold text-ink">SKU Forecasting</span>
+          <span className="text-lg font-semibold">SKU Forecasting</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-7 text-sm text-ink-muted">
-          <Link to="/#benefits" className="hover:text-ink transition-colors">
+        <nav className="hidden md:flex items-center gap-1 text-sm">
+          <Link
+            to="/#benefits"
+            className="px-3 py-2 rounded hover:bg-[#f1f5f9] transition-colors"
+          >
             Возможности
           </Link>
-          <Link to="/#audience" className="hover:text-ink transition-colors">
+          <Link
+            to="/#audience"
+            className="px-3 py-2 rounded hover:bg-[#f1f5f9] transition-colors"
+          >
             Для кого
           </Link>
-          <Link to="/plans" className="hover:text-ink transition-colors">
+          <Link
+            to="/plans"
+            className="px-3 py-2 rounded hover:bg-[#f1f5f9] transition-colors"
+          >
             Тарифы
           </Link>
         </nav>
@@ -53,7 +67,7 @@ function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
           {isAuthed ? (
             <Link
               to="/app"
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors"
+              className="inline-flex items-center px-4 py-2 rounded text-sm font-medium bg-[#0f172a] text-[#f8fafc] hover:bg-[#020817] transition-colors"
             >
               В кабинет →
             </Link>
@@ -61,13 +75,13 @@ function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
             <>
               <Link
                 to="/login"
-                className="hidden sm:inline-flex px-4 py-2 text-sm text-ink-muted hover:text-ink transition-colors"
+                className="hidden sm:inline-flex px-3 py-2 rounded text-sm hover:bg-[#f1f5f9] transition-colors"
               >
                 Войти
               </Link>
               <Link
                 to="/signup"
-                className="inline-flex items-center px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors"
+                className="inline-flex items-center px-4 py-2 rounded text-sm font-medium bg-[#0f172a] text-[#f8fafc] hover:bg-[#020817] transition-colors"
               >
                 Регистрация
               </Link>
@@ -90,7 +104,7 @@ function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
 
 function PublicFooter() {
   return (
-    <footer className="bg-ink/[0.03] border-t border-ink/10 mt-auto">
+    <footer className="bg-[#f1f5f9] border-t border-ink/10 mt-auto">
       <div className="mx-auto max-w-6xl px-5 lg:px-8 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
           <FooterCol
@@ -160,7 +174,7 @@ interface FooterLink {
 function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-4">
+      <h4 className="text-xs font-semibold uppercase tracking-wider text-[#020817] mb-4">
         {title}
       </h4>
       <ul className="space-y-2.5">

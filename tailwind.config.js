@@ -106,10 +106,17 @@ export default {
       },
 
       borderRadius: {
-        md: '0.5rem',
-        lg: '0.75rem',
-        xl: '1rem',
-        '2xl': '1.25rem',
+        // Global radius spec: 2px on все скругления (кроме `full`).
+        // Не используем разные ступени — единый язык по всему UI.
+        none: '0',
+        sm:   '2px',
+        DEFAULT: '2px',
+        md:   '2px',
+        lg:   '2px',
+        xl:   '2px',
+        '2xl': '2px',
+        '3xl': '2px',
+        full: '9999px',
       },
 
       boxShadow: {
