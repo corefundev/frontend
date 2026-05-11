@@ -1,0 +1,158 @@
+# Continuous deployment: push to main → build → deploy to skusystem.ru.
+#
+# Pipeline:
+#   1. build  — builds the static SPA into a docker image, pushes to GHCR
+#               with :sha-12, :main, :latest tags. VITE_API_URL is baked
+#               into the dist/ at build time (no runtime config).
+#   2. deploy — rsync configs (compose / scripts / nginx) to /srv/frontend,
+#               docker pull the new image, `up -d --force-recreate web`.
+#               nginx serves dist/ from inside the container.
+#
+# Frontend has a single environment (prod) — no staging mirror like
+# the backend has. The skusystem.ru landing is mostly static, low risk
+# of regression compared to the backend's data path.
+#
+# Required GH secrets:
+#   FRONTEND_HOST              — skusystem.ru
+#   FRONTEND_USER              — root (per memory; could be `deploy` later)
+#   FRONTEND_SSH_PRIVATE_KEY   — matching ~/.ssh/authorized_keys on VPS
+#   FRONTEND_SSH_KNOWN_HOSTS   — `ssh-keyscan skusystem.ru` output
+#   VITE_API_URL               — baked into dist (https://api.testcore.ru)
+#
+# Required GH environment:
+#   "production"  — recommended to set required reviewers in
+#                   Settings → Environments → production.
+
+name: CD — Build & deploy frontend
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "nginx/**"
+      - "index.html"
+      - "package*.json"
+      - "tsconfig*.json"
+      - "vite.config.ts"
+      - "tailwind.config.js"
+      - "postcss.config.js"
+      - "Dockerfile"
+      - "docker-compose.prod.yml"
+      - ".github/workflows/cd.yml"
+  workflow_dispatch:
+
+env:
+  REGISTRY:  ghcr.io
+  IMAGE:     ghcr.io/corefundev/sku-forecasting-web
+
+concurrency:
+  group: cd-fe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  build:
+    name: Build & push image to GHCR
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tag
+        run: echo "sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build + push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.tag.outputs.sha }}
+            ${{ env.IMAGE }}:main
+            ${{ env.IMAGE }}:latest
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+          cache-to:   type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+
+  deploy:
+    name: Deploy → skusystem.ru
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        env:
+          SSH_KEY:         ${{ secrets.FRONTEND_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.FRONTEND_SSH_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY"         > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      - name: Sync configs to /srv/frontend
+        env:
+          HOST: ${{ secrets.FRONTEND_HOST }}
+          USER: ${{ secrets.FRONTEND_USER }}
+        run: |
+          set -euo pipefail
+          rsync -azh \
+              --include='nginx/' --include='nginx/**' \
+              --include='scripts/' --include='scripts/**' \
+              --include='docker-compose.prod.yml' \
+              --exclude='*' \
+              --exclude='.env' \
+              -e "ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts" \
+              ./ "${USER}@${HOST}:/srv/frontend/"
+
+      - name: Pull image + recreate web container
+        env:
+          HOST:      ${{ secrets.FRONTEND_HOST }}
+          USER:      ${{ secrets.FRONTEND_USER }}
+          TAG:       ${{ needs.build.outputs.tag }}
+          GHCR_PW:   ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          set -euxo pipefail
+          : "${TAG:?TAG empty}"
+          ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=~/.ssh/known_hosts \
+              "${USER}@${HOST}" bash <<EOF
+          set -euxo pipefail
+          cd /srv/frontend
+          echo "${GHCR_PW}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
+          # Compose's build: clause stays for local-dev; image: tag wins on prod
+          # when set. We set WEB_IMAGE_TAG so docker-compose.prod.yml's
+          # \${WEB_IMAGE_TAG:-latest} resolves to our SHA artifact.
+          export WEB_IMAGE_TAG="${TAG}"
+          docker compose --env-file .env -f docker-compose.prod.yml pull web
+          docker compose --env-file .env -f docker-compose.prod.yml up -d --force-recreate web
+          docker logout ghcr.io
+          # Wait for web healthy
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              s=\$(docker inspect frontend-web-1 --format '{{.State.Health.Status}}' 2>/dev/null || true)
+              [ "\$s" = "healthy" ] && break
+              sleep 5
+          done
+          echo "  deploy complete @ ${TAG}"
+          EOF

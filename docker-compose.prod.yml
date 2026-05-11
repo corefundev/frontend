@@ -13,6 +13,12 @@
 services:
 
   web:
+    # CD-built image from GHCR. The CD workflow pushes
+    # ghcr.io/corefundev/sku-forecasting-web with both :sha-12 and :latest
+    # tags; WEB_IMAGE_TAG is exported by the deploy step so prod pulls the
+    # exact SHA. The `build:` block below is kept for dev — when no image
+    # is found, compose builds it locally with the same VITE_API_URL.
+    image: ghcr.io/corefundev/sku-forecasting-web:${WEB_IMAGE_TAG:-latest}
     build:
       context: .
       args:
