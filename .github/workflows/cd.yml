@@ -156,3 +156,63 @@ jobs:
           done
           echo "  deploy complete @ ${TAG}"
           EOF
+
+      - name: Smoke — skusystem.ru returns 200
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 24); do
+              code=$(curl -sf -o /dev/null -w "%{http_code}" https://skusystem.ru/ || echo 000)
+              if [ "$code" = "200" ]; then
+                  echo "smoke ok ($code) after ${i} attempts"
+                  exit 0
+              fi
+              sleep 5
+          done
+          echo "::error::smoke failed — skusystem.ru never returned 200"
+          exit 1
+
+  # Telegram notification — fires regardless of deploy outcome (always()
+  # so the failure case still posts). Re-uses the @Alertcorebot +
+  # "Alert System" supergroup, routed to the "Deploys" topic (thread 44)
+  # — same setup as the backend's notify-{staging,prod} jobs.
+  notify:
+    name: Notify → Telegram
+    needs: [build, deploy]
+    if: ${{ always() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Post status to Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_ALERT_BOT_TOKEN }}
+          CHAT_ID:   ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
+          TAG:       ${{ needs.build.outputs.tag }}
+          DEPLOY_R:  ${{ needs.deploy.result }}
+          RUN_URL:   ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BOT_TOKEN:-}" ] || [ -z "${CHAT_ID:-}" ]; then
+              echo "TELEGRAM_ALERT_* secrets not set — skipping"; exit 0
+          fi
+          if [ "$DEPLOY_R" = "success" ]; then
+              MSG=$(printf '%s\n' \
+                  '🚀 <b>frontend deploy ok</b>' \
+                  '' \
+                  "<i>tag:</i>     <code>${TAG}</code>" \
+                  "<i>cluster:</i> <code>skusystem.ru</code>" \
+                  "<a href=\"${RUN_URL}\">CD run</a>")
+          else
+              MSG=$(printf '%s\n' \
+                  '❌ <b>frontend deploy FAILED</b>' \
+                  '' \
+                  "<i>tag:</i>     <code>${TAG}</code>" \
+                  "<i>deploy:</i>  <code>${DEPLOY_R}</code>" \
+                  "<a href=\"${RUN_URL}\">CD run</a>")
+          fi
+          # message_thread_id=44 → "Deploys" topic in the Alert System
+          # supergroup. Same chat/topic the backend CD posts to.
+          curl -fsS -X POST \
+              -H 'Content-Type: application/json' \
+              --data "$(jq -n --arg chat "$CHAT_ID" --arg text "$MSG" \
+                       '{chat_id:$chat, text:$text, message_thread_id:44, parse_mode:"HTML", disable_web_page_preview:true}')" \
+              "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"
