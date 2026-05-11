@@ -4,6 +4,7 @@
 // (header + footer). Три тарифа карточками; затем сравнительная
 // таблица всех лимитов из /plans API.
 
+import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 
@@ -156,7 +157,7 @@ function PlanCards({ plans, isAuthed }: { plans: PlanSpec[]; isAuthed: boolean }
                   />
                   <Row
                     label="Горизонт"
-                    value={`${p.max_horizon_days} дней`}
+                    value={p.max_horizon_days === null ? '∞' : `${p.max_horizon_days} дней`}
                     dark={!!featured}
                   />
                   <Row
@@ -216,12 +217,12 @@ function PlanCompare({ plans }: { plans: PlanSpec[] }) {
     .map((id) => plans.find((p) => p.id === id))
     .filter((p): p is PlanSpec => !!p)
 
-  const rows: { label: string; render: (p: PlanSpec) => React.ReactNode }[] = [
+  const rows: { label: string; render: (p: PlanSpec) => ReactNode }[] = [
     { label: 'Максимум SKU',           render: (p) => (p.max_skus       === null ? '∞' : p.max_skus) },
-    { label: 'Горизонт прогноза',      render: (p) => `${p.max_horizon_days} дней` },
+    { label: 'Горизонт прогноза',      render: (p) => (p.max_horizon_days === null ? '∞' : `${p.max_horizon_days} дней`) },
     { label: 'Обучений в месяц',       render: (p) => (p.training_runs_per_month === null ? '∞' : p.training_runs_per_month) },
     { label: 'Кулдаун между запусками', render: (p) => (p.training_cooldown_hours === null ? '—' : `${p.training_cooldown_hours} ч`) },
-    { label: 'Модель',                 render: (p) => p.model_name },
+    { label: 'Модель',                 render: (p) => p.model_display_name },
   ]
 
   return (
