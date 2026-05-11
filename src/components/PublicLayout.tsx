@@ -80,6 +80,13 @@ function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
 }
 
 // ── Footer ─────────────────────────────────────────────────────────────
+//
+// Цвета фиксированы по запросу (referest-style):
+//   • base   : rgb(100, 116, 139)  — slate-500, links + bottom-bar
+//   • hover  : rgb(2, 8, 23)       — slate-950 near-black
+//   • size   : 0.875rem = text-sm  (Tailwind)
+//
+// Класс `footer-link` ниже = `text-sm text-[#64748B] hover:text-[#020817]`.
 
 function PublicFooter() {
   return (
@@ -128,15 +135,15 @@ function PublicFooter() {
         <hr className="border-ink/10 my-6" />
 
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-xs text-ink-subtle">
+          <p className="text-sm text-[#64748B]">
             © {new Date().getFullYear()} SKU Forecasting
           </p>
 
-          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
-            <Link to="/"        className="text-ink-subtle hover:text-ink transition-colors">Главная</Link>
-            <Link to="/plans"   className="text-ink-subtle hover:text-ink transition-colors">Тарифы</Link>
-            <Link to="/privacy" className="text-ink-subtle hover:text-ink transition-colors">Политика конфиденциальности</Link>
-            <Link to="/login"   className="text-ink-subtle hover:text-ink transition-colors">Войти</Link>
+          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <Link to="/"        className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Главная</Link>
+            <Link to="/plans"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Тарифы</Link>
+            <Link to="/privacy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Политика конфиденциальности</Link>
+            <Link to="/login"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Войти</Link>
           </nav>
         </div>
       </div>
@@ -153,7 +160,7 @@ interface FooterLink {
 function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-4">
+      <h4 className="text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-4">
         {title}
       </h4>
       <ul className="space-y-2.5">
@@ -164,7 +171,7 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
                 href={l.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-ink hover:text-brand-500 transition-colors"
+                className="text-sm text-[#64748B] hover:text-[#020817] transition-colors"
               >
                 {l.label}
               </a>
@@ -173,7 +180,7 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
             <li key={l.label}>
               <Link
                 to={l.href}
-                className="text-sm text-ink hover:text-brand-500 transition-colors"
+                className="text-sm text-[#64748B] hover:text-[#020817] transition-colors"
               >
                 {l.label}
               </Link>
