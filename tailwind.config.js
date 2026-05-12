@@ -105,20 +105,6 @@ export default {
         'display-md': ['2.5rem', { lineHeight: '1.1',   letterSpacing: '-0.02em' }],
       },
 
-      borderRadius: {
-        // Global radius spec: 2px on все скругления (кроме `full`).
-        // Не используем разные ступени — единый язык по всему UI.
-        none: '0',
-        sm:   '2px',
-        DEFAULT: '2px',
-        md:   '2px',
-        lg:   '2px',
-        xl:   '2px',
-        '2xl': '2px',
-        '3xl': '2px',
-        full: '9999px',
-      },
-
       boxShadow: {
         card:  '0 1px 2px 0 rgba(0,43,41,0.04), 0 2px 8px 0 rgba(0,43,41,0.06)',
         panel: '0 4px 12px rgba(0,43,41,0.08)',
