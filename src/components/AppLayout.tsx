@@ -75,38 +75,50 @@ export default function AppLayout() {
         <nav className="flex-1 p-3 space-y-0.5">
           {visibleNav.map((item) => {
             const { to, label, icon: Icon } = item
-            const minPlan = (item as any).minPlan as PlanId
+            const minPlan = ('minPlan' in item ? item.minPlan : 'free') as PlanId
             const locked  = PLAN_RANK[minPlan] > userRank
-            // Cast to any: TS won't narrow a 'div' | typeof NavLink union from a
-            // runtime ternary, and ElementType isn't permissive enough for the
-            // NavLink-only `to` prop in the unlocked branch.
-            const Component: any = locked ? 'div' : NavLink
-            return (
-              <Component
-                key={to}
-                to={locked ? undefined as any : to}
-                {...(locked ? {} : {
-                  // Strict-match every nav entry so a parent (e.g. "Обучение")
-                  // doesn't also light up while the user is on a child route
-                  // (e.g. "Обучение → История").
-                  end: true,
-                  className: ({ isActive }: { isActive: boolean }) => [
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm',
-                    'transition-colors',
-                    isActive
-                      ? 'bg-brand-500 text-ink-invert'
-                      : 'text-brand-50/80 hover:bg-brand-600 hover:text-ink-invert',
-                  ].join(' ')
-                })}
-                {...(locked ? {
-                  className: 'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-brand-50/40 cursor-not-allowed',
-                  title: `Доступно в тарифе ${minPlan === 'start' ? 'Start' : 'Business'}`,
-                } : {})}
-              >
+            // Split locked vs unlocked into two real branches so TS
+            // sees the right component (div vs NavLink) and we don't
+            // pass `to={undefined}` to NavLink at runtime. The shared
+            // child content is extracted to a fragment.
+            const inner = (
+              <>
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="flex-1 truncate">{label}</span>
                 {locked && <LockTag required={minPlan} compact />}
-              </Component>
+              </>
+            )
+            if (locked) {
+              return (
+                <div
+                  key={to}
+                  role="link"
+                  aria-disabled="true"
+                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-brand-50/40 cursor-not-allowed"
+                  title={`Доступно в тарифе ${minPlan === 'start' ? 'Start' : 'Business'}`}
+                >
+                  {inner}
+                </div>
+              )
+            }
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                // Strict-match every nav entry so a parent (e.g. "Обучение")
+                // doesn't also light up while the user is on a child route
+                // (e.g. "Обучение → История").
+                end
+                className={({ isActive }) => [
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm',
+                  'transition-colors',
+                  isActive
+                    ? 'bg-brand-500 text-ink-invert'
+                    : 'text-brand-50/80 hover:bg-brand-600 hover:text-ink-invert',
+                ].join(' ')}
+              >
+                {inner}
+              </NavLink>
             )
           })}
         </nav>

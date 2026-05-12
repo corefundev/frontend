@@ -34,9 +34,12 @@ export default function OAuthReturnPage() {
   const newUser  = params.get('new_user') === '1'
   const apiKey   = params.get('api_key') ?? ''
 
-  // Apply the JWT once on mount. If the token's bogus, the next API
-  // call will 401 and the global axios interceptor will boot us back
-  // to /login.
+  // Apply the JWT once. The effect re-runs if the URL params change
+  // (e.g. back-button → forward through a different OAuth callback)
+  // so we don't get stuck with stale auth state. setAuth/nav are
+  // stable references from their stores, safe to include in deps.
+  // If the token's bogus, the next API call will 401 and the global
+  // axios interceptor boots us back to /login.
   useEffect(() => {
     if (!token || !clientId) {
       toast.error('Сессия не получена. Попробуйте снова.')
@@ -51,9 +54,8 @@ export default function OAuthReturnPage() {
       nav('/app', { replace: true })
     }
     // New user → stay on this page to show api_key, then continue.
-    // (effect doesn't navigate; ApiKeyReveal calls onContinue)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    // (ApiKeyReveal calls onContinue → /welcome)
+  }, [token, clientId, newUser, setAuth, nav])
 
   if (!token || !clientId) return null
   if (!newUser) return <Spinner />
