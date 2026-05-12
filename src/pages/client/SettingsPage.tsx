@@ -862,8 +862,8 @@ function LivePreview({ state }: { state: RegulatorState }) {
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full mt-4 block" aria-hidden>
         <defs>
           <linearGradient id="tunedFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"  stopColor="#004743" stopOpacity="0.12" />
-            <stop offset="100%" stopColor="#004743" stopOpacity="0.00" />
+            <stop offset="0%"  stopColor="#1A4AB8" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="#1A4AB8" stopOpacity="0.00" />
           </linearGradient>
         </defs>
 
@@ -877,7 +877,7 @@ function LivePreview({ state }: { state: RegulatorState }) {
           x={splitX - 4} y={PAD + 10}
           className="fill-gold-600"
           fontSize="9" textAnchor="end"
-          style={{ fontFamily: 'IBM Plex Sans' }}
+          style={{ fontFamily: 'Inter' }}
         >
           СЕЙЧАС
         </text>
@@ -885,19 +885,19 @@ function LivePreview({ state }: { state: RegulatorState }) {
         {/* history (solid, ink) */}
         <path
           d={path(history)}
-          fill="none" stroke="#1A1A1A" strokeWidth="1.5"
+          fill="none" stroke="#020817" strokeWidth="1.5"
         />
 
         {/* baseline forecast (dashed, muted) */}
         <path
           d={path(baseline, history.length - 1)}
-          fill="none" stroke="#8B9190" strokeWidth="1.5"
+          fill="none" stroke="#94A3B8" strokeWidth="1.5"
           strokeDasharray="4 4"
         />
         {/* tuned forecast (solid brand teal) */}
         <path
           d={path(tuned, history.length - 1)}
-          fill="none" stroke="#004743" strokeWidth="2.25"
+          fill="none" stroke="#1A4AB8" strokeWidth="2.25"
         />
         {/* tuned fill under the line */}
         <path
@@ -907,9 +907,9 @@ function LivePreview({ state }: { state: RegulatorState }) {
       </svg>
 
       <ul className="mt-4 space-y-1.5 text-[12px]">
-        <LegendRow color="#1A1A1A" label="История продаж (факт)" />
-        <LegendRow color="#8B9190" label="Прогноз по дефолту" dashed />
-        <LegendRow color="#004743" label="Прогноз с вашими настройками" />
+        <LegendRow color="#020817" label="История продаж (факт)" />
+        <LegendRow color="#94A3B8" label="Прогноз по дефолту" dashed />
+        <LegendRow color="#1A4AB8" label="Прогноз с вашими настройками" />
       </ul>
 
       <div className="rule-dot !my-5" />

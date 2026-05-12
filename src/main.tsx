@@ -74,12 +74,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             className: '!font-sans !text-sm',
             style: {
               background: '#FFFFFF',
-              color: '#1A1A1A',
-              border: '1px solid #E2E5E5',
-              boxShadow: '0 4px 12px rgba(0,43,41,0.08)',
+              color: '#020817',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06)',
             },
             success: { iconTheme: { primary: '#2E7D32', secondary: '#E6F1E8' } },
-            error:   { iconTheme: { primary: '#B03A2E', secondary: '#F7E3E0' } },
+            error:   { iconTheme: { primary: '#DC2626', secondary: '#FEF2F2' } },
           }}
         />
       </BrowserRouter>

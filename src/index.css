@@ -34,9 +34,10 @@ body {
 }
 
 /* ═════════════════════════════════════════════════════════════════════
-   Editorial typography — Fraunces for display, IBM Plex Sans for body.
-   Fraunces is a variable serif tuned per optical size; we lean into
-   its SOFT axis (40) at display sizes for a humane, confident feel.
+   Typography — Inter is the single voice (display + body + UI).
+   The font-variation-settings on .display-* are no-ops on Inter
+   (it has no opsz/SOFT/WONK axes) but are kept so reintroducing a
+   variable serif later just needs a tailwind.config.js swap.
    ═════════════════════════════════════════════════════════════════════ */
 
 .display-xl, .display-lg, .display-md {
@@ -49,7 +50,7 @@ body {
 .display-lg { @apply text-display-lg; }
 .display-md { @apply text-display-md; }
 
-/* Italic display used for emphasis — Fraunces italic is delicious */
+/* Italic display used for emphasis */
 .display-em {
   @apply font-display italic;
   font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;

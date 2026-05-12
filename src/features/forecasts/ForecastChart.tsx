@@ -80,28 +80,28 @@ export function ForecastChart({
       )}
       <ResponsiveContainer width="100%" height={height}>
         <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E2E5E5" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
           <XAxis
             dataKey="date"
-            tick={{ fill: '#525757', fontSize: 12 }}
-            tickLine={{ stroke: '#E2E5E5' }}
-            axisLine={{ stroke: '#E2E5E5' }}
+            tick={{ fill: '#64748B', fontSize: 12 }}
+            tickLine={{ stroke: '#E2E8F0' }}
+            axisLine={{ stroke: '#E2E8F0' }}
           />
           <YAxis
-            tick={{ fill: '#525757', fontSize: 12 }}
-            tickLine={{ stroke: '#E2E5E5' }}
-            axisLine={{ stroke: '#E2E5E5' }}
+            tick={{ fill: '#64748B', fontSize: 12 }}
+            tickLine={{ stroke: '#E2E8F0' }}
+            axisLine={{ stroke: '#E2E8F0' }}
             width={48}
           />
           <Tooltip
             contentStyle={{
               background: '#FFFFFF',
-              border: '1px solid #E2E5E5',
+              border: '1px solid #E2E8F0',
               borderRadius: 8,
               boxShadow: '0 4px 12px rgba(0,43,41,0.08)',
               fontSize: 12,
             }}
-            labelStyle={{ color: '#1A1A1A', fontWeight: 600 }}
+            labelStyle={{ color: '#020817', fontWeight: 600 }}
             formatter={(value, name, item) => {
               const v = typeof value === 'number' ? value : Number(value) || 0
               // Hide the invisible stacked baseline used for the band trick.
@@ -142,7 +142,7 @@ export function ForecastChart({
                 dataKey="band"
                 stackId="band"
                 stroke="none"
-                fill="#004743"
+                fill="#1A4AB8"
                 fillOpacity={0.12}
                 isAnimationActive={false}
                 name="Диапазон 80%"
@@ -153,10 +153,10 @@ export function ForecastChart({
           <Line
             type="monotone"
             dataKey="value"
-            stroke="#004743"
+            stroke="#1A4AB8"
             strokeWidth={2}
-            dot={{ r: 3, fill: '#004743' }}
-            activeDot={{ r: 5, fill: '#003E3A' }}
+            dot={{ r: 3, fill: '#1A4AB8' }}
+            activeDot={{ r: 5, fill: '#1540A0' }}
             isAnimationActive={false}
             name="Прогноз"
           />
