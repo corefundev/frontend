@@ -5,89 +5,89 @@ export default {
     extend: {
       colors: {
         // ─────────────────────────────────────────────────────────────
-        //  Brand — royal blue (referest.ru palette)
-        //  #2462EA against white: contrast 5.4:1 (WCAG AA).
+        //  Brand — referest royal blue (#2463EB).
+        //  Anchored on #2463EB; scale tuned for AA contrast on white.
         // ─────────────────────────────────────────────────────────────
         brand: {
-          50:  '#EEF3FE',
-          100: '#D5E1FC',
-          200: '#ABBFF7',
-          300: '#7C99F1',
-          400: '#527AED',
-          500: '#2462EA',
-          600: '#1B4FC8',
-          700: '#163FA0',
-          800: '#112F78',
-          900: '#0B1F50',
+          50:  '#EEF2FE',
+          100: '#D9E2FD',
+          200: '#B3C5FB',
+          300: '#8DA8F9',
+          400: '#588AF2',
+          500: '#2463EB',
+          600: '#1D54CC',
+          700: '#1A4AB8',
+          800: '#1540A0',
+          900: '#112F78',
         },
 
-        // Neutral surfaces — cool side
+        // Neutral surfaces — referest slate scale
         surface: {
-          DEFAULT: '#FAFAFA',
-          muted:   '#F1F1F1',
-          raised:  '#FFFFFF',
-          border:  '#E2E5E5',
-          deep:    '#EBEBE8',      // for editorial stripe dividers
+          DEFAULT: '#F8FAFC',      // ghost white — subtle bg tint
+          muted:   '#F1F5F9',      // light sky — hover bg / secondary btn
+          raised:  '#FFFFFF',      // pure white — card surface
+          border:  '#E2E8F0',      // slate-200 — primary border / divider
+          deep:    '#CBD5E1',      // slate-300 — emphasised border
         },
 
         // ─────────────────────────────────────────────────────────────
         //  Premium paper — warm cream tones for locked-state previews.
-        //  Not grey. Feels like high-end printed material: a reason to
-        //  upgrade, not a disabled widget.
+        //  Kept as-is: distinct from the public UI's slate palette,
+        //  used only inside `/app` for upgrade-gate overlays.
         // ─────────────────────────────────────────────────────────────
         paper: {
-          DEFAULT: '#F4EFE5',      // cream background of lock overlays
-          deep:    '#EAE2D1',      // border / embossed rim
-          line:    '#D7CCB3',      // hair-line within paper
-          ink:     '#4C4435',      // text on paper
+          DEFAULT: '#F4EFE5',
+          deep:    '#EAE2D1',
+          line:    '#D7CCB3',
+          ink:     '#4C4435',
         },
 
         // ─────────────────────────────────────────────────────────────
-        //  Accent — antique gold. Used sparingly: upgrade CTAs, plan
-        //  seals, "Business" marks. Never for success / confirmation —
-        //  it's a "prestige" signal, not a state indicator.
+        //  Accent — antique gold. Sparingly: upgrade CTAs, plan seals,
+        //  "Business" marks. Never for success / confirmation.
         // ─────────────────────────────────────────────────────────────
         gold: {
           50:   '#FBF4DF',
           100:  '#F4E3B0',
           300:  '#E7C770',
-          500:  '#C79A33',    // primary gold accent
+          500:  '#C79A33',
           600:  '#A37C10',
           700:  '#7C5D0A',
           800:  '#5C4409',
         },
 
-        // Ink scale (editorial typography)
+        // Ink scale — referest deep-navy primary text
         ink: {
-          DEFAULT: '#1A1A1A',
-          muted:   '#525757',
-          subtle:  '#8B9190',
-          invert:  '#FAFAFA',
+          DEFAULT: '#020817',      // deep navy — primary text
+          muted:   '#64748B',      // slate-500 — secondary text
+          subtle:  '#94A3B8',      // slate-400 — placeholders / tertiary
+          invert:  '#F8FAFC',      // ghost white — on dark surfaces
         },
 
         // Status — tuned warmer than the usual pure red/green.
         success: { DEFAULT: '#2E7D32', bg: '#E6F1E8' },
-        moss:    { DEFAULT: '#6B8E5A', bg: '#EEF2E8' },   // subtle success
-        danger:  { DEFAULT: '#B03A2E', bg: '#F7E3E0' },
+        moss:    { DEFAULT: '#6B8E5A', bg: '#EEF2E8' },
+        danger:  { DEFAULT: '#DC2626', bg: '#FEF2F2' },
         warn:    { DEFAULT: '#B77914', bg: '#FCF1DA' },
-        terra:   { DEFAULT: '#C86644', bg: '#F9E6DD' },   // warmer alert
+        terra:   { DEFAULT: '#C86644', bg: '#F9E6DD' },
       },
 
       fontFamily: {
-        // ── Display: Fraunces — variable serif with soft, humane curves.
-        //    Great at large sizes for numbers/headlines. Good Cyrillic.
-        display: [
-          '"Fraunces"',
-          'ui-serif',
-          'Georgia',
-          'serif',
-        ],
-        // ── Body/UI: IBM Plex Sans — characterful, technical, excellent
-        //    Cyrillic. Replaces Inter — too generic.
+        // Referest spec: Inter as the single typographic voice.
+        // Fraunces/IBM Plex retired — Inter handles display + body + UI.
         sans: [
-          '"IBM Plex Sans"',
-          'ui-sans-serif',
-          'system-ui',
+          '"Inter"',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          '"Helvetica Neue"',
+          'sans-serif',
+        ],
+        display: [
+          '"Inter"',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
           'sans-serif',
         ],
         mono: [
@@ -99,36 +99,55 @@ export default {
       },
 
       fontSize: {
-        // Editorial display scale — large + tighter leading
-        'display-xl': ['5rem',   { lineHeight: '1',     letterSpacing: '-0.03em' }],
-        'display-lg': ['3.5rem', { lineHeight: '1.05',  letterSpacing: '-0.025em' }],
-        'display-md': ['2.5rem', { lineHeight: '1.1',   letterSpacing: '-0.02em' }],
+        // Referest display scale — Inter, tight negative tracking.
+        'display-xl': ['48px', { lineHeight: '60px', letterSpacing: '-0.02em', fontWeight: '800' }],
+        'display-lg': ['30px', { lineHeight: '36px', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'display-md': ['24px', { lineHeight: '32px', letterSpacing: '0',       fontWeight: '600' }],
+      },
+
+      borderRadius: {
+        // Referest radius scale: 0 / 4 / 6 / 8 / 20 / full only.
+        // No flat-2px override (warmth retained) and no >8px squishy corners.
+        none:    '0',
+        sm:      '4px',
+        DEFAULT: '6px',
+        md:      '6px',
+        lg:      '8px',
+        xl:      '8px',
+        '2xl':   '8px',
+        '3xl':   '8px',
+        pill:    '20px',
+        full:    '9999px',
       },
 
       boxShadow: {
-        card:  '0 1px 2px 0 rgba(0,43,41,0.04), 0 2px 8px 0 rgba(0,43,41,0.06)',
-        panel: '0 4px 12px rgba(0,43,41,0.08)',
-        // Premium paper shadow — warm, softer, with a hint of gold
-        paper: '0 1px 2px rgba(95,72,26,0.08), 0 10px 24px -8px rgba(95,72,26,0.15)',
-        // Subtle inset for editorial frames
-        rule:  'inset 0 -1px 0 rgba(0,43,41,0.08)',
+        // Referest elevation system — two-layer composition, restrained.
+        raised:   '0px 1px 2px rgba(0,0,0,0.05), 0px 1px 2px rgba(0,0,0,0.05)',
+        floating: '0px 4px 6px rgba(0,0,0,0.10), 0px 2px 4px rgba(0,0,0,0.06)',
+        lifted:   '0px 10px 15px rgba(0,0,0,0.10), 0px 4px 6px rgba(0,0,0,0.05)',
+        overlay:  '0px 20px 25px rgba(0,0,0,0.15), 0px 8px 10px rgba(0,0,0,0.10)',
+        // Brand focus ring per spec
+        focus:    '0 0 0 3px rgba(36,99,235,0.10)',
+        // Legacy aliases — many components still reference these
+        card:     '0px 1px 2px rgba(0,0,0,0.05), 0px 1px 2px rgba(0,0,0,0.05)',
+        panel:    '0px 4px 6px rgba(0,0,0,0.10), 0px 2px 4px rgba(0,0,0,0.06)',
+        paper:    '0 1px 2px rgba(95,72,26,0.08), 0 10px 24px -8px rgba(95,72,26,0.15)',
+        rule:     'inset 0 -1px 0 rgba(0,0,0,0.06)',
       },
 
       backgroundImage: {
-        // Grain / noise for paper surfaces
         'paper-grain': `
           radial-gradient(rgba(140,106,46,0.10) 1px, transparent 1px),
           linear-gradient(180deg, #F4EFE5 0%, #EFE8D8 100%)
         `,
-        // Thin editorial rule — centered dot
         'dot-rule': `linear-gradient(to right,
           transparent 0%,
-          #E2E5E5 20%,
-          #E2E5E5 48%,
-          #2462EA 48%,
-          #2462EA 52%,
-          #E2E5E5 52%,
-          #E2E5E5 80%,
+          #E2E8F0 20%,
+          #E2E8F0 48%,
+          #2463EB 48%,
+          #2463EB 52%,
+          #E2E8F0 52%,
+          #E2E8F0 80%,
           transparent 100%)`,
       },
 
@@ -146,9 +165,6 @@ export default {
           '0%':   { opacity: '0', transform: 'rotate(-4deg) scale(0.92)' },
           '100%': { opacity: '1', transform: 'rotate(-4deg) scale(1)' },
         },
-        // Progress-bar lifesigns. Slow ping for the "still working"
-        // dot; sliding chip for indeterminate state; marching
-        // diagonal stripes for the determinate fill.
         'ping-slow': {
           '0%, 100%': { transform: 'scale(1)',   opacity: '1' },
           '50%':      { transform: 'scale(1.4)', opacity: '0.5' },
