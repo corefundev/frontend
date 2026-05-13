@@ -88,11 +88,41 @@ apiClient.interceptors.response.use((r) => r, handle401)
 uploadClient.interceptors.response.use((r) => r, handle401)
 
 // ── Error message helper for toast ────────────────────────────────────────
+//
+// Runtime-guarded extraction of a user-facing message from any thrown
+// value. The previous version cast `err as AxiosError<{detail?: …}>`
+// without checking — if the backend returned an unexpected shape, or
+// a non-axios error landed here (a plain Error from caller code), the
+// cast was a lie. Toast would surface "[object Object]" or empty
+// strings depending on what the backend actually returned.
+//
+// Order of preference:
+//   1. FastAPI {detail: string}
+//   2. FastAPI {detail: [{msg: string}, …]} (validation errors)
+//   3. axios/Error .message  (timeout, network, etc.)
+//   4. fallback
 export function errorMessage(err: unknown, fallback = 'Произошла ошибка'): string {
-  const ax = err as AxiosError<{ detail?: string | Array<{ msg?: string }> }>
-  const detail = ax?.response?.data?.detail
-  if (typeof detail === 'string') return detail
-  if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg
-  if (ax?.message) return ax.message
+  // Narrow without lying — `unknown` is only safe to dereference when
+  // we've actually checked it's an object.
+  if (!err || typeof err !== 'object') return fallback
+
+  const errObj = err as Record<string, unknown>
+  const response = errObj.response as { data?: unknown } | undefined
+  const data = response?.data
+
+  if (data && typeof data === 'object') {
+    const detail = (data as { detail?: unknown }).detail
+    if (typeof detail === 'string') return detail
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail[0]
+      if (first && typeof first === 'object' && typeof (first as { msg?: unknown }).msg === 'string') {
+        return (first as { msg: string }).msg
+      }
+    }
+  }
+
+  const msg = errObj.message
+  if (typeof msg === 'string' && msg.length > 0) return msg
+
   return fallback
 }
