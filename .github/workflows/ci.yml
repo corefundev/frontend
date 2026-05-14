@@ -49,3 +49,22 @@ jobs:
           name: dist-${{ github.sha }}
           path: dist
           retention-days: 14
+
+      # ── npm audit (advisory, audit R2-14) ────────────────────
+      # Surface known-vulnerable transitive dependencies. Advisory so a
+      # freshly-disclosed CVE doesn't block deploys; once the repo has a
+      # clean baseline, drop `continue-on-error` to make it a hard gate.
+      # `--audit-level=high` skips noisy low/moderate findings (often
+      # in dev-only tooling like vite plugins / type packages).
+      - name: npm audit (high+ only)
+        continue-on-error: true
+        run: |
+          npm audit --audit-level=high --omit=dev | tee npm-audit.txt
+
+      - name: Upload npm-audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-${{ github.sha }}
+          path: npm-audit.txt
+          retention-days: 14

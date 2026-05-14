@@ -53,8 +53,24 @@
         • JetBrains Mono — retained for mono.
       Only the weights we actually use (400 / 500 / 600 / 700 / 800)
       to keep FCP tight.
+
+      Subresource Integrity (audit R2-11, 2026-05-15): NOT applied to
+      this resource because Google Fonts rewrites the CSS payload per
+      browser UA (woff vs woff2 vs ttf), so a static SHA-384 hash would
+      break on every UA bucket. Defence-in-depth instead via CSP:
+      `style-src` and `font-src` restrict origins to googleapis.com /
+      gstatic.com (see meta CSP above + the authoritative header from
+      nginx/app.conf.template). Same rationale applies to the
+      Cloudflare Turnstile loader injected dynamically at
+      src/pages/SignupVerifyPage.tsx:209 — `script-src` whitelists
+      `challenges.cloudflare.com` and Cloudflare versions the loader
+      URL, so MITM at the path-level can't slip a different script
+      under the same `/v0/api.js`. Adding `crossorigin="anonymous"`
+      on the stylesheet for the (future) day when both providers
+      publish stable hashes.
     -->
     <link rel="stylesheet"
+          crossorigin="anonymous"
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" />
   </head>
   <body>
