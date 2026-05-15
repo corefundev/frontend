@@ -4,6 +4,7 @@ import { lazy, Suspense } from 'react'
 import { useAuthStore } from './features/auth/store'
 import AppLayout from './components/AppLayout'
 import AdminGuard from './components/AdminGuard'
+import PjaxLoader from './components/PjaxLoader'
 import LoginPage from './pages/LoginPage'
 import AdminLoginPage from './pages/AdminLoginPage'
 import LandingPage from './pages/LandingPage'
@@ -43,8 +44,12 @@ function SuspenseFallback() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
+    <>
+      {/* GitHub-style pjax progress bar — fixed-top, brand-500.
+          Listens to route changes + react-query in-flight state. */}
+      <PjaxLoader />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
       <Route path="/login/admin" element={<AdminLoginPage />} />
       <Route
         path="/signup"
@@ -218,6 +223,7 @@ export default function App() {
       <Route path="/admin/clients"  element={<Navigate to="/app/admin/clients"  replace />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   )
 }
