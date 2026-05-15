@@ -56,7 +56,8 @@ export default function TrainingHistoryPage() {
       </header>
 
       {isLoading && (
-        <section className="card p-5 text-sm text-ink-muted">Загрузка истории…</section>
+        // PJAX top-bar signals the wait; empty card holds layout.
+        <section className="card p-5 h-20" aria-hidden="true" />
       )}
 
       {!isLoading && runs.length === 0 && (

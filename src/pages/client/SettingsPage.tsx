@@ -301,9 +301,8 @@ function SettingsContent({
   isLoading: boolean
 }) {
   if (isLoading) {
-    return (
-      <div className="card py-16 text-center text-ink-muted">Загрузка…</div>
-    )
+    // PJAX top-bar signals the wait; empty card keeps layout stable.
+    return <div className="card py-16" aria-hidden="true" />
   }
 
   return (

@@ -92,7 +92,8 @@ export default function AdminClientsPage() {
 
       <section className="card overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-ink-muted">Загрузка…</div>
+          // PJAX top-bar signals the wait; spacer keeps layout stable.
+          <div className="p-8 h-32" aria-hidden="true" />
         ) : clients.length === 0 ? (
           <div className="p-8 text-center text-ink-muted">
             Клиентов пока нет.

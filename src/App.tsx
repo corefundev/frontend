@@ -35,11 +35,9 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 }
 
 function SuspenseFallback() {
-  return (
-    <div className="flex h-64 items-center justify-center text-ink-muted">
-      Загрузка…
-    </div>
-  )
+  // PJAX loader at the top of viewport speaks for "fetching chunk".
+  // Empty spacer preserves layout height so the page doesn't snap.
+  return <div className="h-64" aria-hidden="true" />
 }
 
 export default function App() {

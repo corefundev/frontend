@@ -45,7 +45,8 @@ export default function AdminLegalPage() {
   })
 
   if (isLoading) {
-    return <div className="p-6 text-ink-muted">Загрузка…</div>
+    // PJAX top-bar signals the wait; this placeholder reserves height.
+    return <div className="p-6 h-64" aria-hidden="true" />
   }
 
   return (

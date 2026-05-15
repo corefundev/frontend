@@ -20,9 +20,9 @@ export default function PrivacyPage() {
     <PublicLayout>
       <section className="py-12 lg:py-16">
         <div className="mx-auto max-w-3xl px-5 lg:px-8">
-          {isLoading && (
-            <div className="text-ink-muted">Загрузка документа…</div>
-          )}
+          {/* PJAX-loader at viewport top covers the wait; spacer here
+              just reserves vertical room so the layout doesn't pop. */}
+          {isLoading && <div className="h-48" aria-hidden="true" />}
 
           {error && (
             <div className="p-6 rounded-2xl bg-red-50 border border-red-200 text-red-700">

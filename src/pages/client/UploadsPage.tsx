@@ -225,9 +225,8 @@ export default function UploadsPage() {
           <span className="eyebrow">{uploads.length} записей</span>
         </div>
         {listLoading ? (
-          <div className="card py-10 text-center text-ink-muted text-sm">
-            Загрузка…
-          </div>
+          // PJAX top-bar signals the wait; spacer holds layout.
+          <div className="card py-10 h-24" aria-hidden="true" />
         ) : uploads.length === 0 ? (
           <div className="card py-10 text-center text-ink-muted text-sm">
             Загрузок ещё нет.
