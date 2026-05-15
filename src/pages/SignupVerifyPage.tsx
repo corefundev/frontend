@@ -177,7 +177,20 @@ export default function SignupVerifyPage() {
           </button>
         </div>
 
-        <div className="text-xs mt-5 text-center">
+        {/* Login-redirect hint — shown to ALL users (not gated on any
+            server response), so it never leaks whether THIS email is
+            already registered. Pairs with audit R3-9: the backend's
+            /auth/signup returns an identical 202 for duplicate emails,
+            so an honest user who already has an account won't see a
+            code and needs an in-UI nudge toward /login. */}
+        <div className="text-xs mt-5 text-center text-ink-subtle">
+          Уже регистрировались?{' '}
+          <Link to="/login" className="text-brand-700 hover:text-brand-800 font-medium">
+            Войти
+          </Link>
+        </div>
+
+        <div className="text-xs mt-3 text-center">
           <Link to="/signup" className="text-ink-subtle hover:text-ink">
             ← Изменить email
           </Link>
