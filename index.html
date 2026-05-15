@@ -21,6 +21,13 @@
         • 'unsafe-inline' on style-src is needed by Tailwind's base layer
           when loaded via <style> tags during dev — production builds emit
           external stylesheets and you can drop it.
+        • 'unsafe-inline' on script-src is REQUIRED at runtime (audit R2-28,
+          2026-05-15 — verified). Cloudflare injects an inline anti-bot
+          challenge script (`<script>(function(){...CF$cv$params...})()
+          </script>`) into responses served from the orange-cloud proxy.
+          Removing 'unsafe-inline' would break that. Strict-dynamic /
+          nonce-based tightening would require CF's cooperation per
+          script; we accept 'unsafe-inline' as defence-in-depth gap.
         • img-src data: is needed for inline SVGs from recharts/toast.
         • frame-ancestors 'none' defends against clickjacking.
     -->
