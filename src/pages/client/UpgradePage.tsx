@@ -88,6 +88,18 @@ export default function UpgradePage() {
     },
     onError: (e) => {
       setPending(null)
+      // Backend audit R4-6 — /upgrade is now admin-gated until the
+      // payment-integration webhook is wired; non-admin callers see 403.
+      // Surface a sales-contact hint instead of the generic error so
+      // honest customers know where to go.
+      const status = (e as { response?: { status?: number } })?.response?.status
+      if (status === 403) {
+        toast(
+          'Смена тарифа временно через службу поддержки — напишите на support@testcore.ru',
+          { duration: 6000 },
+        )
+        return
+      }
       toast.error(errorMessage(e, 'Не удалось сменить тариф'))
     },
   })
