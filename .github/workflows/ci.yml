@@ -52,14 +52,15 @@ jobs:
           path: dist
           retention-days: 14
 
-      # ── npm audit (advisory, audit R2-14) ────────────────────
-      # Surface known-vulnerable transitive dependencies. Advisory so a
-      # freshly-disclosed CVE doesn't block deploys; once the repo has a
-      # clean baseline, drop `continue-on-error` to make it a hard gate.
-      # `--audit-level=high` skips noisy low/moderate findings (often
-      # in dev-only tooling like vite plugins / type packages).
-      - name: npm audit (high+ only)
-        continue-on-error: true
+      # ── npm audit — hard gate ─────────────────────────────────
+      # Audit R3-22 (2026-05-16) — promoted from advisory (R2-14)
+      # to hard gate after the clean baseline window. `--audit-level
+      # =high` keeps noise out (low/moderate findings in dev-only
+      # tooling like vite plugins don't block); HIGH+ in runtime
+      # deps now fails CI loudly so they can't slip into a deploy.
+      # To temporarily ignore a known CVE, prefix the run with an
+      # explicit allowlist comment + add `--exclude <pkg>` per case.
+      - name: npm audit (high+ runtime deps)
         run: |
           npm audit --audit-level=high --omit=dev | tee npm-audit.txt
 
