@@ -25,6 +25,8 @@ export default function TrainingHistoryPage() {
       const live = runs.some((r) => r.status === 'queued' || r.status === 'running')
       return live ? 5000 : false
     },
+    // PjaxLoader-silent — see PjaxLoader.tsx predicate.
+    meta: { silent: true },
   })
 
   const { data: uploads = [] } = useQuery({

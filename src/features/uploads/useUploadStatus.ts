@@ -20,5 +20,7 @@ export function useUploadStatus(uploadId: string | null) {
       if (!s || UPLOADS_TERMINAL.includes(s)) return false
       return POLL_MS
     },
+    // PjaxLoader-silent — see PjaxLoader.tsx predicate.
+    meta: { silent: true },
   })
 }

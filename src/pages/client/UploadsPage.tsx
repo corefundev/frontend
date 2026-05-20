@@ -76,6 +76,8 @@ export default function UploadsPage() {
       )
       return anyPending ? 3_000 : false
     },
+    // PjaxLoader-silent — see PjaxLoader.tsx predicate.
+    meta: { silent: true },
   })
 
   // Most recent processed upload — defines "current catalog size".

@@ -123,6 +123,8 @@ export default function TrainingPage() {
       }
       return q.state.data ? false : false
     },
+    // PjaxLoader-silent — see PjaxLoader.tsx predicate.
+    meta: { silent: true },
   })
   const runs = history?.runs ?? []
 

@@ -15,5 +15,9 @@ export function useJobPolling(jobId: string | null) {
       if (!status || TERMINAL.includes(status)) return false
       return POLL_MS
     },
+    // PjaxLoader filters out silent polls — keeps the top-bar from
+    // flashing every 3 sec during an active training. Initial fetch
+    // (dataUpdatedAt === 0) is still visible.
+    meta: { silent: true },
   })
 }

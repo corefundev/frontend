@@ -36,7 +36,17 @@ type Phase = 'idle' | 'loading' | 'finishing'
 
 export default function PjaxLoader() {
   const location = useLocation()
-  const isFetching  = useIsFetching()
+  // Background polls (e.g. useJobPolling on the training page, upload-
+  // status polls) opt out via `meta: { silent: true }` on their
+  // useQuery options. Without this filter, every poll tick triggered
+  // useIsFetching > 0 → start/finish cycle → the bar flashed once per
+  // poll interval. Initial fetches of silent queries are still counted
+  // (dataUpdatedAt === 0 = no data yet), so the bar still appears on
+  // first arrival to a page that polls.
+  const isFetching = useIsFetching({
+    predicate: (q) =>
+      q.meta?.silent !== true || q.state.dataUpdatedAt === 0,
+  })
   const isMutating  = useIsMutating()
   const busy        = isFetching > 0 || isMutating > 0
 
