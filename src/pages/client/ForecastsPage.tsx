@@ -32,6 +32,8 @@ export default function ForecastsPage() {
     queryKey: ['forecasts', clientId],
     queryFn:  () => forecastsApi.listForecasts(clientId),
     refetchInterval: 15_000,
+    // PjaxLoader-silent — see PjaxLoader.tsx predicate.
+    meta: { silent: true },
   })
 
   if (isLoading) {
