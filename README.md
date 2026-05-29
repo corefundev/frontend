@@ -28,14 +28,6 @@ npm run dev                        # http://localhost:5173
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
 
-## Production
-
-Прод-домен: `https://skusystem.ru`. Сборка билдится на CI и деплоится за nginx (см. `docker-compose.prod.yml` и `Dockerfile` в этом же репо).
-
-## Связь с backend
-
-Бэкенд: `https://api.testcore.ru` (репо: [corefundev/backend](https://github.com/corefundev/backend)).
-Авторизация: JWT + per-client API-ключ или OAuth (Google / Yandex). См. backend `/docs`.
 
 ## Лицензия
 
