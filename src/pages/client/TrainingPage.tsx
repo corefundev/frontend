@@ -59,8 +59,9 @@ export default function TrainingPage() {
   const cooldown = usage?.cooldown_until ? parseISO(usage.cooldown_until) : null
   const now = new Date()
   const blockedByCooldown = !!(cooldown && cooldown > now)
-  const blockedByCounter  =
-    usage?.training_runs_remaining === 0
+  // Monthly training limits removed 2026-06-02 — no per-month cap on any
+  // plan. The only throttles are the cooldown above (Free) and the
+  // single-in-flight guard (enforced server-side, 409).
   const skuOverLimit =
     !!selectedUpload &&
     usage?.max_skus !== null &&
@@ -286,12 +287,6 @@ export default function TrainingPage() {
               с {format(cooldown, 'dd MMM HH:mm', { locale: ru })}.
             </NoticeRow>
           )}
-          {blockedByCounter && usage && (
-            <NoticeRow tone="warn">
-              Исчерпан лимит запусков на месяц
-              ({usage.training_runs_used} / {usage.training_runs_per_month}).
-            </NoticeRow>
-          )}
           {skuOverLimit && (
             <NoticeRow tone="danger">
               Размер датасета превышает лимит тарифа.
@@ -307,20 +302,11 @@ export default function TrainingPage() {
             disabled={
               !uploadId ||
               isPending ||
-              blockedByCooldown ||
-              blockedByCounter
+              blockedByCooldown
             }
           >
             {isPending ? 'Запуск…' : 'Запустить обучение'}
           </button>
-          {usage && usage.training_runs_per_month !== null && (
-            <span className="text-sm text-ink-muted">
-              Осталось запусков в этом месяце:{' '}
-              <strong className="text-ink">{usage.training_runs_remaining}</strong>
-              {' / '}
-              {usage.training_runs_per_month}
-            </span>
-          )}
         </div>
       </section>
         )

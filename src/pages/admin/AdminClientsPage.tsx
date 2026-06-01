@@ -38,8 +38,8 @@ export default function AdminClientsPage() {
     queryFn: () => plansApi.list(),
   })
 
-  // Pre-fetch usage per client so the table can show "X/15 runs" at a
-  // glance. useQueries keeps each request independent.
+  // Pre-fetch usage per client so the table can show the month's run
+  // count at a glance. useQueries keeps each request independent.
   const usageQueries = useQueries({
     queries: clients.map((c) => ({
       queryKey: ['usage', c.client_id],
@@ -107,7 +107,7 @@ export default function AdminClientsPage() {
                   <Th>Тариф</Th>
                   <Th>Статус</Th>
                   <Th>Горизонт</Th>
-                  <Th>Обучений в мес.</Th>
+                  <Th>Обучений (мес.)</Th>
                   <Th>SKU (обуч.)</Th>
                   <Th>Последнее обуч.</Th>
                   <Th>API-ключ</Th>
@@ -152,11 +152,9 @@ export default function AdminClientsPage() {
                       </Td>
                       <Td>{c.horizon} дн.</Td>
                       <Td>
-                        {u?.training_runs_per_month === null || u === undefined
-                          ? u?.training_runs_per_month === null
-                            ? '∞'
-                            : '—'
-                          : `${u.training_runs_used} / ${u.training_runs_per_month}`}
+                        {/* Monthly cap removed 2026-06-02 — show the run
+                            count this month (informational; no cap). */}
+                        {u ? (u.training_runs_used ?? 0) : '—'}
                       </Td>
                       <Td>
                         {c.trained_sku_count ?? '—'}
