@@ -161,8 +161,8 @@ function PlanCards({ plans, isAuthed }: { plans: PlanSpec[]; isAuthed: boolean }
                     dark={!!featured}
                   />
                   <Row
-                    label="Обучений / мес"
-                    value={p.training_runs_per_month === null ? '∞' : String(p.training_runs_per_month)}
+                    label="Кулдаун обучения"
+                    value={p.training_cooldown_hours === null ? 'нет' : `${p.training_cooldown_hours} ч`}
                     dark={!!featured}
                   />
                 </dl>
@@ -220,8 +220,8 @@ function PlanCompare({ plans }: { plans: PlanSpec[] }) {
   const rows: { label: string; render: (p: PlanSpec) => ReactNode }[] = [
     { label: 'Максимум SKU',           render: (p) => (p.max_skus       === null ? '∞' : p.max_skus) },
     { label: 'Горизонт прогноза',      render: (p) => (p.max_horizon_days === null ? '∞' : `${p.max_horizon_days} дней`) },
-    { label: 'Обучений в месяц',       render: (p) => (p.training_runs_per_month === null ? '∞' : p.training_runs_per_month) },
-    { label: 'Кулдаун между запусками', render: (p) => (p.training_cooldown_hours === null ? '—' : `${p.training_cooldown_hours} ч`) },
+    { label: 'Кулдаун между обучениями', render: (p) => (p.training_cooldown_hours === null ? 'нет' : `${p.training_cooldown_hours} ч`) },
+    { label: 'Параллельные обучения',    render: () => '1 — новое после завершения текущего' },
     { label: 'Модель',                 render: (p) => p.model_display_name },
   ]
 
