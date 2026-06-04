@@ -45,10 +45,10 @@ export default function TrainingPage() {
   // ── Form state ───────────────────────────────────────────────────
   const [uploadId,     setUploadId]     = useState<string>('')
   const [jobId,        setJobId]        = useState<string | null>(null)
-  // When the user has at least one finished training, default to
-  // "продолжить с предыдущим набором". They can untick if they want
-  // a clean retrain on just the new file.
-  const [extendFromPrev, setExtendFromPrev] = useState<boolean>(true)
+  // When the user has trained before, default to "дообучить на всей
+  // истории" — merge ALL their prior processed uploads with the new one.
+  // They can untick for a clean retrain on just the new file.
+  const [extendFromHistory, setExtendFromHistory] = useState<boolean>(true)
 
   const selectedUpload: UploadRecord | undefined = useMemo(
     () => processedUploads.find((u) => u.upload_id === uploadId),
@@ -74,13 +74,6 @@ export default function TrainingPage() {
 
   const { mutate: train, isPending } = useMutation({
     mutationFn: () => {
-      // Find the most recent finished run with a different upload_id —
-      // that's what we'd merge with when "extend from previous" is on.
-      const prevUploadId = lastFinishedDifferentUploadId
-      const extendFrom =
-        extendFromPrev && prevUploadId && prevUploadId !== uploadId
-          ? prevUploadId
-          : undefined
       // We pass only upload_id — backend resolves the actual s3:// URI
       // from the upload registry. Hardcoding "s3://processed/..." here
       // (as we used to) was wrong: "processed" isn't the real bucket
@@ -92,7 +85,9 @@ export default function TrainingPage() {
           ? `upload://${selectedUpload.upload_id}`
           : '',
         upload_id: uploadId || undefined,
-        extend_from_upload_id: extendFrom,
+        // R11-#75: when on, the backend merges the client's FULL processed
+        // history (all prior uploads + this one) — no specific prior to pick.
+        extend_from_history: extendFromHistory,
       })
     },
     onSuccess: (res) => {
@@ -173,27 +168,12 @@ export default function TrainingPage() {
     if (active?.job_id) setJobId(active.job_id)
   }, [runs, jobId, dismissedJobs])
 
-  // Most recent successful training that used a different upload from
-  // the one currently selected — that's the one we'd merge with.
-  const lastFinishedDifferentUploadId = useMemo(() => {
-    for (const r of runs) {
-      if (r.status === 'finished' && r.upload_id && r.upload_id !== uploadId) {
-        return r.upload_id
-      }
-    }
-    return null
-  }, [runs, uploadId])
-
+  // Whether the client has trained before — gates the "extend from full
+  // history" toggle (R11-#75: we no longer pick a specific prior upload;
+  // the backend merges the entire processed history).
   const lastFinishedRun = useMemo(
     () => runs.find((r) => r.status === 'finished' && r.upload_id) ?? null,
     [runs],
-  )
-  const lastFinishedUpload: UploadRecord | undefined = useMemo(
-    () =>
-      lastFinishedRun?.upload_id
-        ? processedUploads.find((u) => u.upload_id === lastFinishedRun.upload_id)
-        : undefined,
-    [lastFinishedRun, processedUploads],
   )
 
   return (
@@ -251,29 +231,27 @@ export default function TrainingPage() {
           </select>
         )}
 
-        {/* Continue-training toggle — appears only when there's a
-            prior finished training run on a different upload.
-            Default ON: typical workflow is "user re-uploads delta,
-            wants combined training". They can untick for clean retrain. */}
-        {!!lastFinishedDifferentUploadId && !!uploadId && (
+        {/* Full-history retrain toggle (R11-#75) — appears once the client
+            has trained before. Default ON: a returning customer typically
+            wants the new data combined with everything they uploaded
+            before. They can untick for a clean retrain on just this file. */}
+        {!!lastFinishedRun && !!uploadId && (
           <label className="mt-4 flex items-start gap-3 cursor-pointer rounded-md border border-surface-border p-3 hover:bg-surface-muted/40">
             <input
               type="checkbox"
               className="mt-0.5 h-4 w-4 accent-brand-500"
-              checked={extendFromPrev}
-              onChange={(e) => setExtendFromPrev(e.target.checked)}
+              checked={extendFromHistory}
+              onChange={(e) => setExtendFromHistory(e.target.checked)}
             />
             <div className="flex-1 text-sm">
               <div className="text-ink font-medium">
-                Продолжить обучение с предыдущим набором
+                Дообучить на всей моей истории
               </div>
               <div className="text-ink-subtle text-xs mt-0.5">
                 Объединит выбранный файл{selectedUpload?.row_count != null && ` (${selectedUpload.row_count.toLocaleString('ru-RU')} строк)`}
-                {' '}с предыдущим обученным датасетом
-                {lastFinishedUpload?.filename && ` «${lastFinishedUpload.filename}»`}
-                {lastFinishedUpload?.row_count != null && ` (${lastFinishedUpload.row_count.toLocaleString('ru-RU')} строк)`}
-                {' '}и переобучит модель на полном объёме.
-                Совпадающие даты по SKU заменятся новыми значениями.
+                {' '}со ВСЕЙ вашей предыдущей историей загрузок и переобучит
+                модель на полном объёме. Совпадающие даты по SKU заменятся
+                новыми значениями.
               </div>
             </div>
           </label>
