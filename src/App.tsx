@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 
 import { useAuthStore } from './features/auth/store'
 import AppLayout from './components/AppLayout'
@@ -29,7 +29,24 @@ const AdminLegalPage    = lazy(() => import('./pages/admin/AdminLegalPage'))
 const PrivacyPage       = lazy(() => import('./pages/PrivacyPage'))
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const isAuthed = useAuthStore((s) => s.isAuthenticated())
+  const isAuthed  = useAuthStore((s) => s.isAuthenticated())
+  const expiresAt = useAuthStore((s) => s.expiresAt)
+  const logout    = useAuthStore((s) => s.logout)
+
+  // R11-L3: react to time-based JWT expiry on an IDLE tab. isAuthenticated()
+  // is only evaluated on render, so without this an idle tab keeps showing
+  // authed chrome until the next nav / API 401. Schedule a logout exactly
+  // when the token expires → the store update re-renders this guard → it
+  // bounces to /login. (The server 401 remains the real boundary; this is
+  // a client-side UX correctness fix.)
+  useEffect(() => {
+    if (!expiresAt) return
+    const ms = expiresAt - Date.now()
+    if (ms <= 0) { logout(); return }
+    const t = setTimeout(() => logout(), ms)
+    return () => clearTimeout(t)
+  }, [expiresAt, logout])
+
   if (!isAuthed) return <Navigate to="/login" replace />
   return children
 }
