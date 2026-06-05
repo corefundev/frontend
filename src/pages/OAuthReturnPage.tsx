@@ -29,10 +29,22 @@ export default function OAuthReturnPage() {
   const [params] = useSearchParams()
   const setAuth = useAuthStore((s) => s.setAuth)
 
-  const token    = params.get('token') ?? ''
-  const clientId = params.get('client_id') ?? ''
-  const newUser  = params.get('new_user') === '1'
-  const apiKey   = params.get('api_key') ?? ''
+  // R11-L1: the backend now delivers the token / api_key in the URL
+  // FRAGMENT (#…), which never reaches the server (out of access logs and
+  // the Referer header). Read the hash first; fall back to the query string
+  // for backward-compat during the backend deploy window. The values are
+  // captured once at mount; we scrub the URL in the effect below.
+  const { token, clientId, newUser, apiKey } = useMemo(() => {
+    const rawHash = window.location.hash.replace(/^#/, '')
+    const hashParams = new URLSearchParams(rawHash)
+    const get = (k: string) => hashParams.get(k) ?? params.get(k) ?? ''
+    return {
+      token:    get('token'),
+      clientId: get('client_id'),
+      newUser:  get('new_user') === '1',
+      apiKey:   get('api_key'),
+    }
+  }, [params])
 
   // Apply the JWT once. The effect re-runs if the URL params change
   // (e.g. back-button → forward through a different OAuth callback)
@@ -46,6 +58,10 @@ export default function OAuthReturnPage() {
       nav('/login', { replace: true })
       return
     }
+    // R11-L1: scrub the token / api_key out of the URL (address bar +
+    // history entry) immediately after capturing them, so they don't
+    // linger in browser history once login completes.
+    window.history.replaceState(null, '', window.location.pathname)
     setAuth(token, clientId)
 
     // Existing user → straight in.
