@@ -11,6 +11,7 @@ import {
   PlanGateBadge,
   UpgradeTrigger,
 } from '../../features/plans/upsell'
+import type { PlanId } from '../../features/plans/api'
 import { errorMessage } from '../../shared/api/client'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -49,6 +50,8 @@ interface RegulatorState {
   weatherOn:       boolean     // Business-only
   weatherLat:      string       // string so empty = "use server default" (СПб)
   weatherLon:      string
+  fxOn:            boolean      // RU FX regressors — Start + Business
+  fxCurrencies:    string[]     // subset of FX_CURRENCIES; non-empty when fxOn
 }
 
 const DEFAULTS: RegulatorState = {
@@ -65,9 +68,21 @@ const DEFAULTS: RegulatorState = {
   weatherOn:       false,
   weatherLat:      '',
   weatherLon:      '',
+  fxOn:            true,
+  fxCurrencies:    ['CNY', 'USD', 'EUR', 'BYN', 'KZT'],
 }
 
 const COUNTRIES = ['RU', 'KZ', 'BY', 'US', 'DE', 'FR'] as const
+
+// RU FX regressors. Order = display order. Source of truth on the backend is
+// external_regressors_ru.CBR_CODES; keep this list in sync with it.
+const FX_CURRENCIES = ['CNY', 'USD', 'EUR', 'BYN', 'KZT'] as const
+const FX_PRESETS: { label: string; codes: string[] }[] = [
+  { label: 'Все',        codes: ['CNY', 'USD', 'EUR', 'BYN', 'KZT'] },
+  { label: 'Азия-ЕАЭС',  codes: ['CNY', 'KZT', 'BYN'] },
+  { label: 'Запад',      codes: ['USD', 'EUR'] },
+  { label: 'Только CNY', codes: ['CNY'] },
+]
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Mapping: UI-state ↔ dotted config override.
@@ -105,6 +120,13 @@ function stateToOverride(s: RegulatorState): Record<string, any> {
         ...(s.weatherLat.trim() ? { latitude:  Number(s.weatherLat) }  : {}),
         ...(s.weatherLon.trim() ? { longitude: Number(s.weatherLon) } : {}),
       },
+      external_regressors_ru: {
+        enabled: s.fxOn,
+        // Attach currencies only when enabled AND non-empty — the backend
+        // rejects an empty list (validate_client_config), and the UI blocks
+        // save in that state, so this guard is belt-and-suspenders.
+        ...(s.fxOn && s.fxCurrencies.length ? { currencies: s.fxCurrencies } : {}),
+      },
     },
   }
 }
@@ -138,6 +160,13 @@ function overrideToState(raw: Record<string, any>): RegulatorState {
       features.weather?.latitude  != null ? String(features.weather.latitude)  : '',
     weatherLon:
       features.weather?.longitude != null ? String(features.weather.longitude) : '',
+    fxOn:
+      features.external_regressors_ru?.enabled ?? DEFAULTS.fxOn,
+    fxCurrencies:
+      Array.isArray(features.external_regressors_ru?.currencies) &&
+      features.external_regressors_ru.currencies.length
+        ? features.external_regressors_ru.currencies
+        : DEFAULTS.fxCurrencies,
   }
 }
 
@@ -180,6 +209,10 @@ export default function SettingsPage() {
     }
     return false
   }
+
+  // FX feed enabled but zero currencies selected = an override the backend
+  // rejects (validate_client_config); block save and surface it inline.
+  const fxInvalid = state.fxOn && canEdit('fxOn') && state.fxCurrencies.length === 0
 
   const { mutate: save, isPending: saving } = useMutation({
     mutationFn: () => configApi.set(clientId, stateToOverride(state) as any),
@@ -229,6 +262,7 @@ export default function SettingsPage() {
               update={() => {}}
               canEdit={() => false}
               isLoading={false}
+              fxInvalid={false}
             />
           </LockOverlay>
         </div>
@@ -248,6 +282,7 @@ export default function SettingsPage() {
             update={update}
             canEdit={canEdit}
             isLoading={isLoading}
+            fxInvalid={fxInvalid}
           />
 
           {/* Action row */}
@@ -268,7 +303,7 @@ export default function SettingsPage() {
                 type="button"
                 className="btn-primary"
                 onClick={() => save()}
-                disabled={saving || !dirty}
+                disabled={saving || !dirty || fxInvalid}
               >
                 {saving ? 'Сохраняю…' : 'Сохранить'}
               </button>
@@ -294,11 +329,13 @@ function SettingsContent({
   update,
   canEdit,
   isLoading,
+  fxInvalid,
 }: {
   state: RegulatorState
   update: <K extends keyof RegulatorState>(k: K, v: RegulatorState[K]) => void
   canEdit: (k: keyof RegulatorState) => boolean
   isLoading: boolean
+  fxInvalid: boolean
 }) {
   if (isLoading) {
     // PJAX top-bar signals the wait; empty card keeps layout stable.
@@ -436,6 +473,68 @@ function SettingsContent({
               </p>
             </div>
           )}
+
+          {/* RU FX regressors — Start + Business (Free sees the upsell badge) */}
+          <div className="border-t border-surface pt-4 mt-2">
+            <Toggle
+              label="Валютные регрессоры (курсы ЦБ ₽)"
+              hint="CNY/USD/EUR/BYN/KZT — сильный сигнал для импортных товаров"
+              checked={state.fxOn}
+              onChange={(v) => update('fxOn', v)}
+              disabled={!canEdit('fxOn')}
+              gate={!canEdit('fxOn') ? 'start' : undefined}
+            />
+            {state.fxOn && canEdit('fxOn') && (
+              <div className="mt-3 max-w-md pl-1">
+                <div className="flex flex-wrap gap-2">
+                  {FX_CURRENCIES.map((c) => {
+                    const on = state.fxCurrencies.includes(c)
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() =>
+                          update(
+                            'fxCurrencies',
+                            on
+                              ? state.fxCurrencies.filter((x) => x !== c)
+                              : [...state.fxCurrencies, c],
+                          )
+                        }
+                        className={[
+                          'rounded-full px-3 py-1 text-sm border border-transparent transition',
+                          on
+                            ? 'bg-brand-500 text-ink-invert'
+                            : 'bg-surface-muted text-ink-muted hover:text-ink',
+                        ].join(' ')}
+                      >
+                        {c}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="eyebrow">Пресеты:</span>
+                  {FX_PRESETS.map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => update('fxCurrencies', p.codes)}
+                      className="text-xs text-brand-600 hover:text-brand-700 underline underline-offset-2"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                {fxInvalid && (
+                  <p className="mt-2 text-xs text-danger">
+                    Выберите хотя бы одну валюту — или выключите блок.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
 
           {state.holidaysOn && (
             <div className="mt-4">
@@ -785,7 +884,7 @@ function Slider({
 }
 
 function Toggle({
-  label, hint, checked, onChange, disabled, businessOnly,
+  label, hint, checked, onChange, disabled, businessOnly, gate,
 }: {
   label: string
   hint?: string
@@ -793,6 +892,7 @@ function Toggle({
   onChange: (v: boolean) => void
   disabled?: boolean
   businessOnly?: boolean
+  gate?: PlanId
 }) {
   return (
     <label className={[
@@ -809,7 +909,8 @@ function Toggle({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm text-ink">{label}</span>
-          {businessOnly && <PlanGateBadge required="business" />}
+          {gate ? <PlanGateBadge required={gate} />
+                : businessOnly && <PlanGateBadge required="business" />}
         </div>
         {hint && <div className="eyebrow mt-0.5">{hint}</div>}
       </div>

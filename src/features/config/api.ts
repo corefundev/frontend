@@ -33,6 +33,9 @@ export interface ClientConfigOverride {
     price?: boolean
     promo?: boolean
     stock?: boolean
+    // RU FX regressors (ЦБ РФ daily rates). Paid-tier override
+    // (plans._START_CONFIG_KEYS); currencies ⊆ {CNY,USD,EUR,BYN,KZT}.
+    external_regressors_ru?: { enabled?: boolean; currencies?: string[] }
   }
   anomaly_detection?: { enabled?: boolean; contamination?: number; iqr_factor?: number }
   hpo?: { enabled?: boolean; n_trials?: number; timeout_sec?: number }
