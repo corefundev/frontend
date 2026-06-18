@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   useMutation,
-  useQueries,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
@@ -38,19 +37,6 @@ export default function AdminClientsPage() {
     queryFn: () => plansApi.list(),
   })
 
-  // Pre-fetch usage per client so the table can show the month's run
-  // count at a glance. useQueries keeps each request independent.
-  const usageQueries = useQueries({
-    queries: clients.map((c) => ({
-      queryKey: ['usage', c.client_id],
-      queryFn:  () => plansApi.getUsage(c.client_id),
-      staleTime: 30_000,
-    })),
-  })
-  const usageById = new Map(
-    clients.map((c, i) => [c.client_id, usageQueries[i].data]),
-  )
-
   const planMap = new Map<PlanId, PlanSpec>(plans.map((p) => [p.id, p]))
 
   const updateMut = useMutation({
@@ -59,7 +45,6 @@ export default function AdminClientsPage() {
     onSuccess: (rec) => {
       toast.success(`${rec.client_id}: тариф обновлён`)
       qc.invalidateQueries({ queryKey: ['admin-clients'] })
-      qc.invalidateQueries({ queryKey: ['usage', rec.client_id] })
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось обновить')),
   })
@@ -107,7 +92,6 @@ export default function AdminClientsPage() {
                   <Th>Тариф</Th>
                   <Th>Статус</Th>
                   <Th>Горизонт</Th>
-                  <Th>Обучений (мес.)</Th>
                   <Th>SKU (обуч.)</Th>
                   <Th>Последнее обуч.</Th>
                   <Th>API-ключ</Th>
@@ -115,7 +99,6 @@ export default function AdminClientsPage() {
               </thead>
               <tbody className="divide-y divide-surface-border">
                 {clients.map((c) => {
-                  const u = usageById.get(c.client_id)
                   const spec = planMap.get(c.plan)
                   return (
                     <tr key={c.client_id} className="hover:bg-surface-muted/50">
@@ -151,11 +134,6 @@ export default function AdminClientsPage() {
                         <span className={STATUS_BADGE[c.status]}>{c.status}</span>
                       </Td>
                       <Td>{c.horizon} дн.</Td>
-                      <Td>
-                        {/* Monthly cap removed 2026-06-02 — show the run
-                            count this month (informational; no cap). */}
-                        {u ? (u.training_runs_used ?? 0) : '—'}
-                      </Td>
                       <Td>
                         {c.trained_sku_count ?? '—'}
                         {spec?.max_skus !== null && spec?.max_skus !== undefined && (

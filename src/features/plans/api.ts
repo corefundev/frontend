@@ -13,7 +13,6 @@ export interface PlanSpec {
   max_skus: number | null                 // null = unlimited
   max_horizon_days: number | null
   training_cooldown_hours: number | null
-  training_runs_per_month: number | null
   config_allowed_keys: string[] | null    // null = everything; [] = nothing
   price_label: string
 }
@@ -27,9 +26,6 @@ export interface ClientUsage {
   max_horizon_days: number | null
   config_allowed_keys: string[] | null
   training_cooldown_hours: number | null
-  training_runs_per_month: number | null
-  training_runs_used: number
-  training_runs_remaining: number | null
   cooldown_until: string | null           // ISO
   trained_sku_count: number | null
   // Distinct SKU count from the latest processed upload — what's in
