@@ -590,7 +590,11 @@ function NotificationsBlock() {
       // Open the bot link in a new tab. The user clicks Start there,
       // bot's poll loop receives /start <token>, stores chat_id, and
       // the next status refetch will show "Привязано".
-      window.open(data.url, '_blank', 'noopener')
+      // R13 LOW — only open http(s) URLs; never a javascript:/data: scheme,
+      // as a defensive guard even though the server builds this bot URL.
+      if (/^https?:\/\//i.test(data.url)) {
+        window.open(data.url, '_blank', 'noopener')
+      }
       toast(
         'Откройте бота и нажмите Start. Через несколько секунд статус обновится.',
         { icon: '✈', duration: 6000 },
