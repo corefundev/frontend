@@ -62,10 +62,23 @@ export interface BatchPredictRequest {
   requests: PredictRequest[]
 }
 
+// CONTRACT-batch (backend #186): the batch endpoint is PARTIAL-SUCCESS.
+// Each slot (in request order) is either the normal single-predict payload
+// or an error envelope for that item alone — one bad SKU no longer fails
+// the whole batch. Narrow with `'error' in item` before reading fields.
+export interface BatchItemError {
+  error: {
+    status: number
+    detail: string
+  }
+}
+
 export interface BatchPredictResponse {
   client_id: string
-  results: PredictResponse[]
+  results: (PredictResponse | BatchItemError)[]
   count: number
+  succeeded: number
+  failed: number
 }
 
 // One per-SKU forecast track returned by GET /clients/{id}/forecasts.
