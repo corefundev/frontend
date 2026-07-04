@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -116,6 +117,15 @@ function ForecastViewer({
   })
   const anomalies: AnomalyRow[] = anomaliesPayload?.anomalies ?? []
 
+  // QW2-3 (#226): whole days since the forecasts (= the model) were
+  // generated; past 45 days the header shows a retrain nudge (measured
+  // drift: interval coverage slides 0.805 → ~0.75 over 1-3 months).
+  const modelAgeDays = useMemo(() => {
+    if (!data.generated_at) return null
+    const ms = Date.now() - parseISO(data.generated_at).getTime()
+    return Number.isFinite(ms) ? Math.floor(ms / 86_400_000) : null
+  }, [data.generated_at])
+
   // Build the date axis once — every SKU's values array is aligned to
   // it index-by-index.
   const dates = useMemo(() => {
@@ -161,6 +171,16 @@ function ForecastViewer({
               <div className="text-ink-subtle text-xs mt-0.5">
                 до {formatDate(data.last_date)} · горизонт {data.horizon_days} дн. · {data.count} SKU
               </div>
+              {/* QW2-3 (#226): staleness nudge. Measured drift: interval
+                  coverage slides 0.805 → ~0.75 over 1-3 months without a
+                  retrain, so past 45 days we nudge toward Обучение. */}
+              {modelAgeDays !== null && modelAgeDays > 45 && (
+                <div className="mt-1.5">
+                  <Link to="/training" className="badge-warn hover:opacity-80 transition-opacity">
+                    Модель обучена {modelAgeDays} дн. назад — рекомендуем переобучить
+                  </Link>
+                </div>
+              )}
             </>
           )}
         </div>
