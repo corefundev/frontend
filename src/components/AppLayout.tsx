@@ -23,6 +23,7 @@ const NAV = [
   { to: 'upgrade',     label: 'Апгрейд',       pageTitle: 'Тариф',              icon: IconStar,    minPlan: 'free'     },
   { to: 'admin/clients', label: 'Клиенты',     pageTitle: 'Клиенты',            icon: IconUsers,   minPlan: 'free', adminOnly: true },
   { to: 'admin/legal',   label: 'Юр. документы', pageTitle: 'Юридические документы', icon: IconFile, minPlan: 'free', adminOnly: true },
+  { to: 'admin/notifications', label: 'Уведомления', pageTitle: 'Уведомления клиентам', icon: IconMegaphone, minPlan: 'free', adminOnly: true },
 ] as const
 
 const PLAN_RANK: Record<PlanId, number> = { free: 0, start: 1, business: 2 }
@@ -275,6 +276,15 @@ function IconSpark({ className }: IconProps) {
     </svg>
   )
 }
+function IconMegaphone({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+         strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M3 11l18-7-4 14-6-3-3 4-1-5z" />
+    </svg>
+  )
+}
+
 function IconHistory({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"

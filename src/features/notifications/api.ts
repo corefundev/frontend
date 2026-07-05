@@ -81,3 +81,30 @@ export async function markNotificationsRead(
   )
   return data
 }
+
+// ── Admin announcements (ADM-1 #254; backend NC-6 #251) ──────────────────────
+
+export interface AdminSendRequest {
+  target: 'all' | string[]
+  title: string
+  body?: string
+  severity?: 'info' | 'warning'
+  type?: 'announcement' | 'system'
+}
+
+export interface AdminSentNotification extends AppNotification {
+  client_id: string
+}
+
+export const adminNotificationsApi = {
+  send: (req: AdminSendRequest) =>
+    apiClient
+      .post<{ created: number; target: string }>('/admin/notifications', req)
+      .then((r) => r.data),
+
+  history: (limit = 50) =>
+    apiClient
+      .get<{ notifications: AdminSentNotification[]; count: number }>(
+        '/admin/notifications', { params: { limit } })
+      .then((r) => r.data),
+}
