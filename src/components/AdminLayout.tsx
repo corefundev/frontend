@@ -21,6 +21,7 @@ const TITLES: Record<string, string> = {
   '/admin':               'Обзор системы',
   '/admin/clients':       'Клиенты',
   '/admin/plans':         'Тарифы',
+  '/admin/clients/new':   'Новый пользователь',
   '/admin/notifications': 'Уведомления клиентам',
   '/admin/legal':         'Юридические документы',
 }
@@ -63,7 +64,8 @@ export default function AdminLayout() {
   const logout   = useAuthStore((s) => s.logout)
   const nav = useNavigate()
   const { pathname } = useLocation()
-  const title = TITLES[pathname] ?? 'Админ-консоль'
+  const title = TITLES[pathname]
+    ?? (pathname.startsWith('/admin/clients/') ? 'Карточка клиента' : 'Админ-консоль')
 
   return (
     <div className="flex min-h-screen bg-surface">
