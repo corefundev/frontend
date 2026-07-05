@@ -21,9 +21,6 @@ const NAV = [
   { to: 'promo',       label: 'Промо',         pageTitle: 'Промо-планировщик',  icon: IconSpark,   minPlan: 'business' },
   { to: 'settings',    label: 'Настройки',     pageTitle: 'Настройки модели',   icon: IconSlider,  minPlan: 'free'     },
   { to: 'upgrade',     label: 'Апгрейд',       pageTitle: 'Тариф',              icon: IconStar,    minPlan: 'free'     },
-  { to: 'admin/clients', label: 'Клиенты',     pageTitle: 'Клиенты',            icon: IconUsers,   minPlan: 'free', adminOnly: true },
-  { to: 'admin/legal',   label: 'Юр. документы', pageTitle: 'Юридические документы', icon: IconFile, minPlan: 'free', adminOnly: true },
-  { to: 'admin/notifications', label: 'Уведомления', pageTitle: 'Уведомления клиентам', icon: IconMegaphone, minPlan: 'free', adminOnly: true },
 ] as const
 
 const PLAN_RANK: Record<PlanId, number> = { free: 0, start: 1, business: 2 }
@@ -33,15 +30,16 @@ export default function AppLayout() {
   const location = useLocation()
   const clientId = useAuthStore((s) => s.clientId)
   const logout   = useAuthStore((s) => s.logout)
-  const isAdmin  = useAuthStore((s) => s.isAdmin())
   const { data: usage } = useUsage()
 
   const userRank = usage ? PLAN_RANK[usage.plan] : 0
-  const visibleNav = NAV.filter((item) => !('adminOnly' in item) || !item.adminOnly || isAdmin)
+  // ADM-0 (#276): админ-пункты живут в выделенной консоли /admin — клиентский
+  // сайдбар показывает только клиентские разделы.
+  const visibleNav = NAV
 
-  // Pick the longest matching nav entry for the current path so
-  // /app/admin/clients beats the empty "Главная" entry (which would
-  // otherwise prefix-match the root /app path).
+  // Pick the longest matching nav entry for the current path so a nested
+  // path beats the empty "Главная" entry (which would otherwise
+  // prefix-match the root /app path).
   const pageTitle = (() => {
     const path = location.pathname.replace(/^\/app\/?/, '')
     const matches = NAV.filter((n) => n.to !== '' && path.startsWith(n.to))
@@ -228,29 +226,6 @@ function IconSlider({ className }: IconProps) {
     </svg>
   )
 }
-function IconUsers({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  )
-}
-function IconFile({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="8" y1="13" x2="16" y2="13" />
-      <line x1="8" y1="17" x2="16" y2="17" />
-      <line x1="8" y1="9"  x2="10" y2="9" />
-    </svg>
-  )
-}
 function IconSplit({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -276,15 +251,6 @@ function IconSpark({ className }: IconProps) {
     </svg>
   )
 }
-function IconMegaphone({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-         strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      <path d="M3 11l18-7-4 14-6-3-3 4-1-5z" />
-    </svg>
-  )
-}
-
 function IconHistory({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
