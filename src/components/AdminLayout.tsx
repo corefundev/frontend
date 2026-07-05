@@ -12,6 +12,7 @@ import { useAuthStore } from '../features/auth/store'
 const NAV = [
   { to: '/admin',               label: 'Обзор',          end: true },
   { to: '/admin/clients',       label: 'Клиенты',        end: false },
+  { to: '/admin/plans',         label: 'Тарифы',         end: false },
   { to: '/admin/notifications', label: 'Уведомления',    end: false },
   { to: '/admin/legal',         label: 'Юр. документы',  end: false },
 ] as const
@@ -19,6 +20,7 @@ const NAV = [
 const TITLES: Record<string, string> = {
   '/admin':               'Обзор системы',
   '/admin/clients':       'Клиенты',
+  '/admin/plans':         'Тарифы',
   '/admin/notifications': 'Уведомления клиентам',
   '/admin/legal':         'Юридические документы',
 }
