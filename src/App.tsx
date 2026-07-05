@@ -27,6 +27,8 @@ const OAuthReturnPage   = lazy(() => import('./pages/OAuthReturnPage'))
 const AdminClientsPage  = lazy(() => import('./pages/admin/AdminClientsPage'))
 const AdminLegalPage    = lazy(() => import('./pages/admin/AdminLegalPage'))
 const AdminNotificationsPage = lazy(() => import('./pages/admin/AdminNotificationsPage'))
+const AdminHomePage = lazy(() => import('./pages/admin/AdminHomePage'))
+const AdminLayout = lazy(() => import('./components/AdminLayout'))
 const PrivacyPage       = lazy(() => import('./pages/PrivacyPage'))
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -111,7 +113,7 @@ export default function App() {
         }
       />
 
-      {/* Public legal — privacy policy (admin-editable via /app/admin/legal) */}
+      {/* Public legal — privacy policy (admin-editable via /admin/legal) */}
       <Route
         path="/privacy"
         element={
@@ -207,37 +209,40 @@ export default function App() {
             </Suspense>
           }
         />
-        <Route
-          path="admin/clients"
-          element={
-            <AdminGuard>
-              <Suspense fallback={<SuspenseFallback />}>
-                <AdminClientsPage />
-              </Suspense>
-            </AdminGuard>
-          }
-        />
-        <Route
-          path="admin/legal"
-          element={
-            <AdminGuard>
-              <Suspense fallback={<SuspenseFallback />}>
-                <AdminLegalPage />
-              </Suspense>
-            </AdminGuard>
-          }
-        />
-        <Route
-          path="admin/notifications"
-          element={
-            <AdminGuard>
-              <Suspense fallback={<SuspenseFallback />}>
-                <AdminNotificationsPage />
-              </Suspense>
-            </AdminGuard>
-          }
-        />
       </Route>
+
+      {/* ADM-0 (#276): выделенная админ-консоль — свой shell, никакого
+          клиентского кабинета. AdminGuard на уровне layout'а. */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminGuard>
+              <Suspense fallback={<SuspenseFallback />}>
+                <AdminLayout />
+              </Suspense>
+            </AdminGuard>
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={
+          <Suspense fallback={<SuspenseFallback />}><AdminHomePage /></Suspense>
+        } />
+        <Route path="clients" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminClientsPage /></Suspense>
+        } />
+        <Route path="notifications" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminNotificationsPage /></Suspense>
+        } />
+        <Route path="legal" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminLegalPage /></Suspense>
+        } />
+      </Route>
+
+      {/* /app/admin/* → выделенная консоль (ADM-0) */}
+      <Route path="/app/admin/clients"       element={<Navigate to="/admin/clients"       replace />} />
+      <Route path="/app/admin/legal"         element={<Navigate to="/admin/legal"         replace />} />
+      <Route path="/app/admin/notifications" element={<Navigate to="/admin/notifications" replace />} />
 
       {/* Старые ссылки вида /uploads, /forecasts и т.п. редиректим на /app/* */}
       <Route path="/uploads"        element={<Navigate to="/app/uploads"        replace />} />
@@ -246,7 +251,6 @@ export default function App() {
       <Route path="/scenarios"      element={<Navigate to="/app/scenarios"      replace />} />
       <Route path="/promo"          element={<Navigate to="/app/promo"          replace />} />
       <Route path="/settings"       element={<Navigate to="/app/settings"       replace />} />
-      <Route path="/admin/clients"  element={<Navigate to="/app/admin/clients"  replace />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

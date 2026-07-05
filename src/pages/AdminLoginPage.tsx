@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
     onSuccess: (data) => {
       setAuth(data.access_token, clientId.trim())
       toast.success('Вход выполнен')
-      nav('/app', { replace: true })
+      nav('/admin', { replace: true })
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось войти')),
   })
