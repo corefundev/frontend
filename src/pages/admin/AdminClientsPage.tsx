@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import { clientsApi } from '../../features/clients/api'
-import { plansApi, type PlanId } from '../../features/plans/api'
+import { plansApi, type PlanId, type PlanSpec } from '../../features/plans/api'
 import { apiClient } from '../../shared/api/client'
 
 const PLAN_ORDER: PlanId[] = ['free', 'start', 'business']
