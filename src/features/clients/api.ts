@@ -18,6 +18,9 @@ export interface ClientRecord {
   notes: string | null
   // ── Phase 4 fields ──
   plan: 'free' | 'start' | 'business'
+  email?: string | null
+  // ADM-10 (#278): NULL = active; timestamp = suspended since then.
+  suspended_at?: string | null
   training_runs_this_month: number
   training_runs_window_start: string | null
   trained_sku_count: number | null
@@ -61,6 +64,17 @@ export const clientsApi = {
 
   // Admin or self: POST /clients/{client_id}/api-key/rotate
   // Returns a NEW api_key one-time. Old one is invalidated on the server.
+  // ADM-10 (#278): operator suspension — immediate effect, audited server-side.
+  suspend: (clientId: string) =>
+    apiClient
+      .post<{ suspended: boolean }>(`/admin/clients/${encodeURIComponent(clientId)}/suspend`)
+      .then((r) => r.data),
+
+  unsuspend: (clientId: string) =>
+    apiClient
+      .post<{ suspended: boolean }>(`/admin/clients/${encodeURIComponent(clientId)}/unsuspend`)
+      .then((r) => r.data),
+
   rotateApiKey: (clientId: string) =>
     apiClient
       .post<RotateApiKeyResponse>(`/clients/${encodeURIComponent(clientId)}/api-key/rotate`)
