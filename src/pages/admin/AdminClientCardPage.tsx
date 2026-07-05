@@ -9,7 +9,7 @@ import toast from 'react-hot-toast'
 
 import { apiClient, errorMessage } from '../../shared/api/client'
 import { clientsApi, type ClientRecord } from '../../features/clients/api'
-import { plansApi, type PlanId } from '../../features/plans/api'
+import { type PlanId } from '../../features/plans/api'
 import { getNotifications } from '../../features/notifications/api'
 
 interface Overview {
@@ -36,9 +36,6 @@ export default function AdminClientCardPage() {
       return data
     },
     enabled: !!clientId,
-  })
-  const { data: plans = [] } = useQuery({
-    queryKey: ['plans'], queryFn: () => plansApi.list(),
   })
   const { data: inbox } = useQuery({
     queryKey: ['notifications', clientId, 'admin-card'],
