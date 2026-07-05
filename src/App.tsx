@@ -26,6 +26,7 @@ const SignupVerifyPage  = lazy(() => import('./pages/SignupVerifyPage'))
 const OAuthReturnPage   = lazy(() => import('./pages/OAuthReturnPage'))
 const AdminClientsPage  = lazy(() => import('./pages/admin/AdminClientsPage'))
 const AdminLegalPage    = lazy(() => import('./pages/admin/AdminLegalPage'))
+const AdminNotificationsPage = lazy(() => import('./pages/admin/AdminNotificationsPage'))
 const PrivacyPage       = lazy(() => import('./pages/PrivacyPage'))
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -222,6 +223,16 @@ export default function App() {
             <AdminGuard>
               <Suspense fallback={<SuspenseFallback />}>
                 <AdminLegalPage />
+              </Suspense>
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="admin/notifications"
+          element={
+            <AdminGuard>
+              <Suspense fallback={<SuspenseFallback />}>
+                <AdminNotificationsPage />
               </Suspense>
             </AdminGuard>
           }
