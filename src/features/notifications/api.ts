@@ -37,3 +37,47 @@ export const notificationsApi = {
       .delete(`/clients/${clientId}/telegram`)
       .then(() => undefined),
 }
+
+// ── In-account notification center (NC-2 #242; backend NC-1 #241) ────────────
+// GET  /clients/{id}/notifications        → inbox list + unread count
+// POST /clients/{id}/notifications/read   → mark ids (or all) read
+
+export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error'
+
+export interface AppNotification {
+  id: number
+  type: string
+  severity: NotificationSeverity
+  title: string
+  body: string
+  created_at: string
+  read_at: string | null
+}
+
+export interface NotificationsResponse {
+  notifications: AppNotification[]
+  count: number
+  unread: number
+}
+
+export async function getNotifications(
+  clientId: string,
+  limit = 20,
+): Promise<NotificationsResponse> {
+  const { data } = await apiClient.get<NotificationsResponse>(
+    `/clients/${encodeURIComponent(clientId)}/notifications`,
+    { params: { limit } },
+  )
+  return data
+}
+
+export async function markNotificationsRead(
+  clientId: string,
+  ids?: number[],
+): Promise<{ marked: number }> {
+  const { data } = await apiClient.post<{ marked: number }>(
+    `/clients/${encodeURIComponent(clientId)}/notifications/read`,
+    { ids: ids ?? null },
+  )
+  return data
+}

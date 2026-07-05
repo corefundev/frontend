@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../features/auth/store'
+import { NotificationBell } from '../features/notifications/NotificationBell'
 import { useUsage } from '../features/plans/useUsage'
 import { PlanBadge } from '../features/plans/PlanBadge'
 import { QuotaMeter, LockTag } from '../features/plans/upsell'
@@ -152,6 +153,7 @@ export default function AppLayout() {
                 modelName={usage.model_display_name}
               />
             )}
+            <NotificationBell />
             <button
               type="button"
               onClick={() => { logout(); nav('/login') }}
