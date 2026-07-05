@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   useMutation,
   useQuery,
@@ -26,6 +26,12 @@ const STATUS_BADGE: Record<ClientRecord['status'], string> = {
 export default function AdminClientsPage() {
   const qc = useQueryClient()
   const [showRegister, setShowRegister] = useState(false)
+  // ADM-10 (#278): client-side search/filter/sort — honest at the current
+  // scale; server-side pagination is the recorded follow-up at ~200 clients.
+  const [search, setSearch] = useState('')
+  const [planFilter, setPlanFilter] = useState<'all' | PlanId>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<'client_id' | 'last_trained_at' | 'plan'>('client_id')
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['admin-clients'],
@@ -38,6 +44,35 @@ export default function AdminClientsPage() {
   })
 
   const planMap = new Map<PlanId, PlanSpec>(plans.map((p) => [p.id, p]))
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    let rows = clients.filter((c) => {
+      if (q && !c.client_id.toLowerCase().includes(q) &&
+          !(c.email ?? '').toLowerCase().includes(q)) return false
+      if (planFilter !== 'all' && c.plan !== planFilter) return false
+      if (statusFilter === 'suspended') return !!c.suspended_at
+      if (statusFilter !== 'all' && c.status !== statusFilter) return false
+      return true
+    })
+    rows = [...rows].sort((a, b) => {
+      if (sortBy === 'last_trained_at')
+        return (b.last_trained_at ?? '').localeCompare(a.last_trained_at ?? '')
+      if (sortBy === 'plan') return a.plan.localeCompare(b.plan)
+      return a.client_id.localeCompare(b.client_id)
+    })
+    return rows
+  }, [clients, search, planFilter, statusFilter, sortBy])
+
+  const suspendMut = useMutation({
+    mutationFn: ({ id, on }: { id: string; on: boolean }) =>
+      on ? clientsApi.suspend(id) : clientsApi.unsuspend(id),
+    onSuccess: (_r, v) => {
+      toast.success(v.on ? `${v.id}: заблокирован` : `${v.id}: разблокирован`)
+      qc.invalidateQueries({ queryKey: ['admin-clients'] })
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Не удалось изменить статус')),
+  })
 
   const updateMut = useMutation({
     mutationFn: ({ id, plan }: { id: string; plan: PlanId }) =>
@@ -67,6 +102,38 @@ export default function AdminClientsPage() {
         </button>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          className="input w-64"
+          placeholder="Поиск: client id или email…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select className="input w-40" value={planFilter}
+                onChange={(e) => setPlanFilter(e.target.value as 'all' | PlanId)}>
+          <option value="all">Все тарифы</option>
+          {PLAN_ORDER.map((p) => <option key={p} value={p}>{planMap.get(p)?.display_name ?? p}</option>)}
+        </select>
+        <select className="input w-44" value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="all">Все статусы</option>
+          <option value="ready">ready</option>
+          <option value="training">training</option>
+          <option value="registered">registered</option>
+          <option value="error">error</option>
+          <option value="suspended">заблокированные</option>
+        </select>
+        <select className="input w-48" value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
+          <option value="client_id">Сортировка: ID</option>
+          <option value="last_trained_at">Сортировка: обучение ↓</option>
+          <option value="plan">Сортировка: тариф</option>
+        </select>
+        <span className="text-xs text-ink-muted ml-auto">
+          {visible.length} из {clients.length}
+        </span>
+      </div>
+
       {showRegister && (
         <RegisterDialog
           plans={plans}
@@ -79,9 +146,9 @@ export default function AdminClientsPage() {
         {isLoading ? (
           // PJAX top-bar signals the wait; spacer keeps layout stable.
           <div className="p-8 h-32" aria-hidden="true" />
-        ) : clients.length === 0 ? (
+        ) : visible.length === 0 ? (
           <div className="p-8 text-center text-ink-muted">
-            Клиентов пока нет.
+            Ничего не найдено.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -95,10 +162,11 @@ export default function AdminClientsPage() {
                   <Th>SKU (обуч.)</Th>
                   <Th>Последнее обуч.</Th>
                   <Th>API-ключ</Th>
+                  <Th>Доступ</Th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
-                {clients.map((c) => {
+                {visible.map((c) => {
                   const spec = planMap.get(c.plan)
                   return (
                     <tr key={c.client_id} className="hover:bg-surface-muted/50">
@@ -131,7 +199,9 @@ export default function AdminClientsPage() {
                         </select>
                       </Td>
                       <Td>
-                        <span className={STATUS_BADGE[c.status]}>{c.status}</span>
+                        {c.suspended_at
+                          ? <span className="badge-danger">заблокирован</span>
+                          : <span className={STATUS_BADGE[c.status]}>{c.status}</span>}
                       </Td>
                       <Td>{c.horizon} дн.</Td>
                       <Td>
@@ -149,6 +219,22 @@ export default function AdminClientsPage() {
                       </Td>
                       <Td>
                         <RotateKeyButton clientId={c.client_id} />
+                      </Td>
+                      <Td>
+                        <button
+                          type="button"
+                          className={c.suspended_at ? 'btn-secondary text-xs' : 'btn-danger text-xs'}
+                          disabled={suspendMut.isPending}
+                          onClick={() => {
+                            const on = !c.suspended_at
+                            const msg = on
+                              ? `Заблокировать «${c.client_id}»? Доступ к API прекратится немедленно; данные сохранятся.`
+                              : `Разблокировать «${c.client_id}»?`
+                            if (window.confirm(msg)) suspendMut.mutate({ id: c.client_id, on })
+                          }}
+                        >
+                          {c.suspended_at ? 'Разблокировать' : 'Заблокировать'}
+                        </button>
                       </Td>
                     </tr>
                   )
