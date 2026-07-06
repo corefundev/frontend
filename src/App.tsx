@@ -33,6 +33,7 @@ const AdminTrainingPage = lazy(() => import('./pages/admin/AdminTrainingPage'))
 const AdminSystemPage = lazy(() => import('./pages/admin/AdminSystemPage'))
 const AdminAuditPage = lazy(() => import('./pages/admin/AdminAuditPage'))
 const AdminSecurityPage = lazy(() => import('./pages/admin/AdminSecurityPage'))
+const AdminDataPage = lazy(() => import('./pages/admin/AdminDataPage'))
 const AdminClientCardPage = lazy(() => import('./pages/admin/AdminClientCardPage'))
 const AdminClientNewPage = lazy(() => import('./pages/admin/AdminClientNewPage'))
 const AdminLayout = lazy(() => import('./components/AdminLayout'))
@@ -264,6 +265,9 @@ export default function App() {
         } />
         <Route path="security" element={
           <Suspense fallback={<SuspenseFallback />}><AdminSecurityPage /></Suspense>
+        } />
+        <Route path="data" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminDataPage /></Suspense>
         } />
       </Route>
 
