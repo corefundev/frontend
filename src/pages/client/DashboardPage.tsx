@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+
+import { QualityCard } from '../../features/training/QualityCard'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
@@ -108,6 +110,12 @@ export default function DashboardPage() {
                 href="/app/training"
               />
             </div>
+
+            {clientId && (
+              <div className="mt-5">
+                <QualityCard clientId={clientId} />
+              </div>
+            )}
           </div>
 
           {/* Sidecard — upcoming suggestion based on state */}
