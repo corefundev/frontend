@@ -67,6 +67,10 @@ export interface TrainingRun {
   n_rows:        number | null
   wmape:         number | null
   mase:          number | null
+  // #181: MASE vs SEASONAL naive (m=7) — the honest client-facing baseline;
+  // <1 means «точнее наивного прогноза». #227: gate verdict of the run.
+  mase_seasonal: number | null
+  gate_passed:   boolean | null
   smape:         number | null
   model_path:    string | null
   mlflow_run_id: string | null
