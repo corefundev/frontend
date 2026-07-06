@@ -19,6 +19,7 @@ const NAV = [
   { to: '/admin/training',      label: 'Обучение',       end: false },
   { to: '/admin/notifications', label: 'Уведомления',    end: false },
   { to: '/admin/audit',         label: 'Аудит',          end: false },
+  { to: '/admin/security',      label: 'Безопасность',   end: false },
   { to: '/admin/legal',         label: 'Юр. документы',  end: false },
   { to: '/admin/system',        label: 'Система',        end: false },
 ] as const
@@ -31,6 +32,7 @@ const TITLES: Record<string, string> = {
   '/admin/clients/new':   'Новый пользователь',
   '/admin/notifications': 'Уведомления клиентам',
   '/admin/audit':         'Аудит',
+  '/admin/security':      'Безопасность',
   '/admin/legal':         'Юридические документы',
   '/admin/system':        'Система',
 }
