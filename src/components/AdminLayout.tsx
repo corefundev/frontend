@@ -16,6 +16,7 @@ const NAV = [
   { to: '/admin/clients',       label: 'Клиенты',        end: false,
     children: [{ to: '/admin/clients/new', label: 'Новый пользователь' }] },
   { to: '/admin/plans',         label: 'Тарифы',         end: false },
+  { to: '/admin/training',      label: 'Обучение',       end: false },
   { to: '/admin/notifications', label: 'Уведомления',    end: false },
   { to: '/admin/legal',         label: 'Юр. документы',  end: false },
 ] as const
@@ -24,6 +25,7 @@ const TITLES: Record<string, string> = {
   '/admin':               'Обзор системы',
   '/admin/clients':       'Клиенты',
   '/admin/plans':         'Тарифы',
+  '/admin/training':      'Обучение',
   '/admin/clients/new':   'Новый пользователь',
   '/admin/notifications': 'Уведомления клиентам',
   '/admin/legal':         'Юридические документы',
