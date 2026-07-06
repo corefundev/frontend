@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import { clientsApi } from '../../features/clients/api'
@@ -66,9 +66,7 @@ export default function AdminClientsPage() {
             Административный просмотр: тарифы, статусы обучения, счётчики квот.
           </p>
         </div>
-        <Link to="/admin/clients/new" className="btn-primary">
-          Новый пользователь
-        </Link>
+
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

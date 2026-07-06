@@ -11,7 +11,10 @@ import { useAuthStore } from '../features/auth/store'
 
 const NAV = [
   { to: '/admin',               label: 'Обзор',          end: true },
-  { to: '/admin/clients',       label: 'Клиенты',        end: false },
+  // правка 2026-07-06: «Новый пользователь» — подпункт дерева под
+  // «Клиенты» (кнопки на странице списка нет).
+  { to: '/admin/clients',       label: 'Клиенты',        end: false,
+    children: [{ to: '/admin/clients/new', label: 'Новый пользователь' }] },
   { to: '/admin/plans',         label: 'Тарифы',         end: false },
   { to: '/admin/notifications', label: 'Уведомления',    end: false },
   { to: '/admin/legal',         label: 'Юр. документы',  end: false },
@@ -79,20 +82,36 @@ export default function AdminLayout() {
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `block rounded-md px-3 py-2 text-sm transition-colors ${
-                  isActive
-                    ? 'bg-slate-800 text-white font-medium'
-                    : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
+            <div key={item.to}>
+              <NavLink
+                to={item.to}
+                end={'children' in item ? true : item.end}
+                className={({ isActive }) =>
+                  `block rounded-md px-3 py-2 text-sm transition-colors ${
+                    isActive
+                      ? 'bg-slate-800 text-white font-medium'
+                      : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+              {'children' in item && item.children.map((ch) => (
+                <NavLink
+                  key={ch.to}
+                  to={ch.to}
+                  className={({ isActive }) =>
+                    `block rounded-md pl-8 pr-3 py-1.5 text-[13px] transition-colors ${
+                      isActive
+                        ? 'bg-slate-800 text-white font-medium'
+                        : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                    }`
+                  }
+                >
+                  {ch.label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="px-5 py-4 border-t border-slate-800 text-xs text-slate-400">
