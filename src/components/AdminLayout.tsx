@@ -19,6 +19,7 @@ const NAV = [
   { to: '/admin/training',      label: 'Обучение',       end: false },
   { to: '/admin/notifications', label: 'Уведомления',    end: false },
   { to: '/admin/legal',         label: 'Юр. документы',  end: false },
+  { to: '/admin/system',        label: 'Система',        end: false },
 ] as const
 
 const TITLES: Record<string, string> = {
@@ -29,6 +30,7 @@ const TITLES: Record<string, string> = {
   '/admin/clients/new':   'Новый пользователь',
   '/admin/notifications': 'Уведомления клиентам',
   '/admin/legal':         'Юридические документы',
+  '/admin/system':        'Система',
 }
 
 function SessionCountdown() {
@@ -116,9 +118,7 @@ export default function AdminLayout() {
             </div>
           ))}
         </nav>
-        <div className="px-5 py-4 border-t border-slate-800 text-xs text-slate-400">
-          Grafana / MLflow — см. раздел «Система» (в разработке, ADM-4)
-        </div>
+
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
