@@ -21,6 +21,7 @@ const SettingsPage      = lazy(() => import('./pages/client/SettingsPage'))
 const AccountPage       = lazy(() => import('./pages/client/AccountPage'))
 const AccountProfile    = lazy(() => import('./features/account/ProfileSection'))
 const AccountSecurity   = lazy(() => import('./features/account/SecuritySection'))
+const AccountData       = lazy(() => import('./features/account/DataSection'))
 
 // AC-1 (#312): tiny inline placeholder for account sections whose AC issue
 // hasn't shipped — kept in App.tsx so AccountPage stays a clean lazy chunk.
@@ -245,7 +246,7 @@ export default function App() {
           <Route path="security"      element={<Suspense fallback={<SuspenseFallback />}><AccountSecurity /></Suspense>} />
           <Route path="subscription"  element={<AccountSectionPlaceholder />} />
           <Route path="notifications" element={<AccountSectionPlaceholder />} />
-          <Route path="data"          element={<AccountSectionPlaceholder />} />
+          <Route path="data"          element={<Suspense fallback={<SuspenseFallback />}><AccountData /></Suspense>} />
         </Route>
       </Route>
 
