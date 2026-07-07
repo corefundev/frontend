@@ -76,6 +76,12 @@ export function ProfileMenu() {
           <div className="px-4 py-3 border-b border-surface-border">
             <div className="text-xs text-ink-muted">Аккаунт</div>
             <div className="font-mono text-sm text-ink truncate">{clientId ?? '—'}</div>
+            <button
+              className="mt-2 text-sm text-brand-700 hover:underline"
+              onClick={() => { setOpen(false); nav('/app/account') }}
+            >
+              Все настройки аккаунта →
+            </button>
           </div>
 
           <div className="px-4 py-3 border-b border-surface-border">
