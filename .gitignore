@@ -7,3 +7,10 @@ dist-ssr
 .vite
 *.log
 .DS_Store
+
+# Stray tsc emit — source is .ts/.tsx; tsconfig noEmit guards this, ignore as backstop.
+# (root postcss.config.js / tailwind.config.js are genuine and tracked — not matched here)
+/src/**/*.js
+/vite.config.js
+/vite.config.d.ts
+*.tsbuildinfo

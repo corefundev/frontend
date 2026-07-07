@@ -5,6 +5,10 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
+    // Source of truth is .ts/.tsx — Vite/esbuild does the transpile. Guard
+    // against a bare `tsc` emitting stray src/**/*.js (they'd shadow the .tsx
+    // via Vite's .js-before-.tsx resolution and serve stale code locally).
+    "noEmit": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
