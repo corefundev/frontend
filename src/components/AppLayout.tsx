@@ -24,6 +24,17 @@ const NAV = [
   { to: 'upgrade',     label: 'Апгрейд',       pageTitle: 'Тариф',              icon: IconStar,    minPlan: 'free'     },
 ] as const
 
+// AC-1 (#312): when inside /app/account the sidebar SWAPS to these — the
+// account sections replace the main app nav (standard settings pattern), with
+// a "back to app" link on top. No icons/plan-locks — account is not tier-gated.
+const ACCOUNT_NAV = [
+  { to: 'account/profile',       label: 'Профиль' },
+  { to: 'account/security',      label: 'Безопасность' },
+  { to: 'account/subscription',  label: 'Подписка' },
+  { to: 'account/notifications', label: 'Уведомления' },
+  { to: 'account/data',          label: 'Данные и приватность' },
+] as const
+
 const PLAN_RANK: Record<PlanId, number> = { free: 0, start: 1, business: 2 }
 
 export default function AppLayout() {
@@ -39,7 +50,9 @@ export default function AppLayout() {
   // Pick the longest matching nav entry for the current path so a nested
   // path beats the empty "Главная" entry (which would otherwise
   // prefix-match the root /app path).
+  const isAccount = location.pathname.startsWith('/app/account')
   const pageTitle = (() => {
+    if (isAccount) return 'Личный кабинет'
     const path = location.pathname.replace(/^\/app\/?/, '')
     const matches = NAV.filter((n) => n.to !== '' && path.startsWith(n.to))
     matches.sort((a, b) => b.to.length - a.to.length)
@@ -71,6 +84,33 @@ export default function AppLayout() {
           </div>
         </div>
 
+        {isAccount ? (
+          <nav className="flex-1 p-3 space-y-0.5">
+            <NavLink
+              to=""
+              end
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-brand-50/70 hover:bg-brand-600 hover:text-ink-invert transition-colors"
+            >
+              <span aria-hidden>←</span>
+              <span className="truncate">Назад в приложение</span>
+            </NavLink>
+            <div className="pt-4 pb-1 px-3 eyebrow !text-brand-50/50">Личный кабинет</div>
+            {ACCOUNT_NAV.map((s) => (
+              <NavLink
+                key={s.to}
+                to={s.to}
+                className={({ isActive }) => [
+                  'block rounded-md px-3 py-2 text-sm transition-colors',
+                  isActive
+                    ? 'bg-brand-500 text-ink-invert'
+                    : 'text-brand-50/80 hover:bg-brand-600 hover:text-ink-invert',
+                ].join(' ')}
+              >
+                {s.label}
+              </NavLink>
+            ))}
+          </nav>
+        ) : (
         <nav className="flex-1 p-3 space-y-0.5">
           {visibleNav.map((item) => {
             const { to, label, icon: Icon } = item
@@ -121,6 +161,7 @@ export default function AppLayout() {
             )
           })}
         </nav>
+        )}
 
         {/* Footer of sidebar — client identity */}
         <div className="p-4 border-t border-brand-600">
