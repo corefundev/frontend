@@ -11,7 +11,7 @@ import { useJobPolling } from '../../features/training/useJobPolling'
 import { safeFormat, formatDuration } from '../../features/training/format'
 import { uploadsApi, type UploadRecord } from '../../features/uploads/api'
 import { useUsage } from '../../features/plans/useUsage'
-import { errorMessage } from '../../shared/api/client'
+import { cooldownEta, errorMessage, trainingDenial } from '../../shared/api/client'
 
 const STATUS_LABEL: Record<JobStatus, string> = {
   queued:   'В очереди',
@@ -100,7 +100,26 @@ export default function TrainingPage() {
       qc.invalidateQueries({ queryKey: ['usage', clientId] })
       qc.invalidateQueries({ queryKey: ['training-runs', clientId] })
     },
-    onError: (e) => toast.error(errorMessage(e, 'Не удалось запустить обучение')),
+    onError: (e) => {
+      // B3 #155: a reason-coded denial gets specific wording — a cooldown
+      // shows the ETA ("следующее обучение через X") instead of the raw
+      // backend string; other codes fall back to their message.
+      const denial = trainingDenial(e)
+      if (denial?.reasonCode === 'cooldown') {
+        const eta = cooldownEta(denial.cooldownUntil, denial.retryAfterSec)
+        toast.error(eta ? `Обучение недавно запускалось. Следующее — через ${eta}.` : denial.message)
+        return
+      }
+      if (denial?.reasonCode === 'in_flight') {
+        toast.error('Обучение уже выполняется — дождитесь его завершения.')
+        return
+      }
+      if (denial?.reasonCode === 'lost_race') {
+        toast.error('Запуск не удался из-за одновременного запроса. Повторите через секунду.')
+        return
+      }
+      toast.error(errorMessage(e, 'Не удалось запустить обучение'))
+    },
   })
 
   const { data: jobStatus } = useJobPolling(jobId)

@@ -113,6 +113,13 @@ export function errorMessage(err: unknown, fallback = 'Произошла оши
   if (data && typeof data === 'object') {
     const detail = (data as { detail?: unknown }).detail
     if (typeof detail === 'string') return detail
+    // B3 #155: structured denial envelope {reason_code, message, …} — the
+    // human string lives under .message. (Kept before the array branch so a
+    // future object-shaped detail doesn't slip through to the fallback.)
+    if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+      const m = (detail as { message?: unknown }).message
+      if (typeof m === 'string' && m.length > 0) return m
+    }
     if (Array.isArray(detail) && detail.length > 0) {
       const first = detail[0]
       if (first && typeof first === 'object' && typeof (first as { msg?: unknown }).msg === 'string') {
@@ -125,4 +132,46 @@ export function errorMessage(err: unknown, fallback = 'Произошла оши
   if (typeof msg === 'string' && msg.length > 0) return msg
 
   return fallback
+}
+
+// B3 #155 — structured training-denial envelope, parsed off an axios error.
+// Returns null when the error isn't a reason-coded denial (network error,
+// plain string detail, etc.) so callers fall back to errorMessage().
+export type TrainingDenial = {
+  reasonCode: 'cooldown' | 'lost_race' | 'in_flight'
+  message: string
+  cooldownUntil: string | null
+  retryAfterSec: number | null
+}
+
+export function trainingDenial(err: unknown): TrainingDenial | null {
+  if (!err || typeof err !== 'object') return null
+  const response = (err as Record<string, unknown>).response as { data?: unknown } | undefined
+  const detail = (response?.data as { detail?: unknown } | undefined)?.detail
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return null
+  const d = detail as Record<string, unknown>
+  const code = d.reason_code
+  if (code !== 'cooldown' && code !== 'lost_race' && code !== 'in_flight') return null
+  return {
+    reasonCode: code,
+    message: typeof d.message === 'string' ? d.message : '',
+    cooldownUntil: typeof d.cooldown_until === 'string' ? d.cooldown_until : null,
+    retryAfterSec: typeof d.retry_after_sec === 'number' ? d.retry_after_sec : null,
+  }
+}
+
+// Human "через 2 ч 5 мин" from an ISO cooldown ETA (or a retry-after seconds
+// fallback). Empty string when neither is usable.
+export function cooldownEta(until: string | null, retryAfterSec: number | null): string {
+  let secs = retryAfterSec ?? 0
+  if (until) {
+    const ms = new Date(until).getTime() - Date.now()
+    if (!Number.isNaN(ms)) secs = Math.max(0, Math.round(ms / 1000))
+  }
+  if (secs <= 0) return ''
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  if (h > 0) return m > 0 ? `${h} ч ${m} мин` : `${h} ч`
+  if (m > 0) return `${m} мин`
+  return 'меньше минуты'
 }
