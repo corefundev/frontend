@@ -52,7 +52,10 @@ export default function AppLayout() {
   // prefix-match the root /app path).
   const isAccount = location.pathname.startsWith('/app/account')
   const pageTitle = (() => {
-    if (isAccount) return 'Личный кабинет'
+    if (isAccount) {
+      const seg = location.pathname.replace(/^\/app\/account\/?/, '') || 'profile'
+      return ACCOUNT_NAV.find((n) => n.to === `account/${seg}`)?.label ?? 'Личный кабинет'
+    }
     const path = location.pathname.replace(/^\/app\/?/, '')
     const matches = NAV.filter((n) => n.to !== '' && path.startsWith(n.to))
     matches.sort((a, b) => b.to.length - a.to.length)
@@ -94,7 +97,7 @@ export default function AppLayout() {
               <span aria-hidden>←</span>
               <span className="truncate">Назад в приложение</span>
             </NavLink>
-            <div className="pt-4 pb-1 px-3 eyebrow !text-brand-50/50">Личный кабинет</div>
+            <div className="pt-3" />
             {ACCOUNT_NAV.map((s) => (
               <NavLink
                 key={s.to}

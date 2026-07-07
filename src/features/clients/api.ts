@@ -19,6 +19,8 @@ export interface ClientRecord {
   // ── Phase 4 fields ──
   plan: 'free' | 'start' | 'business'
   email?: string | null
+  email_verified_at?: string | null
+  oauth_provider?: string | null
   // ADM-10 (#278): NULL = active; timestamp = suspended since then.
   suspended_at?: string | null
   training_runs_this_month: number

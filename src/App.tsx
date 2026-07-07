@@ -19,14 +19,15 @@ const TrainingPage      = lazy(() => import('./pages/client/TrainingPage'))
 const TrainingHistoryPage = lazy(() => import('./pages/client/TrainingHistoryPage'))
 const SettingsPage      = lazy(() => import('./pages/client/SettingsPage'))
 const AccountPage       = lazy(() => import('./pages/client/AccountPage'))
+const AccountProfile    = lazy(() => import('./features/account/ProfileSection'))
+const AccountSecurity   = lazy(() => import('./features/account/SecuritySection'))
 
 // AC-1 (#312): tiny inline placeholder for account sections whose AC issue
 // hasn't shipped — kept in App.tsx so AccountPage stays a clean lazy chunk.
-function AccountSectionPlaceholder({ title }: { title: string }) {
+function AccountSectionPlaceholder() {
   return (
     <section className="card p-8">
-      <h2 className="text-2xl font-semibold text-ink">{title}</h2>
-      <p className="mt-3 text-ink-muted">Скоро здесь появятся настройки этого раздела.</p>
+      <p className="text-ink-muted">Скоро здесь появятся настройки этого раздела.</p>
     </section>
   )
 }
@@ -240,11 +241,11 @@ export default function App() {
           }
         >
           <Route index element={<Navigate to="profile" replace />} />
-          <Route path="profile"       element={<AccountSectionPlaceholder title="Профиль" />} />
-          <Route path="security"      element={<AccountSectionPlaceholder title="Безопасность" />} />
-          <Route path="subscription"  element={<AccountSectionPlaceholder title="Подписка" />} />
-          <Route path="notifications" element={<AccountSectionPlaceholder title="Уведомления" />} />
-          <Route path="data"          element={<AccountSectionPlaceholder title="Данные и приватность" />} />
+          <Route path="profile"       element={<Suspense fallback={<SuspenseFallback />}><AccountProfile /></Suspense>} />
+          <Route path="security"      element={<Suspense fallback={<SuspenseFallback />}><AccountSecurity /></Suspense>} />
+          <Route path="subscription"  element={<AccountSectionPlaceholder />} />
+          <Route path="notifications" element={<AccountSectionPlaceholder />} />
+          <Route path="data"          element={<AccountSectionPlaceholder />} />
         </Route>
       </Route>
 
