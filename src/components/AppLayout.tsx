@@ -1,6 +1,7 @@
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../features/auth/store'
 import { NotificationBell } from '../features/notifications/NotificationBell'
+import { ProfileMenu } from '../features/account/ProfileMenu'
 import { useUsage } from '../features/plans/useUsage'
 import { PlanBadge } from '../features/plans/PlanBadge'
 import { QuotaMeter, LockTag } from '../features/plans/upsell'
@@ -26,10 +27,8 @@ const NAV = [
 const PLAN_RANK: Record<PlanId, number> = { free: 0, start: 1, business: 2 }
 
 export default function AppLayout() {
-  const nav      = useNavigate()
   const location = useLocation()
   const clientId = useAuthStore((s) => s.clientId)
-  const logout   = useAuthStore((s) => s.logout)
   const { data: usage } = useUsage()
 
   const userRank = usage ? PLAN_RANK[usage.plan] : 0
@@ -153,14 +152,7 @@ export default function AppLayout() {
               />
             )}
             <NotificationBell />
-            <button
-              type="button"
-              onClick={() => { logout(); nav('/login') }}
-              className="btn-ghost"
-              title="Выйти"
-            >
-              Выйти
-            </button>
+            <ProfileMenu />
           </div>
         </header>
 
