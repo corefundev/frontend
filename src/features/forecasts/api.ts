@@ -93,6 +93,8 @@ export interface ForecastSku {
   values: (number | null)[]
   p10?:   (number | null)[]
   p90?:   (number | null)[]
+  // #308 newsvendor: recommended order quantity (service-level quantile).
+  order_qty?: (number | null)[]
 }
 
 // GET /clients/{id}/forecasts — produced automatically after every

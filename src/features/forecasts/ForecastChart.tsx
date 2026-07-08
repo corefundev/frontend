@@ -25,6 +25,8 @@ interface Props {
   p10?:   (number | null | undefined)[]
   /** P90 — same length as values, null when missing. */
   p90?:   (number | null | undefined)[]
+  /** #308 newsvendor: recommended order quantity (service-level quantile). */
+  orderQty?: (number | null | undefined)[]
   title?: string
   height?: number
 }
@@ -36,10 +38,12 @@ interface ChartRow {
   p10:   number | null
   /** Width of the band on top of p10 — that's what <Area> renders. */
   band:  number | null
+  /** #308: order recommendation (null when the model has no calibrated band). */
+  order: number | null
 }
 
 export function ForecastChart({
-  dates, values, p10, p90, title, height = 280,
+  dates, values, p10, p90, orderQty, title, height = 280,
 }: Props) {
   const data: ChartRow[] = useMemo(
     () =>
@@ -47,19 +51,26 @@ export function ForecastChart({
         const lo = p10?.[i]
         const hi = p90?.[i]
         const hasBand = lo != null && hi != null && hi >= lo
+        const oq = orderQty?.[i]
         return {
           date:  d,
           value: values[i] ?? 0,
           p10:   hasBand ? lo : null,
           band:  hasBand ? hi - lo : null,
+          order: oq != null ? oq : null,
         }
       }),
-    [dates, values, p10, p90],
+    [dates, values, p10, p90, orderQty],
   )
 
   // Hide the ribbon entirely when no point in the series has band data.
   const showBand = useMemo(
     () => data.some((r) => r.p10 !== null && r.band !== null),
+    [data],
+  )
+  // #308: show the order-recommendation line only when the model produced it.
+  const showOrder = useMemo(
+    () => data.some((r) => r.order !== null),
     [data],
   )
 
@@ -106,7 +117,8 @@ export function ForecastChart({
               const v = typeof value === 'number' ? value : Number(value) || 0
               // Hide the invisible stacked baseline used for the band trick.
               if (name === '__baseline__') return ['', ''] as [string, string]
-              if (name === 'Прогноз') return [v.toFixed(2), 'Прогноз (P50)']
+              if (name === 'Прогноз') return [v.toFixed(2), 'Прогноз (среднее)']
+              if (name === 'Рекомендация к заказу') return [Math.ceil(v).toString(), 'Рекомендация к заказу']
               if (name === 'Диапазон 80%') {
                 // recharts types `item.payload` as optional/any; cast
                 // through unknown to our row shape so we can read
@@ -160,6 +172,24 @@ export function ForecastChart({
             isAnimationActive={false}
             name="Прогноз"
           />
+
+          {/* #308 newsvendor: recommended order quantity (service-level
+              quantile) — a distinct dashed amber line, the ACTION number,
+              above the mean. Hidden when the model produced no band. */}
+          {showOrder && (
+            <Line
+              type="monotone"
+              dataKey="order"
+              stroke="#D97706"
+              strokeWidth={2}
+              strokeDasharray="5 4"
+              dot={{ r: 2.5, fill: '#D97706' }}
+              activeDot={{ r: 5, fill: '#B45309' }}
+              isAnimationActive={false}
+              connectNulls={false}
+              name="Рекомендация к заказу"
+            />
+          )}
         </ComposedChart>
       </ResponsiveContainer>
 
@@ -167,6 +197,13 @@ export function ForecastChart({
         <p className="mt-2 text-xs text-ink-subtle text-center">
           Полупрозрачная полоса — 80% доверительный диапазон (P10–P90).
           В нём с вероятностью 4 из 5 окажется фактическая продажа.
+        </p>
+      )}
+      {showOrder && (
+        <p className="mt-1 text-xs text-ink-subtle text-center">
+          <span className="text-[#B45309] font-medium">Пунктирная линия</span> — рекомендация
+          к заказу (уровень сервиса): сколько заказать, чтобы покрыть спрос и не переплатить
+          за хранение. Обычно выше среднего прогноза.
         </p>
       )}
     </div>
