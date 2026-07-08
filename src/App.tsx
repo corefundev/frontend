@@ -32,6 +32,21 @@ function AccountSectionPlaceholder() {
     </section>
   )
 }
+
+// «Данные» group (epic #320) — placeholder pages until the real sections ship
+// (Подготовка данных = DP-5 after the DP-2/3/4 backend; Обогащение = later).
+function DataSectionPlaceholder({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="max-w-3xl">
+      <div className="eyebrow">Данные</div>
+      <h1 className="display-em text-brand-700 text-3xl sm:text-4xl mt-2 leading-[1.05]">{title}</h1>
+      <section className="card p-8 mt-6">
+        <p className="text-ink-muted leading-relaxed">{body}</p>
+        <p className="mt-3 text-xs text-ink-subtle">Раздел в разработке.</p>
+      </section>
+    </div>
+  )
+}
 const UploadsPage       = lazy(() => import('./pages/client/UploadsPage'))
 const PlansPage         = lazy(() => import('./pages/PlansPage'))
 const OnboardingPage    = lazy(() => import('./pages/OnboardingPage'))
@@ -173,6 +188,25 @@ export default function App() {
             <Suspense fallback={<SuspenseFallback />}>
               <UploadsPage />
             </Suspense>
+          }
+        />
+        {/* «Данные» group (epic #320): prepare + enrich — placeholders until DP-5. */}
+        <Route
+          path="data/prepare"
+          element={
+            <DataSectionPlaceholder
+              title="Подготовка данных"
+              body="Скоро: сопоставление колонок вашего файла с нужными полями, конвертация форматов (Excel, выгрузки 1С и маркетплейсов) и проверка данных перед обучением."
+            />
+          }
+        />
+        <Route
+          path="data/enrich"
+          element={
+            <DataSectionPlaceholder
+              title="Обогащение данных"
+              body="Скоро: обогащение ваших данных дополнительными и производными признаками для более точного прогноза. Состав раздела обсудим отдельно."
+            />
           }
         />
         <Route

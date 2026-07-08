@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../features/auth/store'
 import { NotificationBell } from '../features/notifications/NotificationBell'
@@ -14,7 +15,10 @@ import type { PlanId } from '../features/plans/api'
 // above the workspace.
 const NAV = [
   { to: '',            label: 'Главная',       pageTitle: 'Панель управления',  icon: IconHome,    minPlan: 'free'     },
-  { to: 'uploads',     label: 'Загрузки',      pageTitle: 'Загрузки данных',    icon: IconUpload,  minPlan: 'free'     },
+  // «Данные» inline group (epic #320): upload → prepare → enrich pipeline.
+  { to: 'uploads',      label: 'Загрузки',          pageTitle: 'Загрузки данных',   icon: IconUpload,  minPlan: 'free', group: 'Данные' },
+  { to: 'data/prepare', label: 'Подготовка данных', pageTitle: 'Подготовка данных', icon: IconSlider,  minPlan: 'free', group: 'Данные' },
+  { to: 'data/enrich',  label: 'Обогащение данных', pageTitle: 'Обогащение данных', icon: IconSpark,   minPlan: 'free', group: 'Данные' },
   { to: 'forecasts',   label: 'Прогнозы',      pageTitle: 'Прогноз',            icon: IconChart,   minPlan: 'free'     },
   { to: 'training',    label: 'Обучение',      pageTitle: 'Обучение модели',    icon: IconCog,     minPlan: 'free'     },
   { to: 'training/history', label: 'История обучений', pageTitle: 'История обучений', icon: IconHistory, minPlan: 'free' },
@@ -115,10 +119,16 @@ export default function AppLayout() {
           </nav>
         ) : (
         <nav className="flex-1 p-3 space-y-0.5">
-          {visibleNav.map((item) => {
+          {visibleNav.map((item, i) => {
             const { to, label, icon: Icon } = item
             const minPlan = ('minPlan' in item ? item.minPlan : 'free') as PlanId
             const locked  = PLAN_RANK[minPlan] > userRank
+            // Inline nav group: render a small header before the first item of
+            // a group (items of one group are contiguous in NAV).
+            const group     = ('group' in item ? item.group : undefined) as string | undefined
+            const prevItem  = i > 0 ? visibleNav[i - 1] : undefined
+            const prevGroup = prevItem && 'group' in prevItem ? (prevItem.group as string) : undefined
+            const showGroupHeader = !!group && group !== prevGroup
             // Split locked vs unlocked into two real branches so TS
             // sees the right component (div vs NavLink) and we don't
             // pass `to={undefined}` to NavLink at runtime. The shared
@@ -130,22 +140,17 @@ export default function AppLayout() {
                 {locked && <LockTag required={minPlan} compact />}
               </>
             )
-            if (locked) {
-              return (
-                <div
-                  key={to}
-                  role="link"
-                  aria-disabled="true"
-                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-brand-50/40 cursor-not-allowed"
-                  title={`Доступно в тарифе ${minPlan === 'start' ? 'Start' : 'Business'}`}
-                >
-                  {inner}
-                </div>
-              )
-            }
-            return (
+            const itemEl = locked ? (
+              <div
+                role="link"
+                aria-disabled="true"
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-brand-50/40 cursor-not-allowed"
+                title={`Доступно в тарифе ${minPlan === 'start' ? 'Start' : 'Business'}`}
+              >
+                {inner}
+              </div>
+            ) : (
               <NavLink
-                key={to}
                 to={to}
                 // Strict-match every nav entry so a parent (e.g. "Обучение")
                 // doesn't also light up while the user is on a child route
@@ -161,6 +166,14 @@ export default function AppLayout() {
               >
                 {inner}
               </NavLink>
+            )
+            return (
+              <Fragment key={to}>
+                {showGroupHeader && (
+                  <div className="px-3 pt-4 pb-1 eyebrow !text-brand-50/40">{group}</div>
+                )}
+                {itemEl}
+              </Fragment>
             )
           })}
         </nav>
