@@ -11,7 +11,6 @@ import { errorMessage } from '../../shared/api/client'
 import {
   MAX_UPLOAD_BYTES,
   ACCEPT_ATTRIBUTE,
-  UPLOADS_TERMINAL,
   safeUploadError,
   uploadsApi,
   validateUploadClientSide,
@@ -37,6 +36,14 @@ import { useUploadStatus } from '../../features/uploads/useUploadStatus'
 //      overflow panel shows (excess count visible, upgrade CTA).
 //    • Quota-hit UpgradeTrigger surfaces at ≥80% OR on overflow.
 // ─────────────────────────────────────────────────────────────────────────
+
+// Upload-page state buckets. The upload flow ends at `scanned_clean`.
+//   MOVING → show progress + keep polling / re-attach after reload
+//   DONE   → upload finished; release the slot (dropzone returns)
+// FAILED (infected / processing_failed) falls outside both: the card lingers
+// to show the reason, but the dropzone stays available beside it.
+const UPLOAD_MOVING: UploadStatus[] = ['uploaded', 'scanning', 'processing']
+const UPLOAD_DONE:   UploadStatus[] = ['scanned_clean', 'processed']
 
 const STATUS_LABEL: Record<UploadStatus, string> = {
   uploaded:          'Принято',
@@ -107,15 +114,27 @@ export default function UploadsPage() {
 
   const { data: activeUpload } = useUploadStatus(activeUploadId)
 
-  // Recover the in-flight upload after a hard reload: the user's local
-  // state (activeUploadId) is gone, but the backend still has the row
-  // in non-terminal status. As soon as the list arrives, pick that one
-  // so the progress card reappears instead of disappearing.
+  // The upload flow ENDS at `scanned_clean` («Загружено»). Once a file lands
+  // there (or is already `processed`), the upload is DONE — release the slot so
+  // the dropzone returns immediately and the user can upload the next file
+  // without reloading the page. The finished file is visible in the history
+  // list below. Prep is a separate, independent stage on «Подготовка данных».
+  useEffect(() => {
+    if (activeUpload && UPLOAD_DONE.includes(activeUpload.status)) {
+      setActiveUploadId(null)
+      setProgressPct(0)
+      qc.invalidateQueries({ queryKey: ['uploads', clientId] })
+    }
+  }, [activeUpload, clientId, qc])
+
+  // Recover an in-flight upload after a hard reload: the user's local state
+  // (activeUploadId) is gone, but the backend still has the row moving through
+  // AV/parse. Re-attach so the progress card reappears. Only MOVING states
+  // qualify — a `scanned_clean` file is already done and must not re-open the
+  // card (that was the "frame never disappears" bug).
   useEffect(() => {
     if (activeUploadId) return
-    const inflight = uploads.find(
-      (u) => !UPLOADS_TERMINAL.includes(u.status),
-    )
+    const inflight = uploads.find((u) => UPLOAD_MOVING.includes(u.status))
     if (inflight) setActiveUploadId(inflight.upload_id)
   }, [uploads, activeUploadId])
 
@@ -185,29 +204,29 @@ export default function UploadsPage() {
         <UpgradeTrigger variant="quota-hit" />
       )}
 
-      {/* ═══════════════════ 2. DROPZONE / ACTIVE UPLOAD ═══════════════════
-          One slot in the layout, two states:
-          - no in-flight upload  → show Dropzone (user can pick a file)
-          - upload in pipeline   → hide Dropzone, show ActiveUploadCard
-          Cancel from the card sets activeUploadId=null → Dropzone returns. */}
-      {activeUpload ? (
+      {/* ═══════════════════ 2. ACTIVE UPLOAD + DROPZONE ═══════════════════
+          Upload and prep are INDEPENDENT: the dropzone is ALWAYS available so
+          a finished upload never blocks the next one. The progress card shows
+          above it only while a file is moving through AV/parse, or lingers on
+          a failure to show the reason — a `scanned_clean` file auto-clears
+          (see the DONE effect above) and the file drops into the history list. */}
+      {activeUpload && !UPLOAD_DONE.includes(activeUpload.status) && (
         <ActiveUploadCard
           upload={activeUpload}
           onCancel={() => cancelUpload(activeUpload.upload_id)}
           cancelling={cancelling}
         />
-      ) : (
-        <section>
-          <div className="rule-dot mb-6" />
-          <div className="eyebrow mb-3">Новый файл</div>
-          <Dropzone
-            disabled={uploading}
-            onFile={handlePickFile}
-            progressPct={uploading ? progressPct : 0}
-            inputRef={fileInputRef}
-          />
-        </section>
       )}
+      <section>
+        <div className="rule-dot mb-6" />
+        <div className="eyebrow mb-3">Новый файл</div>
+        <Dropzone
+          disabled={uploading}
+          onFile={handlePickFile}
+          progressPct={uploading ? progressPct : 0}
+          inputRef={fileInputRef}
+        />
+      </section>
 
       {/* ═══════════════════ 4. CATALOG SPLIT (soft-lock) ═══════════════════ */}
       {latestProcessed && isOverflow && (
