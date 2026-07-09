@@ -258,7 +258,7 @@ function HistoryRow({
   return (
     <div className="card p-4 sm:p-5">
       <div className="flex items-center gap-4">
-        <FileGlyph tone={isDone ? 'brand' : 'danger'} />
+        <FileGlyph tone={isDone ? 'success' : 'danger'} />
         <div className="min-w-0 flex-1">
           <div className="font-mono text-sm truncate" title={upload.filename}>{upload.filename}</div>
           <div className="eyebrow mt-1">
@@ -339,11 +339,13 @@ function HistoryFilterSelect({
   )
 }
 
-function FileGlyph({ tone }: { tone: 'brand' | 'muted' | 'danger' }) {
+// Icon colours follow the approved status palette (same as the badges):
+//   pending (ready / in-progress) → gray · success → green · error → red
+function FileGlyph({ tone }: { tone: 'success' | 'muted' | 'danger' }) {
   const color =
     tone === 'danger' ? 'text-danger'
     : tone === 'muted' ? 'text-ink-subtle'
-    :                    'text-brand-500'
+    :                    'text-success'
   return (
     <div className={`h-10 w-10 shrink-0 rounded-lg bg-surface-muted flex items-center justify-center ${color}`}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
