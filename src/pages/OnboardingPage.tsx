@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
@@ -37,8 +37,25 @@ export default function OnboardingPage() {
   const [uploadId, setUploadId] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const qc = useQueryClient()
 
-  const { data: upload } = useUploadStatus(uploadId)
+  const { data: upload } = useUploadStatus(uploadId, { pollThroughScannedClean: true })
+
+  // In the onboarding wizard the user is actively being set up, so we trigger
+  // «Подготовить» automatically once the file passes the security check —
+  // keeping the guided flow moving to `processed` without an extra step. (The
+  // regular Uploads flow is user-initiated; this auto-trigger is onboarding-
+  // only.) Invalidating the status query resumes polling past `scanned_clean`.
+  const preparedRef = useRef(false)
+  useEffect(() => {
+    if (upload?.status === 'scanned_clean' && uploadId && clientId && !preparedRef.current) {
+      preparedRef.current = true
+      uploadsApi
+        .prepare(clientId, uploadId)
+        .then(() => qc.invalidateQueries({ queryKey: ['upload', uploadId] }))
+        .catch(() => { preparedRef.current = false })   // allow a retry on failure
+    }
+  }, [upload?.status, uploadId, clientId, qc])
 
   const { mutateAsync: doUpload, isPending: uploading } = useMutation({
     mutationFn: (file: File) =>
@@ -334,12 +351,12 @@ function ProcessingStep({
     const s = upload?.status ?? 'uploaded'
     return ({
       uploaded:          'Файл принят, ставим в очередь…',
-      scanning:          'Антивирус проверяет ваши данные…',
-      scanned_clean:     'Файл чист. Готовим к разбору…',
-      infected:          'Файл заражён и не будет обработан.',
-      processing:        'Парсер проверяет колонки и значения…',
+      scanning:          'Проверяем ваши данные на безопасность…',
+      scanned_clean:     'Файл проверен. Готовим к разбору…',
+      infected:          'Файл не прошёл проверку безопасности и не будет обработан.',
+      processing:        'Проверяем колонки и значения…',
       processed:         'Готово. Данные в модели.',
-      processing_failed: 'Ошибка разбора. Проверьте формат CSV.',
+      processing_failed: 'Не удалось разобрать файл. Проверьте формат CSV.',
     } as Record<string, string>)[s] ?? ''
   }, [upload?.status])
 
@@ -358,9 +375,9 @@ function ProcessingStep({
         <ol className="mt-8 flex items-center gap-3 text-xs">
           {[
             { label: 'Приём' },
-            { label: 'Антивирус' },
-            { label: 'Карантин' },
-            { label: 'Парсер' },
+            { label: 'Проверка' },
+            { label: 'Проверено' },
+            { label: 'Разбор' },
             { label: 'Готов' },
           ].map((s, i) => {
             const finished = idx > i || done
@@ -428,7 +445,7 @@ function ProcessingStep({
       {failed && upload && (
         <div className="mt-8 rounded-lg bg-danger-bg text-danger px-4 py-3 text-sm">
           <div className="font-medium mb-1">
-            {upload.status === 'infected' ? 'Файл не прошёл антивирус' : 'Ошибка разбора'}
+            {upload.status === 'infected' ? 'Файл не прошёл проверку безопасности' : 'Ошибка разбора'}
           </div>
           {upload.error_message && (
             <div className="text-xs font-mono">{upload.error_message}</div>
