@@ -276,7 +276,12 @@ function HistoryRow({
           {isDone
             ? <span className="badge-success shrink-0">Подготовлено</span>
             : <span className="badge-danger shrink-0">Не удалось</span>}
-          <button type="button" className="btn-tertiary text-sm" onClick={onToggle}>
+          <button
+            type="button"
+            className="btn-tertiary text-sm inline-flex items-center gap-2"
+            onClick={onToggle}
+          >
+            {isDone ? <IconEye /> : <IconAlert />}
             {isDone
               ? (open ? 'Скрыть данные' : 'Показать данные')
               : (open ? 'Скрыть ошибку' : 'Показать ошибку')}
@@ -351,6 +356,29 @@ function FileGlyph({ tone }: { tone: 'success' | 'muted' | 'danger' }) {
         <path d="M14 2v6h6" />
       </svg>
     </div>
+  )
+}
+
+// «Показать данные» — eye icon, matching the reference mock.
+function IconEye() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+         strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+// «Показать ошибку» — warning triangle, matching the reference mock.
+function IconAlert() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+         strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden="true">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </svg>
   )
 }
 
