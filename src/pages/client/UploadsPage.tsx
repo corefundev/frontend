@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { useAuthStore } from '../../features/auth/store'
@@ -71,10 +72,13 @@ export default function UploadsPage() {
     queryFn: () => uploadsApi.list(clientId),
     refetchInterval: (q) => {
       const rows = q.state.data as UploadRecord[] | undefined
-      const anyPending = rows?.some(
-        (r) => !['infected', 'processed', 'processing_failed'].includes(r.status),
+      // Poll only while a file is actively moving through AV or the parser.
+      // `scanned_clean` is a REST state — the file waits for the user to run
+      // «Подготовить» in «Подготовка данных» — so it must not keep polling.
+      const anyMoving = rows?.some(
+        (r) => ['uploaded', 'scanning', 'processing'].includes(r.status),
       )
-      return anyPending ? 3_000 : false
+      return anyMoving ? 3_000 : false
     },
     // PjaxLoader-silent — see PjaxLoader.tsx predicate.
     meta: { silent: true },
@@ -159,8 +163,8 @@ export default function UploadsPage() {
             Ваши данные<br/>о продажах.
           </h1>
           <p className="mt-4 text-ink-muted max-w-md">
-            Загрузите CSV или XLSX — файл пройдёт антивирус и разбор в
-            изолированной песочнице, а затем станет основой прогноза.
+            Загрузите CSV или XLSX — файл пройдёт проверку безопасности и
+            разбор, а затем станет основой прогноза.
           </p>
         </div>
 
@@ -534,13 +538,13 @@ const STATUS_PERCENT: Record<UploadStatus, number> = {
 }
 
 const STATUS_CAPTION: Record<UploadStatus, string> = {
-  uploaded:          'Файл принят, ждём антивирус…',
-  scanning:          'Антивирусная проверка ClamAV…',
-  scanned_clean:     'Файл чистый, перевод в карантин…',
-  processing:        'Парсер в изолированной песочнице…',
+  uploaded:          'Файл принят, идёт проверка…',
+  scanning:          'Проверка безопасности…',
+  scanned_clean:     'Файл проверен — готов к подготовке',
+  processing:        'Идёт разбор файла…',
   processed:         'Готово — данные доступны для обучения',
-  infected:          'Антивирус нашёл угрозу — файл удалён',
-  processing_failed: 'Парсер не справился — см. ошибку ниже',
+  infected:          'Обнаружена угроза — файл удалён',
+  processing_failed: 'Не удалось разобрать файл — см. ошибку ниже',
 }
 
 function ActiveUploadCard({
@@ -555,8 +559,10 @@ function ActiveUploadCard({
   const pct = STATUS_PERCENT[upload.status] ?? 0
   const isFailed = upload.status === 'infected' || upload.status === 'processing_failed'
   const isDone   = upload.status === 'processed'
-  // Animated stripes while pipeline is in motion; static when terminal.
-  const isMoving = !isFailed && !isDone
+  // AV passed but prep hasn't run — the file rests here awaiting «Подготовить».
+  const isWaiting = upload.status === 'scanned_clean'
+  // Animated stripes while pipeline is in motion; static when terminal/at rest.
+  const isMoving = !isFailed && !isDone && !isWaiting
 
   const barColor =
     isFailed ? 'bg-danger'
@@ -612,6 +618,17 @@ function ActiveUploadCard({
           </button>
         )}
       </div>
+
+      {isWaiting && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md bg-brand-50 px-4 py-3">
+          <p className="text-sm text-brand-700">
+            Файл прошёл проверку безопасности. Подготовьте его к обучению.
+          </p>
+          <Link to="/app/data/prepare" className="btn-primary text-sm shrink-0">
+            Перейти к подготовке →
+          </Link>
+        </div>
+      )}
 
       {upload.error_message && (
         <div className="mt-4 rounded-md bg-danger-bg text-danger px-3 py-2 text-sm">

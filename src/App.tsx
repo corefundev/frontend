@@ -48,6 +48,7 @@ function DataSectionPlaceholder({ title, body }: { title: string; body: string }
   )
 }
 const UploadsPage       = lazy(() => import('./pages/client/UploadsPage'))
+const DataPreparePage   = lazy(() => import('./pages/client/DataPreparePage'))
 const PlansPage         = lazy(() => import('./pages/PlansPage'))
 const OnboardingPage    = lazy(() => import('./pages/OnboardingPage'))
 const SignupPage        = lazy(() => import('./pages/SignupPage'))
@@ -190,14 +191,13 @@ export default function App() {
             </Suspense>
           }
         />
-        {/* «Данные» group (epic #320): prepare + enrich — placeholders until DP-5. */}
+        {/* «Данные» group (epic #320): prepare (DP-5 #32) + enrich (placeholder). */}
         <Route
           path="data/prepare"
           element={
-            <DataSectionPlaceholder
-              title="Подготовка данных"
-              body="Скоро: сопоставление колонок вашего файла с нужными полями, конвертация форматов (Excel, выгрузки 1С и маркетплейсов) и проверка данных перед обучением."
-            />
+            <Suspense fallback={<SuspenseFallback />}>
+              <DataPreparePage />
+            </Suspense>
           }
         />
         <Route

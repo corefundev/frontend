@@ -287,7 +287,7 @@ function NextStepCard({
   if (hasUploads && !hasProcessed) {
     chapter = '— подождите чуть-чуть'
     title   = 'Файл обрабатывается'
-    blurb   = 'Антивирус и разбор занимают до минуты. Следите в разделе Загрузки.'
+    blurb   = 'Проверка и разбор занимают до минуты. Следите в разделе Загрузки.'
     cta     = 'К загрузкам'
     href    = '/uploads'
   } else if (hasProcessed && !hasTrained) {
