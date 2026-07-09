@@ -107,13 +107,10 @@ export default function DataPreparePage() {
 
   return (
     <div className="max-w-5xl space-y-8 sm:space-y-10">
-      {/* ═══════════════ HERO ═══════════════ */}
+      {/* Lead — no page <h1> here: AppLayout's top bar already shows the
+          «Подготовка данных» title, so repeating it would duplicate the heading. */}
       <header className="max-w-2xl">
-        <div className="eyebrow">Данные</div>
-        <h1 className="display-em text-brand-700 text-3xl sm:text-5xl mt-2 leading-[1.05]">
-          Подготовка данных
-        </h1>
-        <p className="mt-4 text-ink-muted leading-relaxed">
+        <p className="text-ink-muted leading-relaxed">
           Загруженные файлы готовятся к обучению. Система сама распознаёт формат
           (CSV, Excel, выгрузки 1С и маркетплейсов) и сопоставляет ваши колонки
           с нужными полями — нажмите «Подготовить» и проверьте результат.
