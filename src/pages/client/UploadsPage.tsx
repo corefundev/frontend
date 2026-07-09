@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { useAuthStore } from '../../features/auth/store'
@@ -13,6 +12,7 @@ import {
   MAX_UPLOAD_BYTES,
   ACCEPT_ATTRIBUTE,
   UPLOADS_TERMINAL,
+  safeUploadError,
   uploadsApi,
   validateUploadClientSide,
   type UploadRecord,
@@ -41,7 +41,7 @@ import { useUploadStatus } from '../../features/uploads/useUploadStatus'
 const STATUS_LABEL: Record<UploadStatus, string> = {
   uploaded:          'Принято',
   scanning:          'Сканирование',
-  scanned_clean:     'Безопасно',
+  scanned_clean:     'Загружено',
   infected:          'Вирус',
   processing:        'Разбор',
   processed:         'Готово',
@@ -50,7 +50,7 @@ const STATUS_LABEL: Record<UploadStatus, string> = {
 const STATUS_BADGE: Record<UploadStatus, string> = {
   uploaded:          'badge-neutral',
   scanning:          'badge-info',
-  scanned_clean:     'badge-info',
+  scanned_clean:     'badge-success',
   infected:          'badge-danger',
   processing:        'badge-info',
   processed:         'badge-success',
@@ -528,9 +528,9 @@ function Dropzone({
 // ══════════════════════════════════════════════════════════════════════════
 
 const STATUS_PERCENT: Record<UploadStatus, number> = {
-  uploaded:          15,
-  scanning:          35,
-  scanned_clean:     55,
+  uploaded:          25,
+  scanning:          65,
+  scanned_clean:    100,   // upload is DONE here — prep is a separate section
   processing:        80,
   processed:        100,
   infected:         100,   // bar full, but coloured red
@@ -540,7 +540,7 @@ const STATUS_PERCENT: Record<UploadStatus, number> = {
 const STATUS_CAPTION: Record<UploadStatus, string> = {
   uploaded:          'Файл принят, идёт проверка…',
   scanning:          'Проверка безопасности…',
-  scanned_clean:     'Файл проверен — готов к подготовке',
+  scanned_clean:     'Файл загружен',
   processing:        'Идёт разбор файла…',
   processed:         'Готово — данные доступны для обучения',
   infected:          'Обнаружена угроза — файл удалён',
@@ -558,11 +558,12 @@ function ActiveUploadCard({
 }) {
   const pct = STATUS_PERCENT[upload.status] ?? 0
   const isFailed = upload.status === 'infected' || upload.status === 'processing_failed'
-  const isDone   = upload.status === 'processed'
-  // AV passed but prep hasn't run — the file rests here awaiting «Подготовить».
-  const isWaiting = upload.status === 'scanned_clean'
-  // Animated stripes while pipeline is in motion; static when terminal/at rest.
-  const isMoving = !isFailed && !isDone && !isWaiting
+  // The upload flow ENDS at scanned_clean — «Загружено». Prep is a separate,
+  // independent section; the upload page never waits on it. (`processed` may
+  // also appear here if the file was already prepped elsewhere.)
+  const isDone   = upload.status === 'scanned_clean' || upload.status === 'processed'
+  // Animated stripes only while the upload/scan is still in motion.
+  const isMoving = !isFailed && !isDone
 
   const barColor =
     isFailed ? 'bg-danger'
@@ -619,20 +620,9 @@ function ActiveUploadCard({
         )}
       </div>
 
-      {isWaiting && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md bg-brand-50 px-4 py-3">
-          <p className="text-sm text-brand-700">
-            Файл прошёл проверку безопасности. Подготовьте его к обучению.
-          </p>
-          <Link to="/app/data/prepare" className="btn-primary text-sm shrink-0">
-            Перейти к подготовке →
-          </Link>
-        </div>
-      )}
-
       {upload.error_message && (
         <div className="mt-4 rounded-md bg-danger-bg text-danger px-3 py-2 text-sm">
-          {upload.error_message}
+          {safeUploadError(upload.error_message)}
         </div>
       )}
 

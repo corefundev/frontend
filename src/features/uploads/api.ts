@@ -72,6 +72,20 @@ export const ACCEPTED_EXT      = ['.csv', '.xlsx', '.xlsm'] as const
 export const ACCEPT_ATTRIBUTE  =
   '.csv,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
+// Never surface raw parser/sandbox internals (Python tracebacks, file paths,
+// CLI usage) to the client — reconnaissance risk + confusing. Show a clean,
+// actionable message instead. The backend also sanitizes error_message at the
+// source; this is defence-in-depth for older rows and any edge.
+const _LEAKY_ERROR = /traceback|\/sandbox|\/opt|\/usr|\.py\b|errno|usage:|secure_parser|sandbox|permission denied/i
+export function safeUploadError(msg: string | null | undefined): string {
+  const GENERIC =
+    'Не удалось подготовить файл. Проверьте, что это корректный CSV или Excel ' +
+    'с колонками даты, товара и продаж, и загрузите заново.'
+  const s = (msg ?? '').trim()
+  if (!s || s.length > 240 || _LEAKY_ERROR.test(s)) return GENERIC
+  return s
+}
+
 export function validateUploadClientSide(file: File): string | null {
   if (file.size === 0) return 'Файл пустой'
   if (file.size > MAX_UPLOAD_BYTES) {
