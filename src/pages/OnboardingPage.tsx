@@ -8,6 +8,7 @@ import { useUsage } from '../features/plans/useUsage'
 import {
   ACCEPT_ATTRIBUTE,
   MAX_UPLOAD_BYTES,
+  safeUploadError,
   uploadsApi,
   validateUploadClientSide,
 } from '../features/uploads/api'
@@ -448,7 +449,7 @@ function ProcessingStep({
             {upload.status === 'infected' ? 'Файл не прошёл проверку безопасности' : 'Ошибка разбора'}
           </div>
           {upload.error_message && (
-            <div className="text-xs font-mono">{upload.error_message}</div>
+            <div className="text-xs">{safeUploadError(upload.error_message)}</div>
           )}
           <div className="mt-3">
             <Link to="/" className="btn-ghost text-danger">

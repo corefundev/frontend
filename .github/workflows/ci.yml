@@ -32,6 +32,26 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Error-sanitisation guard (AUD-2 #354, backend repo)
+        # Client-facing pages must never render upload.error_message /
+        # api error .detail raw — always through safeUploadError()/
+        # errorMessage(). The #38 sweep missed OnboardingPage exactly
+        # because nothing guarded the pattern; this grep is the guard.
+        # Admin pages (src/pages/admin/) are operator-facing and exempt.
+        run: |
+          set -euo pipefail
+          leaks=$(grep -rn '{upload\.error_message}\|{[a-z]*\.error_message}' \
+                    src/pages src/features src/components \
+                    --include='*.tsx' \
+                  | grep -v 'src/pages/admin/' \
+                  | grep -v 'safeUploadError' || true)
+          if [ -n "$leaks" ]; then
+            echo "::error::raw error_message render on a client-facing page — wrap with safeUploadError():"
+            echo "$leaks"
+            exit 1
+          fi
+          echo "no raw error_message renders on client-facing pages"
+
       - name: Lint
         run: npm run lint
         # No `.eslintrc.*` lives in the repo right now + eslint v8 +
