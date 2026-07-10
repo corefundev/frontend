@@ -11,13 +11,14 @@ import toast from 'react-hot-toast'
 import { legalApi } from '../../features/legal/api'
 import SimpleMarkdown from '../../components/SimpleMarkdown'
 import { errorMessage } from '../../shared/api/client'
+import AdminQueryError from './AdminQueryError'
 
 const DOC_ID = 'privacy'
 
 export default function AdminLegalPage() {
   const qc = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['legal', DOC_ID],
     queryFn:  () => legalApi.get(DOC_ID),
   })
@@ -44,6 +45,14 @@ export default function AdminLegalPage() {
     onError: (e) => toast.error(errorMessage(e, 'Не удалось сохранить')),
   })
 
+  if (isError) {
+    // Editing over a failed load would let the operator save an empty doc.
+    return (
+      <div className="p-6 max-w-5xl mx-auto">
+        <AdminQueryError what="правовые документы" onRetry={() => void refetch()} />
+      </div>
+    )
+  }
   if (isLoading) {
     // PJAX top-bar signals the wait; this placeholder reserves height.
     return <div className="p-6 h-64" aria-hidden="true" />

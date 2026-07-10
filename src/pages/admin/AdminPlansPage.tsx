@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../../shared/api/client'
 import { clientsApi } from '../../features/clients/api'
 import { plansApi, type PlanId } from '../../features/plans/api'
+import AdminQueryError from './AdminQueryError'
 
 interface PlanChange {
   client_id: string
@@ -20,7 +21,7 @@ interface PlanChange {
 const PLAN_ORDER: PlanId[] = ['free', 'start', 'business']
 
 export default function AdminPlansPage() {
-  const { data: plans = [] } = useQuery({
+  const { data: plans = [], isError, refetch } = useQuery({
     queryKey: ['plans'],
     queryFn: () => plansApi.list(),
   })
@@ -48,6 +49,7 @@ export default function AdminPlansPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {isError && <AdminQueryError what="тарифы" onRetry={() => void refetch()} />}
       <div className="grid grid-cols-3 gap-4">
         {ordered.map((p) => (
           <div key={p.id} className="card-paper p-5">

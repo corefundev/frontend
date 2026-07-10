@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import { apiClient } from '../../shared/api/client'
 import { clientsApi } from '../../features/clients/api'
 import { adminNotificationsApi } from '../../features/notifications/api'
+import AdminQueryError from './AdminQueryError'
 
 const STALE_DAYS = 45
 const WINDOW_DAYS = 7
@@ -27,10 +28,13 @@ interface Attention {
 }
 
 export default function AdminHomePage() {
-  const { data: clients = [] } = useQuery({
+  // AUD-12 (#364): the dashboard's KPIs + «Требует внимания» derive from
+  // these three queries — a failed one must render as an OUTAGE, never as
+  // zeros + «Всё спокойно» (a 503 disguised as all-clear on an ops console).
+  const { data: clients = [], isError: clientsError, refetch: refetchClients } = useQuery({
     queryKey: ['admin-clients'], queryFn: () => clientsApi.list(),
   })
-  const { data: oversight } = useQuery({
+  const { data: oversight, isError: oversightError, refetch: refetchOversight } = useQuery({
     queryKey: ['admin-training-oversight'],
     queryFn: async () => {
       const { data } = await apiClient.get<{
@@ -41,10 +45,16 @@ export default function AdminHomePage() {
     refetchInterval: 60_000,
     meta: { silent: true },
   })
-  const { data: history } = useQuery({
+  const { data: history, isError: historyError, refetch: refetchHistory } = useQuery({
     queryKey: ['admin-notifications-history'],
     queryFn: () => adminNotificationsApi.history(5),
   })
+  const anyError = clientsError || oversightError || historyError
+  const retryAll = () => {
+    if (clientsError) void refetchClients()
+    if (oversightError) void refetchOversight()
+    if (historyError) void refetchHistory()
+  }
 
   const { week, attention, staleList } = useMemo(() => {
     const cutoff = Date.now() - WINDOW_DAYS * 86_400_000
@@ -85,6 +95,7 @@ export default function AdminHomePage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {anyError && <AdminQueryError what="данные дашборда" onRetry={retryAll} />}
       <div className="grid grid-cols-4 gap-4">
         <Link to="/admin/clients" className="card-paper p-5 hover:shadow-md transition-shadow">
           <div className="text-3xl font-semibold tracking-tight">{clients.length}</div>
@@ -122,7 +133,11 @@ export default function AdminHomePage() {
         <div className="px-5 py-3 border-b border-surface-border font-semibold text-sm">
           Требует внимания
         </div>
-        {!attention.length ? (
+        {anyError ? (
+          <div className="px-5 py-6 text-sm text-danger">
+            Состояние неизвестно — данные не загрузились. Это не «всё спокойно».
+          </div>
+        ) : !attention.length ? (
           <div className="px-5 py-6 text-sm text-ink-muted">
             Всё спокойно — проблем за последние {WINDOW_DAYS} дн. не найдено.
           </div>
