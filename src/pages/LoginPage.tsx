@@ -199,7 +199,7 @@ function TurnstileWidget({
 
     const tryRender = () => {
       if (cancelled) return
-      const turnstile = (window as any).turnstile
+      const turnstile = window.turnstile
       if (!turnstile) { setTimeout(tryRender, 100); return }
       el.innerHTML = ''
       widgetId = turnstile.render(el, {
@@ -213,7 +213,7 @@ function TurnstileWidget({
 
     return () => {
       cancelled = true
-      const turnstile = (window as any).turnstile
+      const turnstile = window.turnstile
       if (turnstile && widgetId) {
         try { turnstile.remove(widgetId) } catch { /* widget already gone */ }
       }

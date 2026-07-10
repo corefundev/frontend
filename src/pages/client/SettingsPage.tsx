@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
 import { useAuthStore } from '../../features/auth/store'
-import { configApi } from '../../features/config/api'
+import { configApi, type ClientConfigOverride } from '../../features/config/api'
 import { notificationsApi } from '../../features/notifications/api'
 import { useUsage } from '../../features/plans/useUsage'
 import {
@@ -90,7 +90,7 @@ const FX_PRESETS: { label: string; codes: string[] }[] = [
 //  Sliders (0–100) → discrete lag/window arrays the model understands.
 // ─────────────────────────────────────────────────────────────────────────
 
-function stateToOverride(s: RegulatorState): Record<string, any> {
+function stateToOverride(s: RegulatorState): ClientConfigOverride {
   // historyWeight: low → small windows (fast reaction), high → larger.
   const windows =
     s.historyWeight < 33 ? [3, 7, 14] :
@@ -131,9 +131,9 @@ function stateToOverride(s: RegulatorState): Record<string, any> {
   }
 }
 
-function overrideToState(raw: Record<string, any>): RegulatorState {
-  const features   = raw.features ?? {}
-  const wind       = features.rolling_windows as number[] | undefined
+function overrideToState(raw: ClientConfigOverride): RegulatorState {
+  const features   = raw.features ?? ({} as NonNullable<ClientConfigOverride['features']>)
+  const wind       = features.rolling_windows
   const hist       =
     !wind       ? DEFAULTS.historyWeight :
     wind[0] <= 3 ? 16 :
@@ -188,7 +188,9 @@ export default function SettingsPage() {
   const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
-    if (serverConfig) setState(overrideToState(serverConfig.override))
+    // Server sends the override as a generic JSON object; narrow it to the
+    // known override shape (unknown keys are simply ignored by the mapper).
+    if (serverConfig) setState(overrideToState(serverConfig.override as ClientConfigOverride))
   }, [serverConfig])
 
   function update<K extends keyof RegulatorState>(k: K, v: RegulatorState[K]) {
@@ -215,7 +217,7 @@ export default function SettingsPage() {
   const fxInvalid = state.fxOn && canEdit('fxOn') && state.fxCurrencies.length === 0
 
   const { mutate: save, isPending: saving } = useMutation({
-    mutationFn: () => configApi.set(clientId, stateToOverride(state) as any),
+    mutationFn: () => configApi.set(clientId, stateToOverride(state)),
     onSuccess: () => {
       toast.success('Настройки сохранены')
       setDirty(false)

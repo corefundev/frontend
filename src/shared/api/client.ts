@@ -18,7 +18,7 @@
 //   • BASE_URL is validated at import-time to avoid silently falling back
 //     to localhost in production when VITE_API_URL was not baked in.
 
-import axios, { type AxiosError } from 'axios'
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '../../features/auth/store'
 
 function resolveBaseUrl(): string {
@@ -54,7 +54,7 @@ export const uploadClient = axios.create({
 })
 
 // ── Request interceptor: attach bearer token ──────────────────────────────
-function attachAuth(config: any) {
+function attachAuth(config: InternalAxiosRequestConfig) {
   const token = useAuthStore.getState().token
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
