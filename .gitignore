@@ -14,3 +14,9 @@ dist-ssr
 /vite.config.js
 /vite.config.d.ts
 *.tsbuildinfo
+
+# Agent scratch git-worktrees (backend AUD-14 #370). Nested repos: an
+# over-broad `git add` records them as mode-160000 gitlinks with no
+# `.gitmodules` — pointers a fresh clone cannot resolve. The backend repo
+# was hit; guarded here by the Stray-gitlink CI step.
+.claude/worktrees/
