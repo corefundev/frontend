@@ -32,6 +32,36 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Stray-gitlink guard (AUD-14 #370, backend repo)
+        # A mode-160000 tree entry is a submodule pointer. Without a
+        # matching `.gitmodules` stanza it is a dangling pointer: it names
+        # a commit that need not exist outside the committing machine, so a
+        # fresh clone cannot resolve it. Two of these reached the backend's
+        # main — agent scratch worktrees captured by an over-broad `git add`.
+        # This repo is clean; the guard keeps it that way.
+        run: |
+          set -euo pipefail
+          declared=""
+          if [ -f .gitmodules ]; then
+            # `|| true`: --get-regexp exits 1 on zero matches (an empty or
+            # path-less .gitmodules); under pipefail that would fail the
+            # guard itself instead of reporting the undeclared gitlink.
+            declared=$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | cut -d' ' -f2- || true)
+          fi
+          undeclared=""
+          while read -r path; do
+            [ -n "$path" ] || continue
+            printf '%s\n' "$declared" | grep -qxF "$path" || undeclared="${undeclared}${path}"$'\n'
+          done <<< "$(git ls-files --stage | awk '$1 == "160000" { print $4 }')"
+          if [ -n "$undeclared" ]; then
+            echo "::error::submodule pointer(s) with no .gitmodules declaration — a fresh clone cannot resolve them:"
+            printf '%s' "$undeclared"
+            echo "fix: git rm --cached <path> and add it to .gitignore"
+            echo "if you meant to add a submodule, use git submodule add so .gitmodules records its URL"
+            exit 1
+          fi
+          echo "no undeclared submodule pointers"
+
       - name: Error-sanitisation guard (AUD-2 #354, backend repo)
         # Client-facing pages must never render upload.error_message /
         # api error .detail raw — always through safeUploadError()/
