@@ -83,12 +83,10 @@ jobs:
           echo "no raw error_message renders on client-facing pages"
 
       - name: Lint
+        # #379: .eslintrc.cjs landed and the tree is clean under
+        # --max-warnings 0 — lint is a HARD gate now (was advisory while
+        # the config was missing).
         run: npm run lint
-        # No `.eslintrc.*` lives in the repo right now + eslint v8 +
-        # `--max-warnings 0` means any heuristic warning fails CI. Until
-        # we land a proper config, lint is advisory — typecheck + build
-        # are the hard gates.
-        continue-on-error: true
 
       - name: Build (prod)
         # Using the placeholder API URL keeps the build deterministic.

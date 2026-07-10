@@ -109,6 +109,10 @@ export default function PjaxLoader() {
     // We intentionally do NOT finish here — finish is owned by the busy
     // signal effect below, so route + data fetch can co-occur and the
     // bar only completes when BOTH settle.
+    //
+    // startLoading is re-created every render; listing it would run this
+    // effect each render instead of only on pathname change — deliberate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname])
 
   // Busy signal — start/finish based on react-query activity.
@@ -118,6 +122,9 @@ export default function PjaxLoader() {
     } else if (phase === 'loading') {
       finishLoading()
     }
+    // start/finishLoading are re-created every render; listing them would
+    // run this effect each render, not only on busy/phase — deliberate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busy, phase])
 
   // Cleanup on unmount.

@@ -16,6 +16,8 @@ export interface ClientConfigOverride {
   model?: {
     type?: 'lgbm' | 'mimo'
     horizon?: number
+    // Loss objective — paid-tier regulator (plans._START_CONFIG_KEYS).
+    objective?: 'ensemble' | 'mse' | 'mae' | 'tweedie'
     quantiles?: number[]
     n_estimators?: number
     learning_rate?: number

@@ -11,6 +11,7 @@ import {
   safeUploadError,
   uploadsApi,
   validateUploadClientSide,
+  type UploadRecord,
 } from '../features/uploads/api'
 import { useUploadStatus } from '../features/uploads/useUploadStatus'
 import { errorMessage } from '../shared/api/client'
@@ -358,7 +359,7 @@ function UploadStep({
 function ProcessingStep({
   upload, prepFailed, onRetryPrepare, onDone,
 }: {
-  upload: any | null
+  upload: UploadRecord | null
   prepFailed: boolean
   onRetryPrepare: () => void
   onDone: () => void

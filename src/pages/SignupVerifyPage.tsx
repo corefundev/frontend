@@ -60,7 +60,7 @@ export default function SignupVerifyPage() {
       setResendCaptcha('')
       setCooldown(RESEND_COOLDOWN_S)
       // Reset the Turnstile widget too so user can re-solve next time.
-      const turnstile = (window as any).turnstile
+      const turnstile = window.turnstile
       if (turnstile && turnstile.reset) {
         try { turnstile.reset() } catch { /* widget was unmounted already */ }
       }
@@ -172,7 +172,7 @@ export default function SignupVerifyPage() {
             {resendMut.isPending
               ? 'Отправляем…'
               : cooldown > 0
-                ? `Отправить ещё раз через ${cooldown} с`
+                ? `Отправить ещё раз через ${cooldown}\u00A0с`
                 : 'Отправить ещё раз'}
           </button>
         </div>
@@ -228,7 +228,7 @@ function TurnstileWidget({
     let cancelled = false
     const tryRender = () => {
       if (cancelled) return
-      const turnstile = (window as any).turnstile
+      const turnstile = window.turnstile
       if (!turnstile) { setTimeout(tryRender, 100); return }
       el.innerHTML = ''
       widgetId = turnstile.render(el, {
@@ -241,7 +241,7 @@ function TurnstileWidget({
     tryRender()
     return () => {
       cancelled = true
-      const turnstile = (window as any).turnstile
+      const turnstile = window.turnstile
       if (turnstile && widgetId) {
         try { turnstile.remove(widgetId) } catch { /* widget already gone */ }
       }

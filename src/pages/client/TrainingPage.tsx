@@ -141,7 +141,8 @@ export default function TrainingPage() {
     // PjaxLoader-silent — see PjaxLoader.tsx predicate.
     meta: { silent: true },
   })
-  const runs = history?.runs ?? []
+  // Memoised: a fresh [] each render would retrigger the effects/memos below.
+  const runs = useMemo(() => history?.runs ?? [], [history])
 
   // Failed jobs the user has dismissed via × — persisted across reloads
   // so the resume-active-job effect doesn't grab a stale `running` row
@@ -579,7 +580,7 @@ function TimingRow({
   useEffect(() => {
     if (!storageKey) return
     if (ended && ended !== 'None') {
-      try { localStorage.removeItem(storageKey) } catch {}
+      try { localStorage.removeItem(storageKey) } catch { /* private mode — best-effort only */ }
     }
   }, [storageKey, ended])
 
