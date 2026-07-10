@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -47,16 +47,33 @@ export default function OnboardingPage() {
   // keeping the guided flow moving to `processed` without an extra step. (The
   // regular Uploads flow is user-initiated; this auto-trigger is onboarding-
   // only.) Invalidating the status query resumes polling past `scanned_clean`.
+  //
+  // AUD-13 (#365): a failed prepare used to reset a ref and stop — the effect
+  // never re-fired (status stays `scanned_clean`, deps unchanged), so one
+  // transient 5xx froze the wizard on «Готовим к разбору…» polling forever
+  // with no error and no way forward. Failure is now STATE: it toasts,
+  // renders a retry button in step 3, and blocks the auto-effect until the
+  // user retries (no silent auto-retry loop hammering a down backend).
   const preparedRef = useRef(false)
+  const [prepFailed, setPrepFailed] = useState(false)
+  const firePrepare = useCallback(() => {
+    if (!uploadId || !clientId) return
+    preparedRef.current = true
+    setPrepFailed(false)
+    uploadsApi
+      .prepare(clientId, uploadId)
+      .then(() => qc.invalidateQueries({ queryKey: ['upload', uploadId] }))
+      .catch((e) => {
+        preparedRef.current = false
+        setPrepFailed(true)
+        toast.error(errorMessage(e, 'Не удалось запустить подготовку данных'))
+      })
+  }, [clientId, uploadId, qc])
   useEffect(() => {
-    if (upload?.status === 'scanned_clean' && uploadId && clientId && !preparedRef.current) {
-      preparedRef.current = true
-      uploadsApi
-        .prepare(clientId, uploadId)
-        .then(() => qc.invalidateQueries({ queryKey: ['upload', uploadId] }))
-        .catch(() => { preparedRef.current = false })   // allow a retry on failure
+    if (upload?.status === 'scanned_clean' && !preparedRef.current && !prepFailed) {
+      firePrepare()
     }
-  }, [upload?.status, uploadId, clientId, qc])
+  }, [upload?.status, prepFailed, firePrepare])
 
   const { mutateAsync: doUpload, isPending: uploading } = useMutation({
     mutationFn: (file: File) =>
@@ -114,6 +131,8 @@ export default function OnboardingPage() {
           {step === 3 && (
             <ProcessingStep
               upload={upload ?? null}
+              prepFailed={prepFailed}
+              onRetryPrepare={firePrepare}
               onDone={() => nav('/app')}
             />
           )}
@@ -337,9 +356,11 @@ function UploadStep({
 // ─────────────────────────────────────────────────────────────────────────
 
 function ProcessingStep({
-  upload, onDone,
+  upload, prepFailed, onRetryPrepare, onDone,
 }: {
   upload: any | null
+  prepFailed: boolean
+  onRetryPrepare: () => void
   onDone: () => void
 }) {
   const steps = ['uploaded', 'scanning', 'scanned_clean', 'processing', 'processed']
@@ -369,7 +390,16 @@ function ProcessingStep({
          : failed ? 'Что-то пошло не так.'
                   : 'Обрабатываем файл.'}
       </h1>
-      <p className="mt-4 text-ink-muted max-w-xl">{stepCopy}</p>
+      <p className="mt-4 text-ink-muted max-w-xl">
+        {prepFailed && !done && !failed
+          ? 'Не удалось запустить подготовку данных — проверка файла прошла, но следующий шаг не стартовал.'
+          : stepCopy}
+      </p>
+      {prepFailed && !done && !failed && (
+        <button type="button" className="btn-gold mt-4" onClick={onRetryPrepare}>
+          Подготовить ещё раз
+        </button>
+      )}
 
       {/* Pipeline dots */}
       {!failed && (
