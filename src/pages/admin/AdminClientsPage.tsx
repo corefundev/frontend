@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { clientsApi } from '../../features/clients/api'
 import { plansApi, type PlanId, type PlanSpec } from '../../features/plans/api'
 import { apiClient } from '../../shared/api/client'
+import AdminQueryError from './AdminQueryError'
 
 const PLAN_ORDER: PlanId[] = ['free', 'start', 'business']
 
@@ -17,7 +18,7 @@ export default function AdminClientsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'client_id' | 'last_trained_at' | 'plan'>('client_id')
 
-  const { data: clients = [], isLoading } = useQuery({
+  const { data: clients = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-clients'],
     queryFn: () => clientsApi.list(),
   })
@@ -102,7 +103,11 @@ export default function AdminClientsPage() {
       </div>
 
       <section className="card overflow-hidden">
-        {isLoading ? (
+        {isError ? (
+          <div className="p-5">
+            <AdminQueryError what="список клиентов" onRetry={() => void refetch()} />
+          </div>
+        ) : isLoading ? (
           // PJAX top-bar signals the wait; spacer keeps layout stable.
           <div className="p-8 h-32" aria-hidden="true" />
         ) : visible.length === 0 ? (

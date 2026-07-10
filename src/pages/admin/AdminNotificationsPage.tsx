@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { adminNotificationsApi } from '../../features/notifications/api'
 import { clientsApi } from '../../features/clients/api'
 import { errorMessage } from '../../shared/api/client'
+import AdminQueryError from './AdminQueryError'
 
 const SEVERITY_BADGE: Record<string, string> = {
   info:    'badge-info',
@@ -22,11 +23,12 @@ export default function AdminNotificationsPage() {
   const [target, setTarget] = useState<string>('all')
   const [confirmAll, setConfirmAll] = useState('')
 
-  const { data: clients = [] } = useQuery({
+  // Clients feed the target picker — the send form is unusable without them.
+  const { data: clients = [], isError: clientsError, refetch: refetchClients } = useQuery({
     queryKey: ['admin-clients'],
     queryFn: () => clientsApi.list(),
   })
-  const { data: history } = useQuery({
+  const { data: history, isError: historyError, refetch: refetchHistory } = useQuery({
     queryKey: ['admin-notifications-history'],
     queryFn: () => adminNotificationsApi.history(),
   })
@@ -63,6 +65,11 @@ export default function AdminNotificationsPage() {
         </p>
       </div>
 
+      {clientsError && (
+        <div className="max-w-2xl">
+          <AdminQueryError what="список клиентов" onRetry={() => void refetchClients()} />
+        </div>
+      )}
       <form
         className="card-paper p-5 space-y-4 max-w-2xl"
         onSubmit={(e) => { e.preventDefault(); if (canSend) sendMut.mutate() }}
@@ -134,7 +141,11 @@ export default function AdminNotificationsPage() {
         <div className="px-5 py-3 border-b border-surface-border font-semibold text-sm">
           История отправок
         </div>
-        {!history?.notifications?.length ? (
+        {historyError ? (
+          <div className="p-5">
+            <AdminQueryError what="историю уведомлений" onRetry={() => void refetchHistory()} />
+          </div>
+        ) : !history?.notifications?.length ? (
           <div className="px-5 py-8 text-sm text-ink-muted text-center">Пока пусто</div>
         ) : (
           <table className="w-full text-sm">

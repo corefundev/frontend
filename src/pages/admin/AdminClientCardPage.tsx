@@ -11,6 +11,7 @@ import { apiClient, errorMessage } from '../../shared/api/client'
 import { clientsApi, type ClientRecord } from '../../features/clients/api'
 import { type PlanId } from '../../features/plans/api'
 import { getNotifications } from '../../features/notifications/api'
+import AdminQueryError from './AdminQueryError'
 
 interface Overview {
   client: ClientRecord
@@ -28,7 +29,7 @@ export default function AdminClientCardPage() {
   const { clientId = '' } = useParams()
   const qc = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-client-overview', clientId],
     queryFn: async () => {
       const { data } = await apiClient.get<Overview>(
@@ -78,6 +79,14 @@ export default function AdminClientCardPage() {
     return <span className="badge-neutral">до гейта</span>
   }, [])
 
+  if (isError) {
+    return (
+      <div className="max-w-4xl space-y-4">
+        <Link to="/admin/clients" className="text-sm text-ink-muted hover:text-ink">← Клиенты</Link>
+        <AdminQueryError what="карточку клиента" onRetry={() => void refetch()} />
+      </div>
+    )
+  }
   if (isLoading || !c) return <div className="h-40" aria-hidden />
 
   return (

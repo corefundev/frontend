@@ -8,11 +8,12 @@ import toast from 'react-hot-toast'
 import { clientsApi, type RegisterClientRequest } from '../../features/clients/api'
 import { plansApi, type PlanId } from '../../features/plans/api'
 import { errorMessage } from '../../shared/api/client'
+import AdminQueryError from './AdminQueryError'
 
 export default function AdminClientNewPage() {
   const qc = useQueryClient()
   const nav = useNavigate()
-  const { data: plans = [] } = useQuery({
+  const { data: plans = [], isError: plansError, refetch: refetchPlans } = useQuery({
     queryKey: ['plans'], queryFn: () => plansApi.list(),
   })
   const [form, setForm] = useState<RegisterClientRequest>({
@@ -51,6 +52,16 @@ export default function AdminClientNewPage() {
             Открыть карточку
           </button>
         </div>
+      </div>
+    )
+  }
+
+  if (plansError) {
+    // The form is unusable without the plan catalogue — no blind registration.
+    return (
+      <div className="max-w-md space-y-4">
+        <Link to="/admin/clients" className="text-sm text-ink-muted hover:text-ink">← Клиенты</Link>
+        <AdminQueryError what="тарифы" onRetry={() => void refetchPlans()} />
       </div>
     )
   }

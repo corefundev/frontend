@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 
 import { apiClient } from '../../shared/api/client'
+import AdminQueryError from './AdminQueryError'
 
 interface UploadRow {
   upload_id: string; client_id: string; filename: string
@@ -30,7 +31,7 @@ function fmtSize(b: number): string {
 }
 
 export default function AdminDataPage() {
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ['admin-uploads'],
     queryFn: async () => {
       const { data } = await apiClient.get<{ uploads: UploadRow[]; count: number }>(
@@ -43,12 +44,15 @@ export default function AdminDataPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {isError && <AdminQueryError what="данные загрузок" onRetry={() => void refetch()} />}
       <section className="card-paper overflow-hidden">
         <div className="px-5 py-3 border-b border-surface-border flex items-baseline justify-between">
           <span className="font-semibold text-sm">Загрузки (все клиенты)</span>
           <span className="text-xs text-ink-muted">read-only · карантин = вердикт ClamAV</span>
         </div>
-        {!data?.uploads?.length ? (
+        {isError ? (
+          <div className="px-5 py-8" aria-hidden />
+        ) : !data?.uploads?.length ? (
           <div className="px-5 py-8 text-sm text-ink-muted text-center">Загрузок пока нет</div>
         ) : (
           <div className="overflow-x-auto">

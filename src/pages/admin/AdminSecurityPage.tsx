@@ -5,6 +5,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { apiClient } from '../../shared/api/client'
+import AdminQueryError from './AdminQueryError'
 
 interface SecurityInfo {
   admin_logins: { at: string; ip: string | null; user_agent: string; session: string }[]
@@ -16,7 +17,7 @@ interface SecurityInfo {
 }
 
 export default function AdminSecurityPage() {
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ['admin-security'],
     queryFn: async () => {
       const { data } = await apiClient.get<SecurityInfo>('/admin/security',
@@ -25,6 +26,13 @@ export default function AdminSecurityPage() {
     },
   })
 
+  if (isError) {
+    return (
+      <div className="max-w-4xl">
+        <AdminQueryError what="данные безопасности" onRetry={() => void refetch()} />
+      </div>
+    )
+  }
   if (!data) return <div className="h-40" aria-hidden />
 
   return (

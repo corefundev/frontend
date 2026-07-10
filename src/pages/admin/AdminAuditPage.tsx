@@ -8,6 +8,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { apiClient, errorMessage } from '../../shared/api/client'
 import { clientsApi } from '../../features/clients/api'
 import toast from 'react-hot-toast'
+import AdminQueryError from './AdminQueryError'
 
 interface AuditEvent {
   id: number; ts: string; event_type: string; event_subtype: string | null
@@ -31,7 +32,7 @@ export default function AdminAuditPage() {
   const { data: clients = [] } = useQuery({
     queryKey: ['admin-clients'], queryFn: () => clientsApi.list(),
   })
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ['admin-audit', clientFilter, typeFilter, days],
     queryFn: async () => {
       const { data } = await apiClient.get<AuditResponse>('/admin/audit', {
@@ -56,6 +57,7 @@ export default function AdminAuditPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {isError && <AdminQueryError what="данные аудита" onRetry={() => void refetch()} />}
       <div className="flex flex-wrap items-center gap-3">
         <select className="input w-44" value={clientFilter}
                 onChange={(e) => setClientFilter(e.target.value)}>
@@ -93,7 +95,9 @@ export default function AdminAuditPage() {
       </div>
 
       <section className="card-paper overflow-hidden">
-        {!data?.events?.length ? (
+        {isError ? (
+          <div className="px-5 py-8" aria-hidden />
+        ) : !data?.events?.length ? (
           <div className="px-5 py-8 text-sm text-ink-muted text-center">
             Событий за выбранный период нет
           </div>

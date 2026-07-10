@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 
 import { apiClient } from '../../shared/api/client'
+import AdminQueryError from './AdminQueryError'
 
 interface RunRow {
   run_id: string
@@ -36,7 +37,7 @@ function GateBadge({ r }: { r: RunRow }) {
 }
 
 export default function AdminTrainingPage() {
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ['admin-training-oversight'],
     queryFn: async () => {
       const { data } = await apiClient.get<Oversight>('/admin/training-runs',
@@ -52,11 +53,14 @@ export default function AdminTrainingPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {isError && <AdminQueryError what="ленту обучений" onRetry={() => void refetch()} />}
       <section className="card-paper overflow-hidden">
         <div className="px-5 py-3 border-b border-surface-border font-semibold text-sm">
           Возраст моделей
         </div>
-        {!ages.length ? (
+        {isError ? (
+          <div className="px-5 py-6" aria-hidden />
+        ) : !ages.length ? (
           <div className="px-5 py-6 text-sm text-ink-muted">Промоутнутых моделей нет</div>
         ) : (
           <ul className="divide-y divide-surface-border text-sm">
@@ -83,7 +87,9 @@ export default function AdminTrainingPage() {
           <span className="font-semibold text-sm">Лента обучений</span>
           <span className="text-xs text-ink-muted">read-only · v2-действия — по дорожной карте</span>
         </div>
-        {!data?.runs?.length ? (
+        {isError ? (
+          <div className="px-5 py-6" aria-hidden />
+        ) : !data?.runs?.length ? (
           <div className="px-5 py-6 text-sm text-ink-muted">Пусто</div>
         ) : (
           <div className="overflow-x-auto">

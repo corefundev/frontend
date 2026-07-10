@@ -6,6 +6,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { apiClient } from '../../shared/api/client'
+import AdminQueryError from './AdminQueryError'
 
 interface SystemInfo {
   components: Record<string, string>
@@ -22,7 +23,7 @@ function fmtAge(sec: number): string {
 }
 
 export default function AdminSystemPage() {
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ['admin-system'],
     queryFn: async () => {
       const { data } = await apiClient.get<SystemInfo>('/admin/system')
@@ -32,6 +33,13 @@ export default function AdminSystemPage() {
     meta: { silent: true },
   })
 
+  if (isError) {
+    return (
+      <div className="max-w-4xl">
+        <AdminQueryError what="состояние системы" onRetry={() => void refetch()} />
+      </div>
+    )
+  }
   if (!data) return <div className="h-40" aria-hidden />
 
   return (
