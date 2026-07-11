@@ -22,24 +22,63 @@ interface VerifyResult {
   ok: boolean; rows_checked: number
   first_bad_id: number | null; reason: string | null
 }
+// ADM-v3-5 #390: вердикт ежедневного R7-2 крона (штампуется workflow'ом).
+interface ChainStatus {
+  stamped: boolean
+  stamped_at?: string
+  age_hours?: number
+  stale: boolean | null
+  verdict: { ok?: boolean; rows_checked?: number; first_bad_id?: number | null } | null
+}
+
+// Бейдж состояния цепочки: цел/нарушен/крон молчит/ещё не проверялась/
+// статус недоступен (503 ≠ «всё хорошо» — AUD-12 fail-closed рендеринг).
+function ChainBadge({ s, isError }: { s: ChainStatus | undefined; isError: boolean }) {
+  if (isError) return <span className="badge-danger">статус цепочки недоступен</span>
+  if (!s) return null
+  if (!s.stamped) return <span className="badge-neutral">автопроверка ещё не штамповалась</span>
+  if (s.verdict?.ok === false)
+    return <span className="badge-danger">цепочка НАРУШЕНА (строка {s.verdict.first_bad_id ?? '?'})</span>
+  if (s.stale)
+    return <span className="badge-warn">вердикт устарел ({Math.round(s.age_hours ?? 0)} ч) — крон молчит</span>
+  return (
+    <span className="badge-success">
+      цепочка цела · проверено {Math.round(s.age_hours ?? 0)} ч назад
+    </span>
+  )
+}
 
 export default function AdminAuditPage() {
   const [clientFilter, setClientFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [days, setDays] = useState(7)
+  const [subtypeInput, setSubtypeInput] = useState('')
+  const [actorInput, setActorInput] = useState('')
+  const [applied, setApplied] = useState({ subtype: '', actor: '' })
   const [verify, setVerify] = useState<VerifyResult | null>(null)
 
   const { data: clients = [] } = useQuery({
     queryKey: ['admin-clients'], queryFn: () => clientsApi.list(),
   })
+  const { data: chain, isError: chainError } = useQuery({
+    queryKey: ['admin-audit-chain-status'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ChainStatus>('/admin/audit/chain-status')
+      return data
+    },
+    refetchInterval: 300_000,
+    meta: { silent: true },
+  })
   const { data, isError, refetch } = useQuery({
-    queryKey: ['admin-audit', clientFilter, typeFilter, days],
+    queryKey: ['admin-audit', clientFilter, typeFilter, days, applied],
     queryFn: async () => {
       const { data } = await apiClient.get<AuditResponse>('/admin/audit', {
         params: {
           days, limit: 200,
           ...(clientFilter ? { client_id: clientFilter } : {}),
           ...(typeFilter ? { event_type: typeFilter } : {}),
+          ...(applied.subtype ? { event_subtype: applied.subtype } : {}),
+          ...(applied.actor ? { actor: applied.actor } : {}),
         },
       })
       return data
@@ -58,7 +97,15 @@ export default function AdminAuditPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       {isError && <AdminQueryError what="данные аудита" onRetry={() => void refetch()} />}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-semibold text-sm">Журнал действий</h2>
+        <ChainBadge s={chain} isError={chainError} />
+      </div>
+      <form className="flex flex-wrap items-center gap-3"
+            onSubmit={(e) => {
+              e.preventDefault()
+              setApplied({ subtype: subtypeInput.trim(), actor: actorInput.trim() })
+            }}>
         <select className="input w-44" value={clientFilter}
                 onChange={(e) => setClientFilter(e.target.value)}>
           <option value="">Все клиенты</option>
@@ -78,6 +125,13 @@ export default function AdminAuditPage() {
           <option value={30}>30 дней</option>
           <option value={90}>90 дней</option>
         </select>
+        <input className="input w-44" placeholder="подтип (точно)"
+               value={subtypeInput}
+               onChange={(e) => setSubtypeInput(e.target.value)} />
+        <input className="input w-52" placeholder="актор: email (точно)"
+               value={actorInput}
+               onChange={(e) => setActorInput(e.target.value)} />
+        <button type="submit" className="btn-secondary text-sm">Фильтр</button>
         <div className="ml-auto flex items-center gap-3">
           {verify && (
             <span className={verify.ok ? 'badge-success' : 'badge-danger'}>
@@ -92,7 +146,7 @@ export default function AdminAuditPage() {
             {verifyMut.isPending ? 'Проверка…' : 'Проверить целостность'}
           </button>
         </div>
-      </div>
+      </form>
 
       <section className="card-paper overflow-hidden">
         {isError ? (
