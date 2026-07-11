@@ -21,11 +21,45 @@ interface AlertsInfo {
   counts: { firing: number; pending: number }
 }
 
+interface SecretAge {
+  known: boolean
+  reason?: string
+  created_at?: string
+  rotated_at?: string
+  age_days?: number
+  max_age_days?: number
+  overdue?: boolean
+}
 interface SystemInfo {
   components: Record<string, string>
   jobs: { job: string; age_sec: number; cadence_sec: number | null; stale: boolean }[]
   models_cached: number
   storage_backend: string
+  secrets?: { sa_key: SecretAge; admin_api_key: SecretAge }
+}
+
+// ADM-v3-8 #393: строка возраста секрета — warn по порогу, честный
+// unknown/error никогда не рендерится зелёным.
+function SecretRow({ label, s, hint }: { label: string; s: SecretAge; hint: string }) {
+  return (
+    <tr className="border-b border-surface-border last:border-b-0">
+      <td className="px-5 py-2.5 text-xs">{label}</td>
+      <td className="px-3 py-2.5">
+        {!s.known ? (
+          <span className={s.reason?.startsWith('error') ? 'badge-danger' : 'badge-warn'}>
+            {s.reason?.startsWith('error') ? 'ошибка чтения' : 'неизвестен'}
+          </span>
+        ) : (
+          <span className={s.overdue ? 'badge-danger' : 'badge-success'}>
+            {s.age_days} дн{s.overdue ? ' — ротация просрочена!' : ''}
+          </span>
+        )}
+      </td>
+      <td className="px-3 py-2.5 text-xs text-ink-muted">
+        {s.known ? `порог ${s.max_age_days} дн · ${hint}` : (s.reason ?? '')}
+      </td>
+    </tr>
+  )
 }
 
 function fmtAge(sec: number): string {
@@ -155,6 +189,22 @@ export default function AdminSystemPage() {
           </table>
         )}
       </section>
+
+      {data.secrets && (
+        <section className="card-paper overflow-hidden">
+          <div className="px-5 py-3 border-b border-surface-border font-semibold text-sm">
+            Возраст секретов
+          </div>
+          <table className="w-full text-sm">
+            <tbody>
+              <SecretRow label="SA-ключ Lockbox (YC)" s={data.secrets.sa_key}
+                         hint="еженедельная ротация (#353)" />
+              <SecretRow label="ADMIN_API_KEY" s={data.secrets.admin_api_key}
+                         hint="H6-регламент 90 дн (OPERATIONS.md)" />
+            </tbody>
+          </table>
+        </section>
+      )}
 
       <div className="text-xs text-ink-muted">
         Grafana / MLflow / Prometheus не опубликованы наружу — доступ по
