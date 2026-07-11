@@ -16,6 +16,10 @@ interface Item {
   kind: 'Разделы' | 'Клиенты' | 'Действия'
   label: string
   hint?: string
+  /** правая подпись (прототип: «открыть карточку», раздел действия) */
+  k?: string
+  /** невидимое поле поиска (email клиента) */
+  search?: string
   to: string
 }
 
@@ -92,14 +96,16 @@ export default function AdminCommandPalette({ open, onOpenChange }: {
     const clientItems: Item[] = clients.map((c) => ({
       kind: 'Клиенты' as const,
       label: c.client_id,
-      hint: [c.email ?? undefined, c.plan].filter(Boolean).join(' · '),
+      hint: `${c.plan} · ${c.suspended_at ? 'заблокирован' : 'активен'}`,
+      k: 'открыть карточку',
+      search: c.email ?? '',
       to: `/admin/clients/${encodeURIComponent(c.client_id)}`,
     }))
     const pool = q
       ? [...SECTIONS, ...ACTIONS, ...clientItems]
           .map((it) => {
             const r = Math.min(
-              ...[it.label, it.hint ?? ''].map((h) => {
+              ...[it.label, it.hint ?? '', it.search ?? ''].map((h) => {
                 const rr = rank(q, h)
                 return rr === -1 ? 99 : rr
               }),
@@ -110,7 +116,7 @@ export default function AdminCommandPalette({ open, onOpenChange }: {
           .sort((a, b) => a.r - b.r || a.it.label.localeCompare(b.it.label))
           .slice(0, 12)
           .map((x) => x.it)
-      : [...clientItems.slice(0, 4), ...ACTIONS.slice(0, 4), ...SECTIONS.slice(0, 4)]
+      : [...clientItems.slice(0, 4), ...ACTIONS.slice(0, 4)]  // дефолт прототипа: Клиенты + Действия
     // группировка по типам в порядке прототипа (Клиенты → Действия → Разделы)
     return KIND_ORDER.flatMap((k) => pool.filter((it) => it.kind === k))
   }, [query, clients])
@@ -165,7 +171,14 @@ export default function AdminCommandPalette({ open, onOpenChange }: {
                   <span className={it.kind === 'Клиенты' ? 'font-mono text-xs' : 'font-medium'}>
                     {it.label}
                   </span>
-                  {it.hint && <span className="text-[11px] text-ink-subtle truncate ml-auto">{it.hint}</span>}
+                  {it.kind === 'Клиенты' && it.hint && (
+                    <span className="text-[12px] text-ink-muted truncate">{it.hint}</span>
+                  )}
+                  {(it.k ?? (it.kind !== 'Клиенты' ? it.hint : undefined)) && (
+                    <span className="text-[11px] text-ink-subtle whitespace-nowrap ml-auto">
+                      {it.k ?? it.hint}
+                    </span>
+                  )}
                 </button>
               </div>
             )

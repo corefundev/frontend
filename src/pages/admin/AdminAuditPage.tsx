@@ -104,37 +104,39 @@ export default function AdminAuditPage() {
         <h2 className="font-semibold text-sm">Журнал действий</h2>
         <ChainBadge s={chain} isError={chainError} />
       </div>
-      <form className="flex flex-wrap items-center gap-3"
+      {/* #394: все фильтры ОДНОЙ строкой — текстовые поля рядом с
+          селектами, без переноса на вторую строку */}
+      <form className="flex items-center gap-2"
             onSubmit={(e) => {
               e.preventDefault()
               setApplied({ subtype: subtypeInput.trim(), actor: actorInput.trim() })
             }}>
-        <select className="input w-44" value={clientFilter}
+        <select className="input w-40 shrink-0" value={clientFilter}
                 onChange={(e) => setClientFilter(e.target.value)}>
           <option value="">Все клиенты</option>
           {clients.map((c) => (
             <option key={c.client_id} value={c.client_id}>{c.client_id}</option>
           ))}
         </select>
-        <select className="input w-48" value={typeFilter}
+        <select className="input w-44 shrink-0" value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}>
           <option value="">Все события</option>
           {(data?.event_types ?? []).map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <select className="input w-36" value={days}
+        <select className="input w-28 shrink-0" value={days}
                 onChange={(e) => setDays(Number(e.target.value))}>
           <option value={1}>1 день</option>
           <option value={7}>7 дней</option>
           <option value={30}>30 дней</option>
           <option value={90}>90 дней</option>
         </select>
-        <input className="input w-44" placeholder="подтип (точно)"
+        <input className="input w-40 shrink-0" placeholder="подтип (точно)"
                value={subtypeInput}
                onChange={(e) => setSubtypeInput(e.target.value)} />
-        <input className="input w-52" placeholder="актор: email (точно)"
+        <input className="input w-48 shrink-0" placeholder="актор: email (точно)"
                value={actorInput}
                onChange={(e) => setActorInput(e.target.value)} />
-        <button type="submit" className="btn-secondary text-sm">Фильтр</button>
+        <button type="submit" className="btn-secondary text-sm shrink-0">Фильтр</button>
         <div className="ml-auto flex items-center gap-3">
           {verify && (
             <span className={verify.ok ? 'badge-success' : 'badge-danger'}>
