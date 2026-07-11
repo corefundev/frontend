@@ -57,7 +57,6 @@
   --danger-bg:  58 23 21;          /* #3A1715 */
   --warn:       240 162 75;        /* #F0A24B */
   --warn-bg:    51 37 15;          /* #33250F */
-  --admin-frame: #C2333F;
   --admin-brand: #6B96FF;
   --admin-brand-ink: #8FAFFF;
   --admin-brand-bg: #1C2A4E;
@@ -65,7 +64,6 @@
 }
 /* светлые admin-переменные хрома (прототип) */
 :root {
-  --admin-frame: #A61B2B;
   --admin-brand: #2463EB;
   --admin-brand-ink: #1D53C4;
   --admin-brand-bg: #EBF1FE;

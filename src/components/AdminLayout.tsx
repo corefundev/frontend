@@ -305,25 +305,19 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className={`admin-console min-h-screen bg-surface text-ink border-t-[3px] ${dark ? 'admin-dark' : ''}`}
-         style={{ borderTopColor: 'var(--admin-frame)' }}>
+    <div className={`admin-console min-h-screen bg-surface text-ink ${dark ? 'admin-dark' : ''}`}>
       {/* ── Шапка (прототип): лого + Admin-чип · статус-полоса · ⌘K · сессия · тема ── */}
       <header className="sticky top-0 z-20 h-[54px] bg-surface-raised border-b border-surface-border flex items-center gap-4 px-4">
-        <div className="flex items-center gap-2.5 min-w-[196px]">
-          <span className="h-[26px] w-[26px] rounded-md text-white text-[9px] font-bold tracking-wider flex items-center justify-center"
-                style={{ background: 'var(--admin-brand)' }} aria-hidden>SKU</span>
-          <b className="text-sm font-semibold">Console</b>
-          <span className="text-[10px] font-bold tracking-[.08em] uppercase text-white px-2 py-0.5 rounded-full"
-                style={{ background: 'var(--admin-frame)' }}>Admin</span>
+        <div className="flex-1 basis-0 min-w-0 flex items-center">
+          <StatusStrip />
         </div>
-        <StatusStrip />
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button type="button"
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md ring-1 ring-surface-border text-xs text-ink-subtle hover:text-ink-muted hover:ring-surface-deep transition-colors"
-                  onClick={() => setPaletteOpen(true)}>
-            Поиск и действия
-            <kbd className="text-[10.5px] px-1.5 rounded border border-surface-deep border-b-2 bg-surface-muted text-ink-muted font-sans">⌘K</kbd>
-          </button>
+        <button type="button"
+                className="shrink-0 flex items-center gap-2 px-2.5 py-1.5 rounded-md ring-1 ring-surface-border text-xs text-ink-subtle hover:text-ink-muted hover:ring-surface-deep transition-colors"
+                onClick={() => setPaletteOpen(true)}>
+          Поиск и действия
+          <kbd className="text-[10.5px] px-1.5 rounded border border-surface-deep border-b-2 bg-surface-muted text-ink-muted font-sans">⌘K</kbd>
+        </button>
+        <div className="flex-1 basis-0 min-w-0 flex items-center justify-end gap-2.5">
           <SessionCountdown />
           <button type="button"
                   className="h-[30px] w-[30px] rounded-md ring-1 ring-surface-border flex items-center justify-center text-ink-muted hover:bg-surface-muted transition-colors"
