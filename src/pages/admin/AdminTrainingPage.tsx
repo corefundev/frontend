@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { apiClient, errorMessage } from '../../shared/api/client'
+import AdminConfirmDialog, { type ConfirmSpec } from '../../components/AdminConfirmDialog'
 import AdminQueryError from './AdminQueryError'
 import { ShowMore, SkeletonRows, StateRow, Th } from './adminTable'
 import { THEAD_CLS, useSort } from './adminTableUtils'
@@ -52,6 +53,7 @@ function GateBadge({ r }: { r: RunRow }) {
 export default function AdminTrainingPage() {
   const qc = useQueryClient()
   const [limit, setLimit] = useState(50)   // #394-2: «показать ещё», сервер ≤200
+  const [confirm, setConfirm] = useState<ConfirmSpec | null>(null)
   const { data, isError, isLoading, refetch } = useQuery({
     queryKey: ['admin-training-oversight', limit],
     queryFn: async () => {
@@ -125,12 +127,12 @@ export default function AdminTrainingPage() {
             )}
             <button type="button" className="btn-secondary text-xs"
                     disabled={reconcileMut.isPending}
-                    onClick={() => {
-                      if (window.confirm(
-                        'Reconcile зависших тренировок? Освобождаются только раны с '
-                        + 'мёртвым RQ-джобом — живые обучения не затрагиваются.'))
-                        reconcileMut.mutate()
-                    }}>
+                    onClick={() => setConfirm({
+                      title: 'Reconcile зависших тренировок',
+                      body: 'Освобождаются только раны с мёртвым RQ-джобом — живые обучения не затрагиваются.',
+                      actionLabel: 'Reconcile',
+                      onConfirm: () => reconcileMut.mutate(),
+                    })}>
               Reconcile
             </button>
           </div>
@@ -192,6 +194,7 @@ export default function AdminTrainingPage() {
           <ShowMore shown={limit} step={50} max={200} onMore={setLimit} />
         )}
       </section>
+      <AdminConfirmDialog spec={confirm} onClose={() => setConfirm(null)} />
     </div>
   )
 }
