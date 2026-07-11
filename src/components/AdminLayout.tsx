@@ -203,12 +203,40 @@ function StatusStrip() {
   )
 }
 
+// #394-4: тема консоли — system (default) → dark → light по циклу;
+// выбор в localStorage, system следит за prefers-color-scheme.
+type ThemeMode = 'system' | 'dark' | 'light'
+
+function useAdminTheme(): [boolean, ThemeMode, () => void] {
+  const [mode, setMode] = useState<ThemeMode>(
+    () => (localStorage.getItem('admin-theme') as ThemeMode) || 'system')
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  const cycle = () => {
+    const next: ThemeMode = mode === 'system' ? 'dark' : mode === 'dark' ? 'light' : 'system'
+    setMode(next)
+    if (next === 'system') localStorage.removeItem('admin-theme')
+    else localStorage.setItem('admin-theme', next)
+  }
+  const dark = mode === 'dark' || (mode === 'system' && systemDark)
+  return [dark, mode, cycle]
+}
+
 export default function AdminLayout() {
   const clientId = useAuthStore((s) => s.clientId)
   const logout   = useAuthStore((s) => s.logout)
   const nav = useNavigate()
   const { pathname } = useLocation()
   const signals = useChromeSignals()
+  const [dark, themeMode, cycleTheme] = useAdminTheme()
   const title = TITLES[pathname]
     ?? (pathname.startsWith('/admin/clients/') ? 'Карточка клиента' : 'Админ-консоль')
 
@@ -219,7 +247,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-surface">
+    <div className={`flex min-h-screen bg-surface ${dark ? 'admin-dark' : ''}`}>
       <aside className="w-60 shrink-0 bg-slate-900 text-slate-200 flex flex-col">
         <div className="px-5 h-16 flex items-center gap-2 border-b border-slate-800">
           <span className="h-2.5 w-2.5 rounded-full bg-red-500" aria-hidden />
@@ -286,6 +314,14 @@ export default function AdminLayout() {
           <h1 className="text-lg font-semibold tracking-tight text-ink">{title}</h1>
           <div className="flex items-center gap-4">
             <SessionCountdown />
+            <button
+              type="button"
+              className="btn-ghost text-sm"
+              title={`Тема: ${themeMode === 'system' ? 'системная' : themeMode === 'dark' ? 'тёмная' : 'светлая'} (клик — переключить)`}
+              onClick={cycleTheme}
+            >
+              {themeMode === 'system' ? '◐' : dark ? '☾' : '☀'}
+            </button>
             <span className="font-mono text-xs text-ink-muted">{clientId ?? '—'}</span>
             <button
               type="button"

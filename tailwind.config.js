@@ -21,13 +21,16 @@ export default {
           900: '#112F78',
         },
 
-        // Neutral surfaces — referest slate scale
+        // Neutral surfaces — referest slate scale.
+        // #394-4: RGB-триплеты в CSS-переменных (см. :root в index.css) —
+        // светлые значения те же, тёмные включает .admin-dark (только
+        // консоль); триплет-формат сохраняет opacity-модификаторы (bg-x/40).
         surface: {
-          DEFAULT: '#F8FAFC',      // ghost white — subtle bg tint
-          muted:   '#F1F5F9',      // light sky — hover bg / secondary btn
-          raised:  '#FFFFFF',      // pure white — card surface
-          border:  '#E2E8F0',      // slate-200 — primary border / divider
-          deep:    '#CBD5E1',      // slate-300 — emphasised border
+          DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
+          muted:   'rgb(var(--surface-muted) / <alpha-value>)',
+          raised:  'rgb(var(--surface-raised) / <alpha-value>)',
+          border:  'rgb(var(--surface-border) / <alpha-value>)',
+          deep:    'rgb(var(--surface-deep) / <alpha-value>)',
         },
 
         // ─────────────────────────────────────────────────────────────
@@ -56,19 +59,26 @@ export default {
           800:  '#5C4409',
         },
 
-        // Ink scale — referest deep-navy primary text
+        // Ink scale — referest deep-navy primary text (#394-4: через
+        // переменные, см. surface выше)
         ink: {
-          DEFAULT: '#020817',      // deep navy — primary text
-          muted:   '#64748B',      // slate-500 — secondary text
-          subtle:  '#94A3B8',      // slate-400 — placeholders / tertiary
-          invert:  '#F8FAFC',      // ghost white — on dark surfaces
+          DEFAULT: 'rgb(var(--ink) / <alpha-value>)',
+          muted:   'rgb(var(--ink-muted) / <alpha-value>)',
+          subtle:  'rgb(var(--ink-subtle) / <alpha-value>)',
+          invert:  'rgb(var(--ink-invert) / <alpha-value>)',
         },
 
         // Status — tuned warmer than the usual pure red/green.
-        success: { DEFAULT: '#2E7D32', bg: '#E6F1E8' },
+        // #394-4: success/danger/warn через переменные (бейджи должны
+        // оставаться читаемыми в admin-dark); moss/terra — вне консоли,
+        // фиксированные.
+        success: { DEFAULT: 'rgb(var(--success) / <alpha-value>)',
+                   bg: 'rgb(var(--success-bg) / <alpha-value>)' },
         moss:    { DEFAULT: '#6B8E5A', bg: '#EEF2E8' },
-        danger:  { DEFAULT: '#DC2626', bg: '#FEF2F2' },
-        warn:    { DEFAULT: '#B77914', bg: '#FCF1DA' },
+        danger:  { DEFAULT: 'rgb(var(--danger) / <alpha-value>)',
+                   bg: 'rgb(var(--danger-bg) / <alpha-value>)' },
+        warn:    { DEFAULT: 'rgb(var(--warn) / <alpha-value>)',
+                   bg: 'rgb(var(--warn-bg) / <alpha-value>)' },
         terra:   { DEFAULT: '#C86644', bg: '#F9E6DD' },
       },
 

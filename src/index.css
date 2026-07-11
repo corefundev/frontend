@@ -3,19 +3,69 @@
 @tailwind utilities;
 
 /* ── Root tokens ────────────────────────────────────────────────────── */
+/* #394-4: нейтральные + статусные семейства — RGB-триплеты (формат
+   tailwind `rgb(var(..) / <alpha-value>)`, opacity-модификаторы живут).
+   Светлые значения = прежние хексы 1-в-1; тёмные включает .admin-dark
+   (скоуп ТОЛЬКО админ-консоли — клиентский кабинет не темнеет).
+   Старые неиспользуемые hex-переменные (--brand-*, --gold-*, --surface,
+   --ink) удалены — потребителей не было (no-dead-code). */
 :root {
   color-scheme: light;
-  --brand-500: #2462EA;
-  --brand-600: #1B4FC8;
-  --brand-700: #163FA0;
-  --gold-500:  #C79A33;
-  --gold-600:  #A37C10;
   --paper:     #F4EFE5;
   --paper-deep:#EAE2D1;
   --paper-ink: #4C4435;
-  --surface:   #FAFAFA;
-  --ink:       #1A1A1A;
+
+  --surface:        248 250 252;   /* #F8FAFC */
+  --surface-muted:  241 245 249;   /* #F1F5F9 */
+  --surface-raised: 255 255 255;   /* #FFFFFF */
+  --surface-border: 226 232 240;   /* #E2E8F0 */
+  --surface-deep:   203 213 225;   /* #CBD5E1 */
+  --ink:        2 8 23;            /* #020817 */
+  --ink-muted:  100 116 139;       /* #64748B */
+  --ink-subtle: 148 163 184;       /* #94A3B8 */
+  --ink-invert: 248 250 252;       /* #F8FAFC */
+  --success:    46 125 50;         /* #2E7D32 */
+  --success-bg: 230 241 232;       /* #E6F1E8 */
+  --danger:     220 38 38;         /* #DC2626 */
+  --danger-bg:  254 242 242;       /* #FEF2F2 */
+  --warn:       183 121 20;        /* #B77914 */
+  --warn-bg:    252 241 218;       /* #FCF1DA */
 }
+
+/* #394-4: тёмная тема консоли. Значения подобраны на slate-навигационной
+   базе сайдбара (тот же холодный оттенок), контраст текста ≥ AA. */
+.admin-dark {
+  color-scheme: dark;
+  --surface:        11 18 32;      /* глубокий навы-слейт */
+  --surface-muted:  22 32 46;
+  --surface-raised: 16 26 40;
+  --surface-border: 39 52 68;
+  --surface-deep:   58 72 89;
+  --ink:        230 235 242;
+  --ink-muted:  148 161 178;
+  --ink-subtle: 100 113 131;
+  --ink-invert: 2 8 23;
+  --success:    116 195 126;
+  --success-bg: 22 52 33;
+  --danger:     248 113 113;
+  --danger-bg:  62 22 22;
+  --warn:       233 179 84;
+  --warn-bg:    61 46 14;
+}
+
+/* карточки консоли в тёмной теме — плоская raised-поверхность вместо
+   светлой «бумаги» с зерном */
+.admin-dark .card-paper {
+  background-image: none;
+  background-color: rgb(var(--surface-raised));
+  --tw-ring-color: rgb(var(--surface-border));
+}
+/* светлые tint-подсветки строк/бейджей — тёмные эквиваленты */
+.admin-dark .bg-red-50\/50   { background-color: rgb(220 38 38 / 0.10); }
+.admin-dark .bg-amber-50\/40 { background-color: rgb(217 119 6 / 0.10); }
+.admin-dark .bg-brand-50     { background-color: rgb(36 99 235 / 0.18); }
+.admin-dark .badge-info      { color: #8DA8F9; }
+.admin-dark .text-brand-700  { color: #8DA8F9; }
 
 html, body, #root { height: 100%; }
 
