@@ -14,7 +14,7 @@ import { getNotifications } from '../../features/notifications/api'
 import AdminQueryError from './AdminQueryError'
 
 interface Overview {
-  client: ClientRecord
+  client: ClientRecord & { deleted_at?: string | null; pii_retention_days?: number }
   recent_logins: { at: string; ip: string | null; via: string | null }[]
   training_runs: {
     run_id: string; status: string; ended_at: string | null
@@ -69,6 +69,20 @@ export default function AdminClientCardPage() {
       window.prompt('Новый API-ключ (показывается ОДИН раз — скопируйте):', r.api_key)
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось ротировать ключ')),
+  })
+  const revokeMut = useMutation({
+    mutationFn: () => clientsApi.revokeSessions(clientId),
+    onSuccess: () => { toast.success('Все сессии клиента завершены'); invalidate() },
+    onError: (e) => toast.error(errorMessage(e, 'Не удалось завершить сессии')),
+  })
+  const eraseMut = useMutation({
+    mutationFn: () => clientsApi.eraseNow(clientId),
+    onSuccess: (r) => {
+      toast.success(r.already_purged ? 'Данные уже были стёрты'
+        : `Данные стёрты (объектов: ${r.objects_deleted ?? 0})`)
+      invalidate()
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Стирание не выполнено')),
   })
 
   const c = data?.client
@@ -147,10 +161,58 @@ export default function AdminClientCardPage() {
                   }}>
             Ротировать API-ключ
           </button>
+          <button type="button" className="btn-secondary"
+                  disabled={revokeMut.isPending}
+                  onClick={() => {
+                    if (window.confirm('Завершить ВСЕ сессии клиента? Текущие токены перестанут работать немедленно; аккаунт не меняется.'))
+                      revokeMut.mutate()
+                  }}>
+            Завершить все сессии
+          </button>
         </div>
         {c.suspended_at && (
           <div className="text-xs text-ink-muted mt-2">
             Заблокирован с {new Date(c.suspended_at).toLocaleString('ru-RU')}
+          </div>
+        )}
+      </section>
+
+      <section className="card-paper p-5">
+        <h3 className="font-semibold text-sm mb-3">Персональные данные (152-ФЗ)</h3>
+        {c.status === 'purged' ? (
+          <div className="flex items-center gap-3 text-sm">
+            <span className="badge-neutral">данные стёрты</span>
+            <span className="text-ink-muted">аккаунт анонимизирован</span>
+          </div>
+        ) : c.deleted_at ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-sm">
+              <span className="badge-warn">аккаунт закрыт</span>
+              <span className="text-ink-muted">
+                закрыт {new Date(c.deleted_at).toLocaleDateString('ru-RU')}
+                {typeof c.pii_retention_days === 'number' && (() => {
+                  const left = Math.ceil(
+                    (new Date(c.deleted_at!).getTime() + c.pii_retention_days * 86400000
+                      - Date.now()) / 86400000)
+                  return ` · авто-стирание через ${Math.max(0, left)} дн.`
+                })()}
+              </span>
+            </div>
+            <button type="button" className="btn-danger"
+                    disabled={eraseMut.isPending}
+                    onClick={() => {
+                      const typed = window.prompt(
+                        'Стереть данные НЕМЕДЛЕННО, не дожидаясь срока хранения?\n' +
+                        'Действие необратимо. Введите client_id для подтверждения:')
+                      if (typed === c.client_id) eraseMut.mutate()
+                      else if (typed !== null) toast.error('client_id не совпал — отменено')
+                    }}>
+              Стереть данные немедленно
+            </button>
+          </div>
+        ) : (
+          <div className="text-sm text-ink-muted">
+            Аккаунт открыт. Немедленное стирание доступно только после закрытия аккаунта клиентом.
           </div>
         )}
       </section>

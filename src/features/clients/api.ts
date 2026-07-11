@@ -12,7 +12,7 @@ export interface ClientRecord {
   last_mlflow_run_id: string | null
   last_wmape: number | null
   last_mase: number | null
-  status: 'registered' | 'training' | 'ready' | 'error'
+  status: 'registered' | 'training' | 'ready' | 'error' | 'purged'
   model_version: number
   horizon: number
   notes: string | null
@@ -80,6 +80,21 @@ export const clientsApi = {
   rotateApiKey: (clientId: string) =>
     apiClient
       .post<RotateApiKeyResponse>(`/clients/${encodeURIComponent(clientId)}/api-key/rotate`)
+      .then((r) => r.data),
+
+  // ADM-v3-2 (#387): гасит все живые сессии клиента (механизм #357), не
+  // меняя статус аккаунта.
+  revokeSessions: (clientId: string) =>
+    apiClient
+      .post<{ sessions_revoked: boolean }>(`/admin/clients/${encodeURIComponent(clientId)}/revoke-sessions`)
+      .then((r) => r.data),
+
+  // ADM-v3-2 (#387): 152-ФЗ немедленное стирание (только для закрытого
+  // аккаунта; тот же fail-closed путь, что у retention-крона).
+  eraseNow: (clientId: string) =>
+    apiClient
+      .post<{ purged?: boolean; already_purged?: boolean; objects_deleted?: number }>(
+        `/admin/clients/${encodeURIComponent(clientId)}/erase-now`)
       .then((r) => r.data),
 
   // Admin or self: POST /clients/{client_id}/reload (clears model cache)
