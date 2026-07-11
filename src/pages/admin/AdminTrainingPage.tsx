@@ -4,12 +4,15 @@
 // ADM-v3-4 (#389): running-строка старше stuck_threshold_min (порог из
 // backend-ответа — единый источник) подсвечивается «зависла?» + кнопка
 // Reconcile (общий #265-механизм, живые джобы скипаются на сервере).
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { apiClient, errorMessage } from '../../shared/api/client'
 import AdminQueryError from './AdminQueryError'
+import { ShowMore, SkeletonRows, StateRow, Th } from './adminTable'
+import { THEAD_CLS, useSort } from './adminTableUtils'
 
 interface RunRow {
   run_id: string
@@ -48,16 +51,18 @@ function GateBadge({ r }: { r: RunRow }) {
 
 export default function AdminTrainingPage() {
   const qc = useQueryClient()
-  const { data, isError, refetch } = useQuery({
-    queryKey: ['admin-training-oversight'],
+  const [limit, setLimit] = useState(50)   // #394-2: «показать ещё», сервер ≤200
+  const { data, isError, isLoading, refetch } = useQuery({
+    queryKey: ['admin-training-oversight', limit],
     queryFn: async () => {
       const { data } = await apiClient.get<Oversight>('/admin/training-runs',
-        { params: { limit: 50 } })
+        { params: { limit } })
       return data
     },
     refetchInterval: 60_000,
     meta: { silent: true },
   })
+  const sort = useSort(data?.runs ?? [], 'ended_at')
 
   const reconcileMut = useMutation({
     mutationFn: async () => {
@@ -130,28 +135,40 @@ export default function AdminTrainingPage() {
             </button>
           </div>
         </div>
-        {isError ? (
-          <div className="px-5 py-6" aria-hidden />
-        ) : !data?.runs?.length ? (
-          <div className="px-5 py-6 text-sm text-ink-muted">Пусто</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <tbody>
-                {data.runs.map((r) => (
+        {/* #394-2: sticky-шапка + сортировка + три состояния */}
+        <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className={THEAD_CLS}>
+              <tr>
+                <Th label="Время" sortKey="ended_at" sort={sort} />
+                <Th label="Клиент" sortKey="client_id" sort={sort} />
+                <Th label="Вердикт" />
+                <Th label="WMAPE" sortKey="wmape" sort={sort} />
+                <Th label="Ошибка" />
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <SkeletonRows cols={5} />
+              ) : isError ? (
+                <StateRow cols={5} kind="error" what="ленту обучений" />
+              ) : !sort.sorted.length ? (
+                <StateRow cols={5} kind="empty" what="обучения" />
+              ) : (
+                sort.sorted.map((r) => (
                   <tr key={r.run_id}
                       className={`border-b border-surface-border last:border-b-0 ${
                         isStuck(r, threshold) ? 'bg-red-50/50'
                           : r.gate_passed === false && !r.model_path ? 'bg-red-50/50' : ''}`}>
-                    <td className="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">
+                    <td className="px-4 py-2 text-xs text-ink-muted whitespace-nowrap">
                       {(r.ended_at ?? r.started_at)
                         ? new Date(r.ended_at ?? r.started_at!).toLocaleString('ru-RU') : '—'}
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-4 py-2">
                       <Link to={`/admin/clients/${encodeURIComponent(r.client_id)}`}
                             className="font-mono text-xs text-brand-700">{r.client_id}</Link>
                     </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">
+                    <td className="px-4 py-2 whitespace-nowrap">
                       {isStuck(r, threshold)
                         ? <span className="badge-danger"
                                 title={`running дольше ${threshold} мин — вероятно, джоб мёртв (класс R11-H4)`}>
@@ -159,17 +176,20 @@ export default function AdminTrainingPage() {
                           </span>
                         : <GateBadge r={r} />}
                     </td>
-                    <td className="px-3 py-2.5 font-mono text-xs">
-                      {r.wmape != null ? `WMAPE ${Number(r.wmape).toFixed(3)}` : '—'}
+                    <td className="px-4 py-2 font-mono text-xs">
+                      {r.wmape != null ? Number(r.wmape).toFixed(3) : '—'}
                     </td>
-                    <td className="px-3 py-2.5 text-xs text-ink-muted max-w-xs truncate">
+                    <td className="px-4 py-2 text-xs text-ink-muted max-w-xs truncate">
                       {r.error ?? ''}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!isLoading && !isError && (data?.runs.length ?? 0) >= limit && (
+          <ShowMore shown={limit} step={50} max={200} onMore={setLimit} />
         )}
       </section>
     </div>
