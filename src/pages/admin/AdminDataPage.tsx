@@ -10,6 +10,8 @@ import toast from 'react-hot-toast'
 
 import { apiClient, errorMessage } from '../../shared/api/client'
 import AdminQueryError from './AdminQueryError'
+import { ShowMore, SkeletonRows, StateRow, Th } from './adminTable'
+import { THEAD_CLS, useSort } from './adminTableUtils'
 
 interface ConsistencyItem {
   zone?: string; key?: string; client_id: string
@@ -137,16 +139,18 @@ function ConsistencySection() {
 }
 
 export default function AdminDataPage() {
-  const { data, isError, refetch } = useQuery({
-    queryKey: ['admin-uploads'],
+  const [limit, setLimit] = useState(50)   // #394-2: «показать ещё», сервер ≤200
+  const { data, isError, isLoading, refetch } = useQuery({
+    queryKey: ['admin-uploads', limit],
     queryFn: async () => {
       const { data } = await apiClient.get<{ uploads: UploadRow[]; count: number }>(
-        '/admin/uploads', { params: { limit: 50 } })
+        '/admin/uploads', { params: { limit } })
       return data
     },
     refetchInterval: 60_000,
     meta: { silent: true },
   })
+  const sort = useSort(data?.uploads ?? [], 'created_at')
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -156,25 +160,28 @@ export default function AdminDataPage() {
           <span className="font-semibold text-sm">Загрузки (все клиенты)</span>
           <span className="text-xs text-ink-muted">read-only · карантин = вердикт ClamAV</span>
         </div>
-        {isError ? (
-          <div className="px-5 py-8" aria-hidden />
-        ) : !data?.uploads?.length ? (
-          <div className="px-5 py-8 text-sm text-ink-muted text-center">Загрузок пока нет</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-muted text-ink-subtle text-xs uppercase tracking-wider">
-                <tr>
-                  <th className="px-4 py-2 text-left">Время</th>
-                  <th className="px-4 py-2 text-left">Клиент</th>
-                  <th className="px-4 py-2 text-left">Файл</th>
-                  <th className="px-4 py-2 text-left">Статус</th>
-                  <th className="px-4 py-2 text-left">Строк / SKU</th>
-                  <th className="px-4 py-2 text-left">Ошибка</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-border">
-                {data.uploads.map((u) => (
+        {/* #394-2: sticky-шапка + сортировка + три состояния */}
+        <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className={THEAD_CLS}>
+              <tr>
+                <Th label="Время" sortKey="created_at" sort={sort} />
+                <Th label="Клиент" sortKey="client_id" sort={sort} />
+                <Th label="Файл" sortKey="size_bytes" sort={sort} />
+                <Th label="Статус" sortKey="status" sort={sort} />
+                <Th label="Строк / SKU" sortKey="row_count" sort={sort} />
+                <Th label="Ошибка" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-surface-border">
+              {isLoading ? (
+                <SkeletonRows cols={6} />
+              ) : isError ? (
+                <StateRow cols={6} kind="error" what="ленту загрузок" />
+              ) : !sort.sorted.length ? (
+                <StateRow cols={6} kind="empty" what="загрузки" />
+              ) : (
+                sort.sorted.map((u) => (
                   <tr key={u.upload_id}
                       className={`hover:bg-surface-muted/40 ${
                         u.scan_result || u.status === 'failed' ? 'bg-red-50/50' : ''}`}>
@@ -202,10 +209,13 @@ export default function AdminDataPage() {
                       {u.error_message ?? ''}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!isLoading && !isError && (data?.uploads.length ?? 0) >= limit && (
+          <ShowMore shown={limit} step={50} max={200} onMore={setLimit} />
         )}
       </section>
       <ConsistencySection />
