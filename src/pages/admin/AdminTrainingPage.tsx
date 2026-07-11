@@ -1,10 +1,14 @@
 // ADM-2 (#255, Волна 2): «Обучение» — операторский надзор за quality-
 // машинерией: кросс-клиентская лента ранов (gate-вердикты подсвечены),
-// возраст моделей со stale-подсветкой. Read-only v1.
-import { useQuery } from '@tanstack/react-query'
+// возраст моделей со stale-подсветкой.
+// ADM-v3-4 (#389): running-строка старше stuck_threshold_min (порог из
+// backend-ответа — единый источник) подсвечивается «зависла?» + кнопка
+// Reconcile (общий #265-механизм, живые джобы скипаются на сервере).
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
 
-import { apiClient } from '../../shared/api/client'
+import { apiClient, errorMessage } from '../../shared/api/client'
 import AdminQueryError from './AdminQueryError'
 
 interface RunRow {
@@ -24,9 +28,15 @@ interface Oversight {
   runs: RunRow[]
   model_age_days: Record<string, number>
   count: number
+  stuck_threshold_min?: number
 }
 
 const STALE_DAYS = 45
+
+function isStuck(r: RunRow, thresholdMin: number): boolean {
+  if (r.status !== 'running' || !r.started_at) return false
+  return Date.now() - new Date(r.started_at).getTime() > thresholdMin * 60_000
+}
 
 function GateBadge({ r }: { r: RunRow }) {
   if (r.status !== 'finished') return <span className="badge-neutral">{r.status}</span>
@@ -37,6 +47,7 @@ function GateBadge({ r }: { r: RunRow }) {
 }
 
 export default function AdminTrainingPage() {
+  const qc = useQueryClient()
   const { data, isError, refetch } = useQuery({
     queryKey: ['admin-training-oversight'],
     queryFn: async () => {
@@ -47,6 +58,24 @@ export default function AdminTrainingPage() {
     refetchInterval: 60_000,
     meta: { silent: true },
   })
+
+  const reconcileMut = useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post<{ healed: number }>(
+        '/admin/training/reconcile')
+      return data
+    },
+    onSuccess: (r) => {
+      toast.success(r.healed
+        ? `Исцелено зависших тренировок: ${r.healed}`
+        : 'Зависших тренировок не найдено (живые не тронуты)')
+      qc.invalidateQueries({ queryKey: ['admin-training-oversight'] })
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Reconcile не выполнен')),
+  })
+
+  const threshold = data?.stuck_threshold_min ?? 90
+  const stuckCount = (data?.runs ?? []).filter((r) => isStuck(r, threshold)).length
 
   const ages = Object.entries(data?.model_age_days ?? {})
     .sort((a, b) => b[1] - a[1])
@@ -83,9 +112,23 @@ export default function AdminTrainingPage() {
       </section>
 
       <section className="card-paper overflow-hidden">
-        <div className="px-5 py-3 border-b border-surface-border flex items-baseline justify-between">
+        <div className="px-5 py-3 border-b border-surface-border flex items-center justify-between gap-3">
           <span className="font-semibold text-sm">Лента обучений</span>
-          <span className="text-xs text-ink-muted">read-only · v2-действия — по дорожной карте</span>
+          <div className="flex items-center gap-3">
+            {stuckCount > 0 && (
+              <span className="badge-danger">зависших: {stuckCount}</span>
+            )}
+            <button type="button" className="btn-secondary text-xs"
+                    disabled={reconcileMut.isPending}
+                    onClick={() => {
+                      if (window.confirm(
+                        'Reconcile зависших тренировок? Освобождаются только раны с '
+                        + 'мёртвым RQ-джобом — живые обучения не затрагиваются.'))
+                        reconcileMut.mutate()
+                    }}>
+              Reconcile
+            </button>
+          </div>
         </div>
         {isError ? (
           <div className="px-5 py-6" aria-hidden />
@@ -98,7 +141,8 @@ export default function AdminTrainingPage() {
                 {data.runs.map((r) => (
                   <tr key={r.run_id}
                       className={`border-b border-surface-border last:border-b-0 ${
-                        r.gate_passed === false && !r.model_path ? 'bg-red-50/50' : ''}`}>
+                        isStuck(r, threshold) ? 'bg-red-50/50'
+                          : r.gate_passed === false && !r.model_path ? 'bg-red-50/50' : ''}`}>
                     <td className="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">
                       {(r.ended_at ?? r.started_at)
                         ? new Date(r.ended_at ?? r.started_at!).toLocaleString('ru-RU') : '—'}
@@ -107,7 +151,14 @@ export default function AdminTrainingPage() {
                       <Link to={`/admin/clients/${encodeURIComponent(r.client_id)}`}
                             className="font-mono text-xs text-brand-700">{r.client_id}</Link>
                     </td>
-                    <td className="px-3 py-2.5"><GateBadge r={r} /></td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      {isStuck(r, threshold)
+                        ? <span className="badge-danger"
+                                title={`running дольше ${threshold} мин — вероятно, джоб мёртв (класс R11-H4)`}>
+                            зависла?
+                          </span>
+                        : <GateBadge r={r} />}
+                    </td>
                     <td className="px-3 py-2.5 font-mono text-xs">
                       {r.wmape != null ? `WMAPE ${Number(r.wmape).toFixed(3)}` : '—'}
                     </td>
