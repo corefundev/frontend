@@ -46,12 +46,6 @@ const PLAN_ORDER: PlanId[] = ['free', 'start', 'business']
 const TABS = ['Обзор', 'Качество', 'Данные', 'Аудит', 'Настройки'] as const
 type Tab = typeof TABS[number]
 
-function GateBadge({ r }: { r: Overview['training_runs'][number] }) {
-  if (r.gate_passed === false && !r.model_path) return <span className="badge-danger">gate: блок</span>
-  if (r.gate_passed === false) return <span className="badge-warn">gate: fail (перв.)</span>
-  if (r.gate_passed === true) return <span className="badge-success">gate: pass</span>
-  return <span className="badge-neutral">до гейта</span>
-}
 
 function MetaItem({ k, v }: { k: string; v: string }) {
   return (
@@ -382,33 +376,10 @@ export default function AdminClientCardPage() {
           </div>
         )}
 
-        {/* ── Качество ── */}
+        {/* ── Качество (прототип 1:1: только quality-grid) ── */}
         {tab === 'Качество' && (
-          <div className="p-5 space-y-5">
+          <div className="p-4">
             <QualityTrendSection runs={data.training_runs} bare />
-            <div>
-              <h3 className="font-semibold text-sm mb-2">Обучения (последние 5)</h3>
-              {!data.training_runs.length ? (
-                <div className="text-sm text-ink-muted">Обучений не было</div>
-              ) : (
-                <table className="w-full text-sm">
-                  <tbody>
-                    {data.training_runs.slice(0, 5).map((r) => (
-                      <tr key={r.run_id} className="border-b border-surface-border last:border-b-0">
-                        <td className="py-2 pr-3 text-xs text-ink-muted whitespace-nowrap">
-                          {r.ended_at ? new Date(r.ended_at).toLocaleString('ru-RU') : '—'}
-                        </td>
-                        <td className="py-2 px-3"><span className="badge-neutral">{r.status}</span></td>
-                        <td className="py-2 px-3 font-mono text-xs">
-                          {r.wmape != null ? `WMAPE ${Number(r.wmape).toFixed(3)}` : '—'}
-                        </td>
-                        <td className="py-2 px-3"><GateBadge r={r} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
           </div>
         )}
 

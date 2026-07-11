@@ -106,6 +106,20 @@
   box-shadow: var(--admin-shadow);
   border-radius: 8px;
 }
+/* базовый кегль консоли — 14px, как body прототипа (явные text-* побеждают) */
+.admin-console { font-size: 14px; }
+/* KPI hover прототипа: подсветка РАМКИ (line-2), не тень */
+.admin-console .kpi-hover:hover { --tw-ring-color: rgb(var(--surface-deep)); }
+/* чипы прототипа: 11px / 2.5px 9px (скоуп консоли — кабинет не трогаем) */
+.admin-console .badge { font-size: 11px; padding: 2.5px 9px; }
+/* pop-анимация палитры (.14s, как в прототипе) */
+@keyframes admin-pop { from { transform: scale(.98); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+.admin-pop { animation: admin-pop .14s ease-out; }
+@media (prefers-reduced-motion: reduce) { .admin-pop { animation: none } }
+/* тень оверлеев прототипа */
+:root { --admin-shadow-lg: 0 8px 30px rgba(27,36,54,.16); }
+.admin-console.admin-dark { --admin-shadow-lg: 0 8px 30px rgba(0,0,0,.5); }
+.admin-shadow-lg { box-shadow: var(--admin-shadow-lg); }
 /* светлые tint-подсветки строк/бейджей — тёмные эквиваленты */
 .admin-dark .bg-red-50\/50   { background-color: rgb(242 99 93 / 0.10); }
 .admin-dark .bg-amber-50\/40 { background-color: rgb(240 162 75 / 0.10); }

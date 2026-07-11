@@ -169,7 +169,7 @@ function StatusItem({ tone, label, value, title, to }: {
   }[tone]
   return (
     <button type="button" title={title} onClick={() => nav(to)}
-            className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs text-ink-muted hover:bg-surface-muted transition-colors whitespace-nowrap">
+            className="flex items-center gap-[7px] px-2.5 py-[5px] rounded-md text-[12.5px] text-ink-muted hover:bg-surface-muted transition-colors whitespace-nowrap">
       <span className={`h-[7px] w-[7px] rounded-full shrink-0 ${dot}`} aria-hidden />
       {label} <b className="text-ink font-semibold tabular-nums">{value}</b>
     </button>
@@ -214,6 +214,34 @@ function StatusStrip() {
 // тема консоли — system (default) → dark → light по циклу; выбор в
 // localStorage, system следит за prefers-color-scheme
 type ThemeMode = 'system' | 'dark' | 'light'
+
+function ThemeIcon({ mode, dark }: { mode: ThemeMode; dark: boolean }) {
+  // прототипная штриховая иконка (15px, stroke 2, currentColor)
+  if (mode === 'system') {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           strokeWidth="2" strokeLinecap="round" aria-hidden>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" />
+      </svg>
+    )
+  }
+  if (dark) {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+      </svg>
+    )
+  }
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
+  )
+}
 
 function useAdminTheme(): [boolean, ThemeMode, () => void] {
   const [mode, setMode] = useState<ThemeMode>(
@@ -280,12 +308,12 @@ export default function AdminLayout() {
     <div className={`admin-console min-h-screen bg-surface text-ink border-t-[3px] ${dark ? 'admin-dark' : ''}`}
          style={{ borderTopColor: 'var(--admin-frame)' }}>
       {/* ── Шапка (прототип): лого + Admin-чип · статус-полоса · ⌘K · сессия · тема ── */}
-      <header className="sticky top-0 z-20 h-14 bg-surface-raised border-b border-surface-border flex items-center gap-4 px-4">
+      <header className="sticky top-0 z-20 h-[54px] bg-surface-raised border-b border-surface-border flex items-center gap-4 px-4">
         <div className="flex items-center gap-2.5 min-w-[196px]">
           <span className="h-[26px] w-[26px] rounded-md text-white text-[9px] font-bold tracking-wider flex items-center justify-center"
                 style={{ background: 'var(--admin-brand)' }} aria-hidden>SKU</span>
           <b className="text-sm font-semibold">Console</b>
-          <span className="text-[10px] font-bold tracking-wider uppercase text-white px-2 py-0.5 rounded-full"
+          <span className="text-[10px] font-bold tracking-[.08em] uppercase text-white px-2 py-0.5 rounded-full"
                 style={{ background: 'var(--admin-frame)' }}>Admin</span>
         </div>
         <StatusStrip />
@@ -302,7 +330,7 @@ export default function AdminLayout() {
                   title={`Тема: ${themeMode === 'system' ? 'системная' : themeMode === 'dark' ? 'тёмная' : 'светлая'} (клик — переключить)`}
                   aria-label="Переключить тему"
                   onClick={cycleTheme}>
-            {themeMode === 'system' ? '◐' : dark ? '☾' : '☀'}
+            <ThemeIcon mode={themeMode} dark={dark} />
           </button>
           <span className="font-mono text-xs text-ink-subtle">{clientId ?? '—'}</span>
           <button type="button" className="btn-ghost text-xs"
@@ -329,7 +357,7 @@ export default function AdminLayout() {
                     to={item.to}
                     end={item.children ? true : item.end}
                     className={({ isActive }) =>
-                      `flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13.5px] transition-colors ${
+                      `flex items-center gap-2 rounded-md px-2.5 py-[6.5px] text-[13.5px] transition-colors ${
                         isActive ? 'font-semibold' : 'text-ink-muted hover:bg-surface-muted hover:text-ink'
                       }`}
                     style={({ isActive }) => isActive
@@ -351,13 +379,14 @@ export default function AdminLayout() {
                       key={ch.to}
                       to={ch.to}
                       className={({ isActive }) =>
-                        `block rounded-md pl-7 pr-2.5 py-1 text-[12.5px] transition-colors ${
+                        `flex items-center gap-1.5 rounded-md pl-7 pr-2.5 py-1 text-[12.5px] transition-colors ${
                           isActive ? 'font-semibold' : 'text-ink-subtle hover:bg-surface-muted hover:text-ink'
                         }`}
                       style={({ isActive }) => isActive
                         ? { background: 'var(--admin-brand-bg)', color: 'var(--admin-brand-ink)' }
                         : undefined}
                     >
+                      <span aria-hidden className="text-[13px] leading-none">+</span>
                       {ch.label}
                     </NavLink>
                   ))}

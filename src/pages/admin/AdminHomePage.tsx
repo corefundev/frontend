@@ -5,6 +5,7 @@
 // слева, hover-действие, чип справа) + «Последние обучения». Спарклайны
 // прототипа не рисуем там, где нет реальной истории — никаких
 // иллюстративных данных (честность > декорация).
+import type React from 'react'
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
@@ -16,6 +17,22 @@ import AdminQueryError from './AdminQueryError'
 
 const STALE_DAYS = 45
 const WINDOW_DAYS = 7
+
+function plural(n: number, one: string, few: string, many: string): string {
+  const m10 = n % 10, m100 = n % 100
+  if (m10 === 1 && m100 !== 11) return one
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few
+  return many
+}
+
+// относительное время прототипа: сегодня / вчера / N дн / дата
+function relWhen(iso: string): string {
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
+  if (d <= 0) return 'сегодня'
+  if (d === 1) return 'вчера'
+  if (d < 30) return `${d} дн`
+  return new Date(iso).toLocaleDateString('ru-RU')
+}
 
 interface RunRow {
   run_id: string; client_id: string; status: string
@@ -57,13 +74,13 @@ function Spark({ points, tone }: { points: number[]; tone: 'brand' | 'ok' }) {
 }
 
 function Kpi({ label, value, unit, foot, chip, spark, to, danger }: {
-  label: string; value: string; unit?: string; foot: string
+  label: string; value: string; unit?: string; foot: React.ReactNode
   chip?: { tone: 'ok' | 'danger'; text: string }
   spark?: { points: number[]; tone: 'brand' | 'ok' }
   to: string; danger?: boolean
 }) {
   return (
-    <Link to={to} className="card-paper p-4 pb-3 flex flex-col gap-0.5 hover:shadow-md transition-shadow">
+    <Link to={to} className="card-paper kpi-hover p-4 pb-3 flex flex-col gap-0.5 transition-[box-shadow,--tw-ring-color]">
       <span className="text-[11.5px] font-semibold tracking-wide text-ink-muted">{label}</span>
       <span className={`text-[26px] font-semibold tracking-tight leading-tight tabular-nums ${
         danger ? 'text-danger' : ''}`}>
@@ -122,7 +139,8 @@ export default function AdminHomePage() {
     if (historyError) void refetchHistory()
   }
 
-  const { week, attention, wmapeMedian, wmapeN, lastRuns, perDay, wmapeSeries } = useMemo(() => {
+  const { week, attention, wmapeMedian, wmapeN, monthDelta, lastRuns, perDay,
+          wmapeSeries } = useMemo(() => {
     const cutoff = Date.now() - WINDOW_DAYS * 86_400_000
     const threshold = oversight?.stuck_threshold_min ?? 90
     const runs = oversight?.runs ?? []
@@ -135,12 +153,23 @@ export default function AdminHomePage() {
       blocked:  recent.filter((r) => r.gate_passed === false && !r.model_path).length,
       failed:   recent.filter((r) => r.status === 'failed').length,
     }
-    // Медиана WMAPE по finished-обучениям в ленте (реальные числа, без
-    // иллюстративных дельт)
-    const wmapes = runs.filter((r) => r.status === 'finished' && r.wmape != null)
-      .map((r) => r.wmape as number).sort((a, b) => a - b)
-    const wmapeMedian = wmapes.length
-      ? wmapes[Math.floor(wmapes.length / 2)] : null
+    // Медиана WMAPE по finished-обучениям в ленте (реальные числа) +
+    // прототипная дельта «за месяц»: медиана последних 30 дней против
+    // предыдущих 30 — только если есть ОБЕ выборки (без выдумок)
+    const median = (xs: number[]) => {
+      if (!xs.length) return null
+      const s2 = [...xs].sort((a, b) => a - b)
+      return s2[Math.floor(s2.length / 2)]
+    }
+    const finishedW = runs.filter((r) => r.status === 'finished' && r.wmape != null)
+    const wmapes = finishedW.map((r) => r.wmape as number)
+    const wmapeMedian = median(wmapes)
+    const tRun = (r: RunRow) => new Date((r.ended_at ?? r.started_at) as string).getTime()
+    const m0 = Date.now() - 30 * 86_400_000
+    const m1 = Date.now() - 60 * 86_400_000
+    const curM = median(finishedW.filter((r) => tRun(r) >= m0).map((r) => r.wmape as number))
+    const prevM = median(finishedW.filter((r) => tRun(r) >= m1 && tRun(r) < m0).map((r) => r.wmape as number))
+    const monthDelta = curM != null && prevM != null ? curM - prevM : null
     const staleList = Object.entries(oversight?.model_age_days ?? {})
       .filter(([, d]) => d > STALE_DAYS)
       .sort((a, b) => b[1] - a[1])
@@ -190,8 +219,8 @@ export default function AdminHomePage() {
       .sort((a, b) => (a.ended_at as string).localeCompare(b.ended_at as string))
       .map((r) => r.wmape as number)
       .slice(-12)
-    return { week, attention, wmapeMedian, wmapeN: wmapes.length, lastRuns,
-             perDay, wmapeSeries }
+    return { week, attention, wmapeMedian, wmapeN: wmapes.length, monthDelta,
+             lastRuns, perDay, wmapeSeries }
   }, [oversight, clients])
 
   const byPlan = clients.reduce<Record<string, number>>((acc, c) => {
@@ -199,9 +228,17 @@ export default function AdminHomePage() {
     return acc
   }, {})
   const suspended = clients.filter((c) => c.suspended_at).length
-  const backup = (system?.jobs ?? []).find((j) => j.job === 'backup')
+  const jobs = system?.jobs ?? []
+  const backup = jobs.find((j) => j.job === 'backup')
+  const baseB = jobs.find((j) => j.job === 'base_backup')
+  const wal = jobs.find((j) => j.job === 'wal_mirror')
   const fmtAge = (sec: number) =>
-    sec < 5400 ? `${Math.round(sec / 60)} мин` : `${Math.round(sec / 3600)} ч`
+    sec < 5400 ? `${Math.round(sec / 60)} мин` : sec < 129_600
+      ? `${Math.round(sec / 3600)} ч` : `${Math.round(sec / 86_400)} дн`
+  const backupFoot = backup
+    ? ['dump', baseB ? `base ${fmtAge(baseB.age_sec)}` : null,
+       wal ? `WAL ${fmtAge(wal.age_sec)}` : null].filter(Boolean).join(' · ')
+    : 'метрика недоступна'
 
   return (
     <div className="space-y-4 max-w-5xl">
@@ -216,12 +253,16 @@ export default function AdminHomePage() {
              spark={perDay.some((n) => n > 0) ? { points: perDay, tone: 'brand' } : undefined} />
         <Kpi label="Точность (WMAPE, медиана)" to="/admin/training"
              value={wmapeMedian != null ? wmapeMedian.toFixed(2) : '—'}
-             foot={wmapeMedian != null ? `по ${wmapeN} обучениям` : 'нет завершённых обучений'}
+             foot={monthDelta != null
+               ? <span className={monthDelta <= 0 ? 'text-success font-semibold' : 'text-danger font-semibold'}>
+                   {monthDelta <= 0 ? '▾' : '▴'} {Math.abs(monthDelta).toFixed(2)} за месяц
+                 </span>
+               : wmapeMedian != null ? `по ${wmapeN} обучениям` : 'нет завершённых обучений'}
              spark={wmapeSeries.length >= 2 ? { points: wmapeSeries, tone: 'ok' } : undefined} />
         <Kpi label="Свежесть бэкапа" to="/admin/system"
              value={backup ? fmtAge(backup.age_sec).split(' ')[0] : '—'}
              unit={backup ? fmtAge(backup.age_sec).split(' ')[1] : undefined}
-             foot={backup ? 'dump · раздел «Система»' : 'метрика недоступна'}
+             foot={backupFoot}
              chip={backup ? (backup.stale
                ? { tone: 'danger', text: 'отстаёт' }
                : { tone: 'ok', text: 'в норме' }) : undefined}
@@ -234,7 +275,8 @@ export default function AdminHomePage() {
           <div className="px-4 py-2.5 border-b border-surface-border flex items-baseline justify-between">
             <span className="font-semibold text-[13px]">Требует внимания</span>
             <span className="text-[11.5px] text-ink-subtle">
-              {attention.length ? `${attention.length} пункт(а)` : ''}
+              {attention.length ? `${attention.length} ${plural(attention.length,
+                'пункт', 'пункта', 'пунктов')}` : ''}
             </span>
           </div>
           {anyError ? (
@@ -256,7 +298,7 @@ export default function AdminHomePage() {
                     {a.sub && <div className="text-[11.5px] text-ink-subtle mt-px">{a.sub}</div>}
                   </div>
                   <Link to={a.to}
-                        className="btn-secondary text-[11.5px] py-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity">
+                        className="btn-secondary text-[11.5px] py-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 motion-reduce:opacity-100 transition-opacity">
                     {a.action}
                   </Link>
                   <span className={a.severity === 'high' ? 'badge-danger' : 'badge-warn'}>{a.chip}</span>
@@ -301,7 +343,7 @@ export default function AdminHomePage() {
                       {r.wmape != null ? r.wmape.toFixed(3) : '—'}
                     </td>
                     <td className="px-4 py-2 text-right text-xs text-ink-subtle whitespace-nowrap">
-                      {r.ended_at ? new Date(r.ended_at).toLocaleDateString('ru-RU') : '—'}
+                      {r.ended_at ? relWhen(r.ended_at) : '—'}
                     </td>
                   </tr>
                 ))}
