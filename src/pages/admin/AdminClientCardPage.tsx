@@ -45,6 +45,20 @@ export default function AdminClientCardPage() {
     queryFn: () => getNotifications(clientId, 5),
     enabled: !!clientId,
   })
+  // ADM-v3-7 #392: config-override клиента (read-only — правка остаётся
+  // правом клиента). Endpoint клиентский, admin проходит по bypass.
+  const { data: cfg, isError: cfgError } = useQuery({
+    queryKey: ['admin-client-config', clientId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        override: Record<string, unknown>
+        diff: Record<string, { system: unknown; client: unknown }>
+      }>(`/clients/${encodeURIComponent(clientId)}/config`)
+      return data
+    },
+    enabled: !!clientId,
+    meta: { silent: true },
+  })
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['admin-client-overview', clientId] })
@@ -216,6 +230,46 @@ export default function AdminClientCardPage() {
           <div className="text-sm text-ink-muted">
             Аккаунт открыт. Немедленное стирание доступно только после закрытия аккаунта клиентом.
           </div>
+        )}
+      </section>
+
+      {/* ADM-v3-7 #392: настройки клиента — read-only, отличия подсвечены */}
+      <section className="card-paper overflow-hidden">
+        <div className="px-5 py-3 border-b border-surface-border flex items-baseline justify-between">
+          <h3 className="font-semibold text-sm">Настройки клиента (config-override)</h3>
+          <span className="text-xs text-ink-muted">read-only · правка — право клиента</span>
+        </div>
+        {cfgError ? (
+          <div className="px-5 py-4 text-sm"><span className="badge-danger">настройки недоступны</span></div>
+        ) : !cfg ? (
+          <div className="px-5 py-4 text-sm text-ink-muted">Загрузка…</div>
+        ) : !Object.keys(cfg.diff).length ? (
+          <div className="px-5 py-4 text-sm text-ink-muted">
+            Клиент ничего не переопределял — действуют настройки системы и тарифа.
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-surface-muted text-ink-subtle text-xs uppercase tracking-wider">
+              <tr>
+                <th className="px-5 py-2 text-left">Ключ</th>
+                <th className="px-3 py-2 text-left">Система / тариф</th>
+                <th className="px-3 py-2 text-left">Клиент</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-surface-border">
+              {Object.entries(cfg.diff).map(([key, v]) => (
+                <tr key={key} className="bg-amber-50/40">
+                  <td className="px-5 py-2 font-mono text-xs">{key}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-ink-muted">
+                    {JSON.stringify(v.system)}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-xs font-semibold">
+                    {JSON.stringify(v.client)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </section>
 
