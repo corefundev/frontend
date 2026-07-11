@@ -15,6 +15,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { apiClient } from '../shared/api/client'
 import { useAuthStore } from '../features/auth/store'
+import AdminCommandPalette from './AdminCommandPalette'
 
 const NAV_GROUPS: {
   header: string | null
@@ -299,6 +300,8 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+      {/* #394-3: Cmd/Ctrl+K — навигационная палитра */}
+      <AdminCommandPalette />
     </div>
   )
 }
