@@ -68,14 +68,39 @@
   --admin-shadow: 0 1px 2px rgba(27,36,54,.05), 0 4px 14px rgba(27,36,54,.06);
 }
 
-/* карточки консоли в тёмной теме — плоская raised-поверхность, ТЁМНАЯ
-   тень (тёплая shadow-paper на тёмном давала «свечение») */
-.admin-dark .card-paper,
-.admin-dark .card {
+/* #394-5: СКОУП КОНСОЛИ (.admin-console всегда на корне админки).
+   Светлые нейтральные/статусные значения = РОВНО прототипные (холодный
+   slate: ground #F6F7F9, surface #FFFFFF, line #E4E8EF, ink #1B2436…) —
+   тёплая «бумага» клиентского кабинета в консоли не участвует.
+   Кабинет клиента не затронут (у него нет .admin-console-предка). */
+.admin-console {
+  --surface:        246 247 249;   /* #F6F7F9 ground */
+  --surface-muted:  240 242 246;   /* #F0F2F6 surface-2 */
+  --surface-raised: 255 255 255;   /* #FFFFFF surface */
+  --surface-border: 228 232 239;   /* #E4E8EF line */
+  --surface-deep:   213 218 227;   /* #D5DAE3 line-2 */
+  --ink:        27 36 54;          /* #1B2436 */
+  --ink-muted:  93 103 121;        /* #5D6779 */
+  --ink-subtle: 152 161 176;       /* #98A1B0 */
+  --success:    23 138 70;         /* #178A46 */
+  --success-bg: 229 245 236;       /* #E5F5EC */
+  --danger:     196 43 43;         /* #C42B2B */
+  --danger-bg:  251 234 234;       /* #FBEAEA */
+  --warn:       180 83 9;          /* #B45309 */
+  --warn-bg:    252 241 227;       /* #FCF1E3 */
+}
+
+/* Карточки консоли (ОБЕ темы) — чистая raised-поверхность прототипа:
+   никакого кремового зерна card-paper, тень из --admin-shadow (светлая /
+   тёмная задаётся переменной; тёплая shadow-paper на тёмном давала
+   «свечение», на светлом — не-прототипную «бумагу») */
+.admin-console .card-paper,
+.admin-console .card {
   background-image: none;
   background-color: rgb(var(--surface-raised));
   --tw-ring-color: rgb(var(--surface-border));
   box-shadow: var(--admin-shadow);
+  border-radius: 8px;
 }
 /* светлые tint-подсветки строк/бейджей — тёмные эквиваленты */
 .admin-dark .bg-red-50\/50   { background-color: rgb(242 99 93 / 0.10); }

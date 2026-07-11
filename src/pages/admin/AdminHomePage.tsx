@@ -48,7 +48,7 @@ function Kpi({ label, value, unit, foot, chip, to, danger }: {
       <div className="flex items-center justify-between gap-2 mt-1 text-[11.5px] text-ink-subtle">
         <span className="truncate">{foot}</span>
         {chip && (
-          <span className={chip.tone === 'ok' ? 'badge-success' : 'badge-danger'}>{chip.text}</span>
+          <span className={`whitespace-nowrap ${chip.tone === 'ok' ? 'badge-success' : 'badge-danger'}`}>{chip.text}</span>
         )}
       </div>
     </Link>

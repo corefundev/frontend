@@ -11,7 +11,7 @@
 //   • query-ключи общие со страницами — полоса не удваивает запросы;
 //     недоступный сигнал = «?», никогда не зеленеет молча (AUD-12).
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { apiClient } from '../shared/api/client'
@@ -238,6 +238,24 @@ function useAdminTheme(): [boolean, ThemeMode, () => void] {
   return [dark, mode, cycle]
 }
 
+function UpdatedAgo() {
+  // прототип: «обновлено 30 с назад» — честно от последнего успешного
+  // рефетча живых сигналов (react-query dataUpdatedAt)
+  const [, force] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => force((x) => x + 1), 10_000)
+    return () => clearInterval(id)
+  }, [])
+  const qc = useQueryClient()
+  const stamps = ['admin-alerts', 'admin-system']
+    .map((k) => qc.getQueryState([k])?.dataUpdatedAt ?? 0)
+  const newest = Math.max(...stamps)
+  if (!newest) return null
+  const sec = Math.max(0, Math.round((Date.now() - newest) / 1000))
+  const label = sec < 90 ? `${sec} с` : `${Math.round(sec / 60)} мин`
+  return <span className="text-[12.5px] text-ink-subtle">обновлено {label} назад</span>
+}
+
 export default function AdminLayout() {
   const clientId = useAuthStore((s) => s.clientId)
   const logout   = useAuthStore((s) => s.logout)
@@ -246,8 +264,10 @@ export default function AdminLayout() {
   const signals = useChromeSignals()
   const [dark, themeMode, cycleTheme] = useAdminTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const title = TITLES[pathname]
-    ?? (pathname.startsWith('/admin/clients/') ? 'Карточка клиента' : 'Админ-консоль')
+  const cardMatch = pathname.match(/^\/admin\/clients\/([^/]+)$/)
+  const cardId = cardMatch && cardMatch[1] !== 'new'
+    ? decodeURIComponent(cardMatch[1]) : null
+  const title = TITLES[pathname] ?? (cardId ? 'Клиенты' : 'Админ-консоль')
 
   const navBadge = (kind?: 'stuck' | 'firing' | 'clients'): number => {
     if (kind === 'stuck') return signals.stuck ?? 0
@@ -257,7 +277,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className={`min-h-screen bg-surface text-ink border-t-[3px] ${dark ? 'admin-dark' : ''}`}
+    <div className={`admin-console min-h-screen bg-surface text-ink border-t-[3px] ${dark ? 'admin-dark' : ''}`}
          style={{ borderTopColor: 'var(--admin-frame)' }}>
       {/* ── Шапка (прототип): лого + Admin-чип · статус-полоса · ⌘K · сессия · тема ── */}
       <header className="sticky top-0 z-20 h-14 bg-surface-raised border-b border-surface-border flex items-center gap-4 px-4">
@@ -349,7 +369,11 @@ export default function AdminLayout() {
 
         <main className="flex-1 min-w-0 px-7 pt-6 pb-12 max-w-[1160px]">
           <div className="flex items-baseline gap-3 mb-4">
-            <h1 className="text-[19px] font-semibold tracking-tight text-ink">{title}</h1>
+            <h1 className="text-[19px] font-semibold tracking-tight text-ink">
+              {title}
+              {cardId && <span className="text-ink-subtle font-normal"> / {cardId}</span>}
+            </h1>
+            <UpdatedAgo />
           </div>
           <Outlet />
         </main>
