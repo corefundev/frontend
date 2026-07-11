@@ -1,32 +1,33 @@
 // src/components/AdminLayout.tsx
-// ADM-0 (#276): the DEDICATED admin console shell. The operator controls
-// the system from here — no client-cabinet chrome (no quota/plan widgets,
-// no client nav). Visually distinct on purpose: knowing which context you
-// act in is a safety property. Sections appear in the nav as they ship
-// (ADM-2/4/5/6) — no dead stubs.
-// ADM-v3-9 (#394, инкремент 1): навигация группами (КЛИЕНТЫ/ОПЕРАЦИИ/
-// КОНТРОЛЬ) + живая статус-полоса в шапке (алерты/обучения/бэкап/
-// audit-цепочка; клик = переход). Query-ключи совпадают со страницами —
-// react-query разделяет кэш, полоса не удваивает запросы. Недоступный
-// сигнал рендерится «?»-warn, никогда не прячется и не зеленеет (AUD-12).
+// ADM-0 (#276): the DEDICATED admin console shell — knowing which context
+// you act in is a safety property (красная рамка + Admin-чип, прототип).
+// ADM-v3-9 (#394, инкременты 1/3/4/5 — 100% соответствие прототипу):
+//   • шапка: лого SKU Console + красный Admin-чип, ЖИВАЯ статус-полоса
+//     (алерты/обучения/бэкап/audit-цепочка, клик = переход), кнопка
+//     «Поиск и действия ⌘K», таймер сессии (H2), переключатель темы;
+//   • светлая навигация группами (КЛИЕНТЫ/ОПЕРАЦИИ/КОНТРОЛЬ/ПРОЧЕЕ),
+//     активный пункт = brand-bg, счётчики-бейджи;
+//   • тёмная тема .admin-dark (значения прототипа), system→dark→light;
+//   • query-ключи общие со страницами — полоса не удваивает запросы;
+//     недоступный сигнал = «?», никогда не зеленеет молча (AUD-12).
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { apiClient } from '../shared/api/client'
 import { useAuthStore } from '../features/auth/store'
+import { clientsApi } from '../features/clients/api'
 import AdminCommandPalette from './AdminCommandPalette'
 
 const NAV_GROUPS: {
   header: string | null
-  items: { to: string; label: string; end: boolean; badge?: 'stuck' | 'firing'
+  items: { to: string; label: string; end: boolean
+           badge?: 'stuck' | 'firing' | 'clients'
            children?: { to: string; label: string }[] }[]
 }[] = [
   { header: null, items: [{ to: '/admin', label: 'Обзор', end: true }] },
   { header: 'Клиенты', items: [
-    // правка 2026-07-06: «Новый пользователь» — подпункт дерева под
-    // «Клиенты» (кнопки на странице списка нет).
-    { to: '/admin/clients', label: 'Клиенты', end: false,
+    { to: '/admin/clients', label: 'Клиенты', end: false, badge: 'clients',
       children: [{ to: '/admin/clients/new', label: 'Новый пользователь' }] },
     { to: '/admin/plans', label: 'Тарифы', end: false },
   ] },
@@ -40,7 +41,7 @@ const NAV_GROUPS: {
     { to: '/admin/security', label: 'Безопасность', end: false },
     { to: '/admin/system', label: 'Система', end: false, badge: 'firing' },
   ] },
-  { header: null, items: [{ to: '/admin/legal', label: 'Юр. документы', end: false }] },
+  { header: 'Прочее', items: [{ to: '/admin/legal', label: 'Юр. документы', end: false }] },
 ]
 
 const TITLES: Record<string, string> = {
@@ -81,16 +82,18 @@ function SessionCountdown() {
   const m = Math.floor(left / 60000)
   const s = Math.floor((left % 60000) / 1000)
   return (
-    <span
-      className={`font-mono text-xs tabular-nums ${m < 5 ? 'text-red-500 font-semibold' : 'text-ink-muted'}`}
-      title="Оставшееся время админ-сессии (30 мин, ADM-7 H2)"
-    >
-      {m}:{String(s).padStart(2, '0')}
+    <span className="text-xs text-ink-subtle whitespace-nowrap"
+          title="Оставшееся время админ-сессии (30 мин, ADM-7 H2)">
+      сессия{' '}
+      <b className={`font-mono tabular-nums font-semibold ${
+        m < 5 ? 'text-red-500' : 'text-ink-muted'}`}>
+        {m}:{String(s).padStart(2, '0')}
+      </b>
     </span>
   )
 }
 
-// ── #394-1: живые сигналы хрома ─────────────────────────────────────────
+// ── живые сигналы хрома ─────────────────────────────────────────────────
 
 interface AlertsInfo { counts?: { firing?: number } }
 interface Oversight {
@@ -114,7 +117,7 @@ function useChromeSignals() {
     refetchInterval: 45_000, meta: { silent: true }, retry: 1,
   })
   const training = useQuery({
-    queryKey: ['admin-training-oversight'],
+    queryKey: ['admin-training-oversight', 50],
     queryFn: async () =>
       (await apiClient.get<Oversight>('/admin/training-runs',
         { params: { limit: 50 } })).data,
@@ -132,6 +135,11 @@ function useChromeSignals() {
       (await apiClient.get<ChainStatus>('/admin/audit/chain-status')).data,
     refetchInterval: 300_000, meta: { silent: true }, retry: 1,
   })
+  const clients = useQuery({
+    queryKey: ['admin-clients'],
+    queryFn: () => clientsApi.list(),
+    refetchInterval: 300_000, meta: { silent: true }, retry: 1,
+  })
 
   const threshold = training.data?.stuck_threshold_min ?? 90
   const running = (training.data?.runs ?? []).filter((r) => r.status === 'running')
@@ -145,24 +153,25 @@ function useChromeSignals() {
     stuck: training.isError ? null : stuck.length,
     backup: system.isError ? null : backup ?? null,
     chain: chain.isError ? null : (chain.data ?? null),
+    clients: clients.isError ? null : (clients.data?.length ?? 0),
   }
 }
 
-function Pill({ tone, label, title, to }: {
+// прототип .status-item: точка-индикатор + текст + жирное значение
+function StatusItem({ tone, label, value, title, to }: {
   tone: 'ok' | 'warn' | 'danger' | 'unknown'
-  label: string; title: string; to: string
+  label: string; value: string; title: string; to: string
 }) {
   const nav = useNavigate()
-  const cls = {
-    ok:      'bg-emerald-500/15 text-emerald-300',
-    warn:    'bg-amber-500/15 text-amber-300',
-    danger:  'bg-red-500/20 text-red-300',
-    unknown: 'bg-slate-500/20 text-slate-300',
+  const dot = {
+    ok: 'bg-success', warn: 'bg-warn', danger: 'bg-danger',
+    unknown: 'bg-ink-subtle',
   }[tone]
   return (
     <button type="button" title={title} onClick={() => nav(to)}
-            className={`px-2 py-0.5 rounded-full text-[11px] font-medium tabular-nums ${cls} hover:brightness-125 transition`}>
-      {label}
+            className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs text-ink-muted hover:bg-surface-muted transition-colors whitespace-nowrap">
+      <span className={`h-[7px] w-[7px] rounded-full shrink-0 ${dot}`} aria-hidden />
+      {label} <b className="text-ink font-semibold tabular-nums">{value}</b>
     </button>
   )
 }
@@ -172,39 +181,38 @@ function StatusStrip() {
   const fmtAge = (sec: number) =>
     sec < 5400 ? `${Math.round(sec / 60)} мин` : `${Math.round(sec / 3600)} ч`
   return (
-    <div className="flex items-center gap-1.5" aria-label="Состояние системы">
+    <div className="flex items-center gap-1 flex-1 overflow-x-auto min-w-0"
+         aria-label="Живой статус системы">
       {s.firing == null
-        ? <Pill tone="unknown" label="алерты ?" title="Состояние алертов недоступно" to="/admin/system" />
+        ? <StatusItem tone="unknown" label="Алерты" value="?" title="Состояние алертов недоступно" to="/admin/system" />
         : s.firing > 0
-          ? <Pill tone="danger" label={`алерты ${s.firing}`} title={`Firing-алертов: ${s.firing}`} to="/admin/system" />
-          : <Pill tone="ok" label="алертов нет" title="Firing-алертов нет" to="/admin/system" />}
+          ? <StatusItem tone="danger" label="Алерты" value={String(s.firing)} title={`Firing-алертов: ${s.firing}`} to="/admin/system" />
+          : <StatusItem tone="ok" label="Алерты" value="0" title="Firing-алертов нет" to="/admin/system" />}
       {s.stuck == null
-        ? <Pill tone="unknown" label="обучения ?" title="Лента обучений недоступна" to="/admin/training" />
+        ? <StatusItem tone="unknown" label="Обучения" value="?" title="Лента обучений недоступна" to="/admin/training" />
         : s.stuck > 0
-          ? <Pill tone="danger" label={`зависло ${s.stuck}`} title="Зависшие тренировки — Reconcile" to="/admin/training" />
-          : <Pill tone="ok" label={`обучений ${s.running ?? 0}`} title="Тренировок в работе" to="/admin/training" />}
-      {s.backup === null
-        ? <Pill tone="unknown" label="бэкап ?" title="Свежесть бэкапа недоступна" to="/admin/system" />
-        : s.backup === undefined || !s.backup
-          ? <Pill tone="warn" label="бэкап ?" title="Метрика бэкапа не найдена" to="/admin/system" />
-          : s.backup.stale
-            ? <Pill tone="danger" label={`бэкап ${fmtAge(s.backup.age_sec)}`} title="Бэкап отстаёт от каденса" to="/admin/system" />
-            : <Pill tone="ok" label={`бэкап ${fmtAge(s.backup.age_sec)}`} title="Последний успешный бэкап" to="/admin/system" />}
-      {s.chain === null
-        ? <Pill tone="unknown" label="цепочка ?" title="Статус audit-цепочки недоступен" to="/admin/audit" />
+          ? <StatusItem tone="warn" label="Обучения" value={`${s.stuck} зависла?`} title="Зависшие тренировки — Reconcile на «Обучении»" to="/admin/training" />
+          : <StatusItem tone="ok" label="Обучения" value={String(s.running ?? 0)} title="Тренировок в работе" to="/admin/training" />}
+      {s.backup == null || !s.backup
+        ? <StatusItem tone="unknown" label="Бэкап" value="?" title="Свежесть бэкапа недоступна" to="/admin/system" />
+        : s.backup.stale
+          ? <StatusItem tone="danger" label="Бэкап" value={fmtAge(s.backup.age_sec)} title="Бэкап отстаёт от каденса" to="/admin/system" />
+          : <StatusItem tone="ok" label="Бэкап" value={`${fmtAge(s.backup.age_sec)} назад`} title="Последний успешный бэкап" to="/admin/system" />}
+      {s.chain == null
+        ? <StatusItem tone="unknown" label="Audit-цепочка" value="?" title="Статус цепочки недоступен" to="/admin/audit" />
         : !s.chain.stamped
-          ? <Pill tone="warn" label="цепочка —" title="Автопроверка ещё не штамповалась" to="/admin/audit" />
+          ? <StatusItem tone="warn" label="Audit-цепочка" value="не проверялась" title="Автопроверка ещё не штамповалась" to="/admin/audit" />
           : s.chain.verdict?.ok === false
-            ? <Pill tone="danger" label="ЦЕПОЧКА!" title="HMAC-цепочка НАРУШЕНА" to="/admin/audit" />
+            ? <StatusItem tone="danger" label="Audit-цепочка" value="НАРУШЕНА" title="HMAC-цепочка нарушена!" to="/admin/audit" />
             : s.chain.stale
-              ? <Pill tone="warn" label="цепочка стух." title="Вердикт устарел — крон молчит" to="/admin/audit" />
-              : <Pill tone="ok" label="цепочка ок" title="HMAC-цепочка цела" to="/admin/audit" />}
+              ? <StatusItem tone="warn" label="Audit-цепочка" value="крон молчит" title="Вердикт устарел" to="/admin/audit" />
+              : <StatusItem tone="ok" label="Audit-цепочка" value="целостна" title="HMAC-цепочка цела" to="/admin/audit" />}
     </div>
   )
 }
 
-// #394-4: тема консоли — system (default) → dark → light по циклу;
-// выбор в localStorage, system следит за prefers-color-scheme.
+// тема консоли — system (default) → dark → light по циклу; выбор в
+// localStorage, system следит за prefers-color-scheme
 type ThemeMode = 'system' | 'dark' | 'light'
 
 function useAdminTheme(): [boolean, ThemeMode, () => void] {
@@ -237,32 +245,63 @@ export default function AdminLayout() {
   const { pathname } = useLocation()
   const signals = useChromeSignals()
   const [dark, themeMode, cycleTheme] = useAdminTheme()
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const title = TITLES[pathname]
     ?? (pathname.startsWith('/admin/clients/') ? 'Карточка клиента' : 'Админ-консоль')
 
-  const navBadge = (kind?: 'stuck' | 'firing'): number => {
+  const navBadge = (kind?: 'stuck' | 'firing' | 'clients'): number => {
     if (kind === 'stuck') return signals.stuck ?? 0
     if (kind === 'firing') return signals.firing ?? 0
+    if (kind === 'clients') return signals.clients ?? 0
     return 0
   }
 
   return (
-    <div className={`flex min-h-screen bg-surface ${dark ? 'admin-dark' : ''}`}>
-      <aside className="w-60 shrink-0 bg-slate-900 text-slate-200 flex flex-col">
-        <div className="px-5 h-16 flex items-center gap-2 border-b border-slate-800">
-          <span className="h-2.5 w-2.5 rounded-full bg-red-500" aria-hidden />
-          <div>
-            <div className="text-sm font-semibold tracking-tight text-white">Админ-консоль</div>
-            <div className="text-[10px] uppercase tracking-wider text-slate-400">production</div>
-          </div>
+    <div className={`min-h-screen bg-surface text-ink border-t-[3px] ${dark ? 'admin-dark' : ''}`}
+         style={{ borderTopColor: 'var(--admin-frame)' }}>
+      {/* ── Шапка (прототип): лого + Admin-чип · статус-полоса · ⌘K · сессия · тема ── */}
+      <header className="sticky top-0 z-20 h-14 bg-surface-raised border-b border-surface-border flex items-center gap-4 px-4">
+        <div className="flex items-center gap-2.5 min-w-[196px]">
+          <span className="h-[26px] w-[26px] rounded-md text-white text-[9px] font-bold tracking-wider flex items-center justify-center"
+                style={{ background: 'var(--admin-brand)' }} aria-hidden>SKU</span>
+          <b className="text-sm font-semibold">Console</b>
+          <span className="text-[10px] font-bold tracking-wider uppercase text-white px-2 py-0.5 rounded-full"
+                style={{ background: 'var(--admin-frame)' }}>Admin</span>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-4">
+        <StatusStrip />
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button type="button"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md ring-1 ring-surface-border text-xs text-ink-subtle hover:text-ink-muted hover:ring-surface-deep transition-colors"
+                  onClick={() => setPaletteOpen(true)}>
+            Поиск и действия
+            <kbd className="text-[10.5px] px-1.5 rounded border border-surface-deep border-b-2 bg-surface-muted text-ink-muted font-sans">⌘K</kbd>
+          </button>
+          <SessionCountdown />
+          <button type="button"
+                  className="h-[30px] w-[30px] rounded-md ring-1 ring-surface-border flex items-center justify-center text-ink-muted hover:bg-surface-muted transition-colors"
+                  title={`Тема: ${themeMode === 'system' ? 'системная' : themeMode === 'dark' ? 'тёмная' : 'светлая'} (клик — переключить)`}
+                  aria-label="Переключить тему"
+                  onClick={cycleTheme}>
+            {themeMode === 'system' ? '◐' : dark ? '☾' : '☀'}
+          </button>
+          <span className="font-mono text-xs text-ink-subtle">{clientId ?? '—'}</span>
+          <button type="button" className="btn-ghost text-xs"
+                  onClick={() => { logout(); nav('/login/admin') }}>
+            Выйти
+          </button>
+        </div>
+      </header>
+
+      <div className="flex min-h-[calc(100vh-59px)]">
+        {/* ── Светлая навигация группами (прототип) ── */}
+        <nav className="w-[216px] shrink-0 px-2.5 py-4 border-r border-surface-border"
+             aria-label="Разделы консоли">
           {NAV_GROUPS.map((group, gi) => (
-            <div key={gi} className="space-y-1">
+            <div key={gi} className="mb-3.5">
               {group.header && (
-                <div className="px-3 pt-1 text-[10px] uppercase tracking-wider text-slate-500">
+                <p className="m-0 mb-1 px-2.5 text-[10px] font-bold uppercase tracking-widest text-ink-subtle">
                   {group.header}
-                </div>
+                </p>
               )}
               {group.items.map((item) => (
                 <div key={item.to}>
@@ -270,16 +309,19 @@ export default function AdminLayout() {
                     to={item.to}
                     end={item.children ? true : item.end}
                     className={({ isActive }) =>
-                      `flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors ${
-                        isActive
-                          ? 'bg-slate-800 text-white font-medium'
-                          : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
-                      }`
-                    }
+                      `flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13.5px] transition-colors ${
+                        isActive ? 'font-semibold' : 'text-ink-muted hover:bg-surface-muted hover:text-ink'
+                      }`}
+                    style={({ isActive }) => isActive
+                      ? { background: 'var(--admin-brand-bg)', color: 'var(--admin-brand-ink)' }
+                      : undefined}
                   >
                     <span>{item.label}</span>
                     {navBadge(item.badge) > 0 && (
-                      <span className="ml-2 px-1.5 rounded-full bg-red-500/90 text-white text-[10px] font-semibold tabular-nums">
+                      <span className={`ml-auto text-[10.5px] font-bold rounded-full px-1.5 py-px tabular-nums ${
+                        item.badge === 'clients'
+                          ? 'bg-surface-muted text-ink-subtle'
+                          : 'bg-warn-bg text-warn'}`}>
                         {navBadge(item.badge)}
                       </span>
                     )}
@@ -289,12 +331,12 @@ export default function AdminLayout() {
                       key={ch.to}
                       to={ch.to}
                       className={({ isActive }) =>
-                        `block rounded-md pl-8 pr-3 py-1.5 text-[13px] transition-colors ${
-                          isActive
-                            ? 'bg-slate-800 text-white font-medium'
-                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
-                        }`
-                      }
+                        `block rounded-md pl-7 pr-2.5 py-1 text-[12.5px] transition-colors ${
+                          isActive ? 'font-semibold' : 'text-ink-subtle hover:bg-surface-muted hover:text-ink'
+                        }`}
+                      style={({ isActive }) => isActive
+                        ? { background: 'var(--admin-brand-bg)', color: 'var(--admin-brand-ink)' }
+                        : undefined}
                     >
                       {ch.label}
                     </NavLink>
@@ -304,40 +346,17 @@ export default function AdminLayout() {
             </div>
           ))}
         </nav>
-        <div className="px-4 py-3 border-t border-slate-800">
-          <StatusStrip />
-        </div>
-      </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="flex items-center justify-between bg-surface-raised border-b border-surface-border px-6 h-16 shrink-0 gap-6">
-          <h1 className="text-lg font-semibold tracking-tight text-ink">{title}</h1>
-          <div className="flex items-center gap-4">
-            <SessionCountdown />
-            <button
-              type="button"
-              className="btn-ghost text-sm"
-              title={`Тема: ${themeMode === 'system' ? 'системная' : themeMode === 'dark' ? 'тёмная' : 'светлая'} (клик — переключить)`}
-              onClick={cycleTheme}
-            >
-              {themeMode === 'system' ? '◐' : dark ? '☾' : '☀'}
-            </button>
-            <span className="font-mono text-xs text-ink-muted">{clientId ?? '—'}</span>
-            <button
-              type="button"
-              className="btn-secondary text-sm"
-              onClick={() => { logout(); nav('/login/admin') }}
-            >
-              Выйти
-            </button>
+        <main className="flex-1 min-w-0 px-7 pt-6 pb-12 max-w-[1160px]">
+          <div className="flex items-baseline gap-3 mb-4">
+            <h1 className="text-[19px] font-semibold tracking-tight text-ink">{title}</h1>
           </div>
-        </header>
-        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>
-      {/* #394-3: Cmd/Ctrl+K — навигационная палитра */}
-      <AdminCommandPalette />
+
+      {/* #394-3: Cmd/Ctrl+K — палитра (управляется и кнопкой в шапке) */}
+      <AdminCommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   )
 }

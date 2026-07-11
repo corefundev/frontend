@@ -32,40 +32,68 @@
   --warn-bg:    252 241 218;       /* #FCF1DA */
 }
 
-/* #394-4: тёмная тема консоли. Значения подобраны на slate-навигационной
-   базе сайдбара (тот же холодный оттенок), контраст текста ≥ AA. */
+/* #394-4/5: тёмная тема консоли — значения РОВНО из утверждённого
+   прототипа (ground #0E1320 / surface #151C2C / line #26304A / ink
+   #E7EBF3 / ok #3FCE7C / danger #F2635D / warn #F0A24B / brand-в-тёмной
+   #6B96FF·#8FAFFF·bg #1C2A4E / frame #C2333F). */
 .admin-dark {
   color-scheme: dark;
-  --surface:        11 18 32;      /* глубокий навы-слейт */
-  --surface-muted:  22 32 46;
-  --surface-raised: 16 26 40;
-  --surface-border: 39 52 68;
-  --surface-deep:   58 72 89;
-  --ink:        230 235 242;
-  --ink-muted:  148 161 178;
-  --ink-subtle: 100 113 131;
-  --ink-invert: 2 8 23;
-  --success:    116 195 126;
-  --success-bg: 22 52 33;
-  --danger:     248 113 113;
-  --danger-bg:  62 22 22;
-  --warn:       233 179 84;
-  --warn-bg:    61 46 14;
+  --surface:        14 19 32;      /* #0E1320 ground */
+  --surface-muted:  27 35 54;      /* #1B2336 surface-2 */
+  --surface-raised: 21 28 44;      /* #151C2C surface */
+  --surface-border: 38 48 74;      /* #26304A line */
+  --surface-deep:   49 61 92;      /* #313D5C line-2 */
+  --ink:        231 235 243;       /* #E7EBF3 */
+  --ink-muted:  153 163 182;       /* #99A3B6 */
+  --ink-subtle: 95 106 128;        /* #5F6A80 */
+  --ink-invert: 14 19 32;
+  --success:    63 206 124;        /* #3FCE7C */
+  --success-bg: 18 48 31;          /* #12301F */
+  --danger:     242 99 93;         /* #F2635D */
+  --danger-bg:  58 23 21;          /* #3A1715 */
+  --warn:       240 162 75;        /* #F0A24B */
+  --warn-bg:    51 37 15;          /* #33250F */
+  --admin-frame: #C2333F;
+  --admin-brand: #6B96FF;
+  --admin-brand-ink: #8FAFFF;
+  --admin-brand-bg: #1C2A4E;
+  --admin-shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+}
+/* светлые admin-переменные хрома (прототип) */
+:root {
+  --admin-frame: #A61B2B;
+  --admin-brand: #2463EB;
+  --admin-brand-ink: #1D53C4;
+  --admin-brand-bg: #EBF1FE;
+  --admin-shadow: 0 1px 2px rgba(27,36,54,.05), 0 4px 14px rgba(27,36,54,.06);
 }
 
-/* карточки консоли в тёмной теме — плоская raised-поверхность вместо
-   светлой «бумаги» с зерном */
-.admin-dark .card-paper {
+/* карточки консоли в тёмной теме — плоская raised-поверхность, ТЁМНАЯ
+   тень (тёплая shadow-paper на тёмном давала «свечение») */
+.admin-dark .card-paper,
+.admin-dark .card {
   background-image: none;
   background-color: rgb(var(--surface-raised));
   --tw-ring-color: rgb(var(--surface-border));
+  box-shadow: var(--admin-shadow);
 }
 /* светлые tint-подсветки строк/бейджей — тёмные эквиваленты */
-.admin-dark .bg-red-50\/50   { background-color: rgb(220 38 38 / 0.10); }
-.admin-dark .bg-amber-50\/40 { background-color: rgb(217 119 6 / 0.10); }
-.admin-dark .bg-brand-50     { background-color: rgb(36 99 235 / 0.18); }
-.admin-dark .badge-info      { color: #8DA8F9; }
-.admin-dark .text-brand-700  { color: #8DA8F9; }
+.admin-dark .bg-red-50\/50   { background-color: rgb(242 99 93 / 0.10); }
+.admin-dark .bg-amber-50\/40 { background-color: rgb(240 162 75 / 0.10); }
+.admin-dark .bg-brand-50     { background-color: var(--admin-brand-bg); }
+.admin-dark .badge-info      { background-color: var(--admin-brand-bg); color: var(--admin-brand-ink); }
+.admin-dark .text-brand-700  { color: var(--admin-brand-ink); }
+/* recharts: CSS бьёт presentation-атрибуты SVG — темним сетку/оси/тултип */
+.admin-dark .recharts-cartesian-grid line { stroke: #26304A; }
+.admin-dark .recharts-cartesian-axis line,
+.admin-dark .recharts-cartesian-axis-tick-line { stroke: #26304A; }
+.admin-dark .recharts-cartesian-axis-tick text { fill: #5F6A80; }
+.admin-dark .recharts-default-tooltip {
+  background-color: #151C2C !important;
+  border-color: #26304A !important;
+  color: #E7EBF3;
+}
+.admin-dark .recharts-reference-dot circle { stroke: #151C2C; }
 
 html, body, #root { height: 100%; }
 

@@ -69,7 +69,11 @@ function MetricChart({ rows, metric, label }: {
   )
 }
 
-export default function QualityTrendSection({ runs }: { runs: TrendRun[] }) {
+// bare (#394-5): рендер без собственной card-обёртки — для таба
+// «Качество» карточки-hub
+export default function QualityTrendSection({ runs, bare = false }: {
+  runs: TrendRun[]; bare?: boolean
+}) {
   const rows: Row[] = useMemo(() => {
     // API отдаёт DESC по enqueued_at; чемпион = самый свежий promoted.
     const championId = runs.find(
@@ -90,7 +94,7 @@ export default function QualityTrendSection({ runs }: { runs: TrendRun[] }) {
   }, [runs])
 
   return (
-    <section className="card-paper p-5">
+    <section className={bare ? '' : 'card-paper p-5'}>
       <h3 className="font-semibold text-sm mb-3">Качество модели</h3>
       {rows.length < 2 ? (
         <div className="text-sm text-ink-muted">

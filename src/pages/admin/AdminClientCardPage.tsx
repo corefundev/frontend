@@ -1,8 +1,11 @@
-// ADM-3 (#256, Волна 1 finale + правки 2026-07-06): карточка клиента.
-// ВСЕ операторские действия (тариф / блокировка / ротация ключа) живут
-// ЗДЕСЬ — таблица только навигация. Каждое открытие карточки аудируется
-// сервером (H5: overview-endpoint пишет client_view).
-import { useMemo } from 'react'
+// ADM-3 (#256) + правки 2026-07-06: карточка клиента. ВСЕ операторские
+// действия живут ЗДЕСЬ; каждое открытие аудируется сервером (H5).
+// ADM-v3-9 (#394-5, прототип 1:1): карточка-ХАБ — шапка с ключевыми
+// фактами (создан/последний вход/модель/PII) + чипы, колонка действий
+// справа (ротация/разлогин/приостановка/стирание), табы Обзор/Качество/
+// Данные/Аудит/Настройки. Подтверждения — модальные (AdminConfirmDialog,
+// erase-now с вводом client_id), window.confirm/prompt из карточки убраны.
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -11,8 +14,11 @@ import { apiClient, errorMessage } from '../../shared/api/client'
 import { clientsApi, type ClientRecord } from '../../features/clients/api'
 import { type PlanId } from '../../features/plans/api'
 import { getNotifications } from '../../features/notifications/api'
+import AdminConfirmDialog, { type ConfirmSpec } from '../../components/AdminConfirmDialog'
 import AdminQueryError from './AdminQueryError'
 import QualityTrendSection from './QualityTrendSection'
+import { SkeletonRows, StateRow } from './adminTable'
+import { THEAD_CLS } from './adminTableUtils'
 
 interface Overview {
   client: ClientRecord & { deleted_at?: string | null; pii_retention_days?: number }
@@ -25,11 +31,42 @@ interface Overview {
   }[]
 }
 
+interface ClientUpload {
+  upload_id: string; filename: string; size_bytes: number; status: string
+  scan_result: string | null; error_message: string | null
+  row_count: number | null; sku_count: number | null; created_at: string
+}
+
+interface ClientAuditEvent {
+  id: number; ts: string; event_type: string; event_subtype: string | null
+  ip: string | null; success: boolean
+}
+
 const PLAN_ORDER: PlanId[] = ['free', 'start', 'business']
+const TABS = ['Обзор', 'Качество', 'Данные', 'Аудит', 'Настройки'] as const
+type Tab = typeof TABS[number]
+
+function GateBadge({ r }: { r: Overview['training_runs'][number] }) {
+  if (r.gate_passed === false && !r.model_path) return <span className="badge-danger">gate: блок</span>
+  if (r.gate_passed === false) return <span className="badge-warn">gate: fail (перв.)</span>
+  if (r.gate_passed === true) return <span className="badge-success">gate: pass</span>
+  return <span className="badge-neutral">до гейта</span>
+}
+
+function MetaItem({ k, v }: { k: string; v: string }) {
+  return (
+    <div>
+      <div className="text-[10.5px] font-bold uppercase tracking-widest text-ink-subtle">{k}</div>
+      <div className="text-[13px] mt-0.5">{v}</div>
+    </div>
+  )
+}
 
 export default function AdminClientCardPage() {
   const { clientId = '' } = useParams()
   const qc = useQueryClient()
+  const [tab, setTab] = useState<Tab>('Обзор')
+  const [confirm, setConfirm] = useState<ConfirmSpec | null>(null)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-client-overview', clientId],
@@ -45,8 +82,7 @@ export default function AdminClientCardPage() {
     queryFn: () => getNotifications(clientId, 5),
     enabled: !!clientId,
   })
-  // ADM-v3-7 #392: config-override клиента (read-only — правка остаётся
-  // правом клиента). Endpoint клиентский, admin проходит по bypass.
+  // ADM-v3-7 #392: config-override (read-only; admin bypass)
   const { data: cfg, isError: cfgError } = useQuery({
     queryKey: ['admin-client-config', clientId],
     queryFn: async () => {
@@ -57,6 +93,27 @@ export default function AdminClientCardPage() {
       return data
     },
     enabled: !!clientId,
+    meta: { silent: true },
+  })
+  // #394-5: вкладки Данные/Аудит — ленивая загрузка при открытии
+  const { data: uploads, isLoading: uploadsLoading, isError: uploadsError } = useQuery({
+    queryKey: ['admin-client-uploads', clientId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ClientUpload[]>(
+        `/clients/${encodeURIComponent(clientId)}/uploads`, { params: { limit: 50 } })
+      return data
+    },
+    enabled: !!clientId && tab === 'Данные',
+    meta: { silent: true },
+  })
+  const { data: auditEvents, isLoading: auditLoading, isError: auditError } = useQuery({
+    queryKey: ['admin-client-audit', clientId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ events: ClientAuditEvent[] }>(
+        `/clients/${encodeURIComponent(clientId)}/audit`, { params: { limit: 100 } })
+      return data.events
+    },
+    enabled: !!clientId && tab === 'Аудит',
     meta: { silent: true },
   })
 
@@ -81,8 +138,17 @@ export default function AdminClientCardPage() {
   const rotateMut = useMutation({
     mutationFn: () => clientsApi.rotateApiKey(clientId),
     onSuccess: (r) => {
-      // one-time display — the server stores only the hash
-      window.prompt('Новый API-ключ (показывается ОДИН раз — скопируйте):', r.api_key)
+      // one-time display — сервер хранит только hash; показываем в модалке
+      // с копированием (прототип: никаких window.prompt)
+      setConfirm({
+        title: 'Новый API-ключ (показывается один раз)',
+        body: r.api_key,
+        actionLabel: 'Скопировать и закрыть',
+        onConfirm: () => {
+          void navigator.clipboard?.writeText(r.api_key)
+          toast.success('Ключ скопирован в буфер')
+        },
+      })
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось ротировать ключ')),
   })
@@ -102,245 +168,372 @@ export default function AdminClientCardPage() {
   })
 
   const c = data?.client
-  const gateBadge = useMemo(() => (r: Overview['training_runs'][number]) => {
-    if (r.gate_passed === false && !r.model_path) return <span className="badge-danger">gate: блок</span>
-    if (r.gate_passed === false) return <span className="badge-warn">gate: fail (перв.)</span>
-    if (r.gate_passed === true) return <span className="badge-success">gate: pass</span>
-    return <span className="badge-neutral">до гейта</span>
-  }, [])
 
   if (isError) {
     return (
-      <div className="max-w-4xl space-y-4">
+      <div className="max-w-5xl space-y-4">
         <Link to="/admin/clients" className="text-sm text-ink-muted hover:text-ink">← Клиенты</Link>
         <AdminQueryError what="карточку клиента" onRetry={() => void refetch()} />
       </div>
     )
   }
-  if (isLoading || !c) return <div className="h-40" aria-hidden />
+  if (isLoading || !c) {
+    return (
+      <div className="max-w-5xl card-paper p-6 animate-pulse space-y-3" aria-label="Загрузка карточки">
+        <div className="h-6 w-52 rounded bg-surface-muted" />
+        <div className="h-3 w-80 rounded bg-surface-muted" />
+        <div className="h-3 w-64 rounded bg-surface-muted" />
+      </div>
+    )
+  }
+
+  const lastLogin = data.recent_logins[0]
+  const champion = data.training_runs.find(
+    (r) => r.status === 'finished' && r.model_path != null)
+  const modelAgeDays = champion?.ended_at
+    ? Math.round((Date.now() - new Date(champion.ended_at).getTime()) / 86400000)
+    : null
+  const piiState = c.status === 'purged' ? 'данные стёрты'
+    : c.deleted_at ? 'аккаунт закрыт' : 'аккаунт открыт'
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-3">
-        <Link to="/admin/clients" className="text-sm text-ink-muted hover:text-ink">← Клиенты</Link>
-        <h2 className="text-xl font-semibold font-mono">{c.client_id}</h2>
-        {c.suspended_at
-          ? <span className="badge-danger">заблокирован</span>
-          : <span className="badge-success">активен</span>}
-      </div>
+    <div className="space-y-4 max-w-5xl">
+      <Link to="/admin/clients" className="text-sm text-ink-muted hover:text-ink">← Клиенты</Link>
 
-      <section className="card-paper p-5">
-        <h3 className="font-semibold text-sm mb-3">Профиль</h3>
-        <dl className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-          <Row k="Email" v={c.email ?? '—'} />
-          <Row k="Создан" v={new Date(c.created_at).toLocaleString('ru-RU')} />
-          <Row k="Статус обучения" v={c.status} />
-          <Row k="Горизонт" v={`${c.horizon} дн.`} />
-          <Row k="SKU (обучено)" v={String(c.trained_sku_count ?? '—')} />
-          <Row k="Последнее обучение" v={c.last_trained_at
-            ? new Date(c.last_trained_at).toLocaleString('ru-RU') : '—'} />
-        </dl>
-        <div className="mt-4 flex items-center gap-3">
-          <span className="text-sm text-ink-muted">Тариф:</span>
-          <select className="input py-1 text-sm w-44" value={c.plan}
-                  disabled={planMut.isPending}
-                  onChange={(e) => {
-                    const p = e.target.value as PlanId
-                    if (window.confirm(`Сменить тариф «${c.client_id}» на ${p}?`))
-                      planMut.mutate(p)
-                  }}>
-            {PLAN_ORDER.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </div>
-      </section>
-
-      <section className="card-paper p-5">
-        <h3 className="font-semibold text-sm mb-3">Доступ</h3>
-        <div className="flex items-center gap-3">
-          <button type="button"
-                  className={c.suspended_at ? 'btn-secondary' : 'btn-danger'}
-                  disabled={suspendMut.isPending}
-                  onClick={() => {
-                    const on = !c.suspended_at
-                    const msg = on
-                      ? `Заблокировать «${c.client_id}»? Доступ к API прекратится немедленно; данные сохранятся.`
-                      : `Разблокировать «${c.client_id}»?`
-                    if (window.confirm(msg)) suspendMut.mutate(on)
-                  }}>
-            {c.suspended_at ? 'Разблокировать' : 'Заблокировать'}
-          </button>
-          <button type="button" className="btn-secondary"
-                  disabled={rotateMut.isPending}
-                  onClick={() => {
-                    if (window.confirm('Ротировать API-ключ? Старый ключ перестанет работать немедленно.'))
-                      rotateMut.mutate()
-                  }}>
-            Ротировать API-ключ
-          </button>
-          <button type="button" className="btn-secondary"
-                  disabled={revokeMut.isPending}
-                  onClick={() => {
-                    if (window.confirm('Завершить ВСЕ сессии клиента? Текущие токены перестанут работать немедленно; аккаунт не меняется.'))
-                      revokeMut.mutate()
-                  }}>
-            Завершить все сессии
-          </button>
-        </div>
-        {c.suspended_at && (
-          <div className="text-xs text-ink-muted mt-2">
-            Заблокирован с {new Date(c.suspended_at).toLocaleString('ru-RU')}
-          </div>
-        )}
-      </section>
-
-      <section className="card-paper p-5">
-        <h3 className="font-semibold text-sm mb-3">Персональные данные (152-ФЗ)</h3>
-        {c.status === 'purged' ? (
-          <div className="flex items-center gap-3 text-sm">
-            <span className="badge-neutral">данные стёрты</span>
-            <span className="text-ink-muted">аккаунт анонимизирован</span>
-          </div>
-        ) : c.deleted_at ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm">
-              <span className="badge-warn">аккаунт закрыт</span>
-              <span className="text-ink-muted">
-                закрыт {new Date(c.deleted_at).toLocaleDateString('ru-RU')}
-                {typeof c.pii_retention_days === 'number' && (() => {
-                  const left = Math.ceil(
-                    (new Date(c.deleted_at!).getTime() + c.pii_retention_days * 86400000
-                      - Date.now()) / 86400000)
-                  return ` · авто-стирание через ${Math.max(0, left)} дн.`
-                })()}
-              </span>
+      <div className="card-paper overflow-hidden">
+        {/* ── Шапка-hub (прототип): факты слева, действия справа ── */}
+        <div className="p-5 flex gap-5 items-start flex-wrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="font-mono text-[22px] font-semibold tracking-tight">{c.client_id}</span>
+              <span className="badge-info">{c.plan}</span>
+              {c.suspended_at
+                ? <span className="badge-danger">заблокирован</span>
+                : <span className="badge-success">активен</span>}
             </div>
-            <button type="button" className="btn-danger"
-                    disabled={eraseMut.isPending}
+            <div className="flex gap-6 mt-3 flex-wrap">
+              <MetaItem k="Создан" v={new Date(c.created_at).toLocaleDateString('ru-RU')} />
+              <MetaItem k="Последний вход" v={lastLogin
+                ? `${new Date(lastLogin.at).toLocaleDateString('ru-RU')}${lastLogin.via ? ` · ${lastLogin.via}` : ''}`
+                : '—'} />
+              <MetaItem k="Модель" v={champion
+                ? `чемпион · ${modelAgeDays} дн` : 'нет промоутнутой'} />
+              <MetaItem k="PII" v={piiState} />
+            </div>
+          </div>
+          <div className="ml-auto flex flex-col gap-1.5 min-w-[190px]">
+            <button type="button" className="btn-secondary text-xs"
+                    disabled={rotateMut.isPending}
+                    onClick={() => setConfirm({
+                      title: 'Ротация API-ключа',
+                      body: 'Старый ключ перестанет работать немедленно. Новый будет показан один раз.',
+                      actionLabel: 'Ротировать',
+                      onConfirm: () => rotateMut.mutate(),
+                    })}>
+              Ротация api-ключа
+            </button>
+            <button type="button" className="btn-secondary text-xs"
+                    disabled={revokeMut.isPending}
+                    onClick={() => setConfirm({
+                      title: 'Завершить все сессии',
+                      body: 'Текущие токены клиента перестанут работать немедленно; аккаунт не меняется.',
+                      actionLabel: 'Завершить',
+                      onConfirm: () => revokeMut.mutate(),
+                    })}>
+              Разлогинить все сессии
+            </button>
+            <button type="button" className="btn-secondary text-xs"
+                    disabled={suspendMut.isPending}
                     onClick={() => {
-                      const typed = window.prompt(
-                        'Стереть данные НЕМЕДЛЕННО, не дожидаясь срока хранения?\n' +
-                        'Действие необратимо. Введите client_id для подтверждения:')
-                      if (typed === c.client_id) eraseMut.mutate()
-                      else if (typed !== null) toast.error('client_id не совпал — отменено')
+                      const on = !c.suspended_at
+                      setConfirm({
+                        title: on ? 'Заблокировать клиента' : 'Разблокировать клиента',
+                        body: on
+                          ? `Доступ «${c.client_id}» к API прекратится немедленно; данные сохранятся.`
+                          : `Вернуть «${c.client_id}» доступ к API?`,
+                        actionLabel: on ? 'Заблокировать' : 'Разблокировать',
+                        danger: on,
+                        onConfirm: () => suspendMut.mutate(on),
+                      })
                     }}>
-              Стереть данные немедленно
+              {c.suspended_at ? 'Разблокировать' : 'Приостановить'}
+            </button>
+            <button type="button"
+                    className="btn text-xs ring-1 ring-danger text-danger hover:bg-danger-bg rounded-md px-3 py-1.5 font-semibold disabled:opacity-50"
+                    disabled={eraseMut.isPending || c.status === 'purged' || !c.deleted_at}
+                    title={c.status === 'purged' ? 'Данные уже стёрты'
+                      : !c.deleted_at ? 'Доступно только после закрытия аккаунта клиентом' : undefined}
+                    onClick={() => setConfirm({
+                      title: 'Стереть данные немедленно',
+                      body: 'Стирание ПДн, не дожидаясь срока хранения. Действие необратимо; идёт тем же fail-closed путём, что ежедневный крон.',
+                      actionLabel: 'Стереть навсегда',
+                      danger: true,
+                      confirmText: c.client_id,
+                      onConfirm: () => eraseMut.mutate(),
+                    })}>
+              Стереть данные…
             </button>
           </div>
-        ) : (
-          <div className="text-sm text-ink-muted">
-            Аккаунт открыт. Немедленное стирание доступно только после закрытия аккаунта клиентом.
-          </div>
-        )}
-      </section>
-
-      {/* ADM-v3-7 #392: настройки клиента — read-only, отличия подсвечены */}
-      <section className="card-paper overflow-hidden">
-        <div className="px-5 py-3 border-b border-surface-border flex items-baseline justify-between">
-          <h3 className="font-semibold text-sm">Настройки клиента (config-override)</h3>
-          <span className="text-xs text-ink-muted">read-only · правка — право клиента</span>
         </div>
-        {cfgError ? (
-          <div className="px-5 py-4 text-sm"><span className="badge-danger">настройки недоступны</span></div>
-        ) : !cfg ? (
-          <div className="px-5 py-4 text-sm text-ink-muted">Загрузка…</div>
-        ) : !Object.keys(cfg.diff).length ? (
-          <div className="px-5 py-4 text-sm text-ink-muted">
-            Клиент ничего не переопределял — действуют настройки системы и тарифа.
+
+        {/* ── Табы (прототип) ── */}
+        <div className="flex gap-0.5 px-3 border-b border-surface-border" role="tablist">
+          {TABS.map((t) => (
+            <button key={t} type="button" role="tab" aria-selected={tab === t}
+                    className={`px-3 py-2 text-[13px] font-semibold -mb-px border-b-2 transition-colors ${
+                      tab === t ? '' : 'text-ink-subtle hover:text-ink-muted border-transparent'}`}
+                    style={tab === t
+                      ? { color: 'var(--admin-brand-ink)', borderBottomColor: 'var(--admin-brand)' }
+                      : undefined}
+                    onClick={() => setTab(t)}>
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Обзор ── */}
+        {tab === 'Обзор' && (
+          <div className="p-5 space-y-5">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+              <div className="flex justify-between gap-4"><span className="text-ink-muted">Email</span><span>{c.email ?? '—'}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-ink-muted">Статус обучения</span><span>{c.status}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-ink-muted">Горизонт</span><span>{c.horizon} дн.</span></div>
+              <div className="flex justify-between gap-4"><span className="text-ink-muted">SKU (обучено)</span><span>{c.trained_sku_count ?? '—'}</span></div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-ink-muted">Тариф:</span>
+              <select className="input py-1 text-sm w-44" value={c.plan}
+                      disabled={planMut.isPending}
+                      onChange={(e) => {
+                        const p = e.target.value as PlanId
+                        setConfirm({
+                          title: 'Смена тарифа',
+                          body: `Сменить тариф «${c.client_id}» на ${p}?`,
+                          actionLabel: 'Сменить',
+                          onConfirm: () => planMut.mutate(p),
+                        })
+                      }}>
+                {PLAN_ORDER.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+
+            {/* ПДн 152-ФЗ — статус и отсчёт авто-стирания */}
+            <div>
+              <h3 className="font-semibold text-sm mb-2">Персональные данные (152-ФЗ)</h3>
+              {c.status === 'purged' ? (
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="badge-neutral">данные стёрты</span>
+                  <span className="text-ink-muted">аккаунт анонимизирован</span>
+                </div>
+              ) : c.deleted_at ? (
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="badge-warn">аккаунт закрыт</span>
+                  <span className="text-ink-muted">
+                    закрыт {new Date(c.deleted_at).toLocaleDateString('ru-RU')}
+                    {typeof c.pii_retention_days === 'number' && (() => {
+                      const left = Math.ceil(
+                        (new Date(c.deleted_at!).getTime() + c.pii_retention_days * 86400000
+                          - Date.now()) / 86400000)
+                      return ` · авто-стирание через ${Math.max(0, left)} дн. · кнопка «Стереть данные…» — в шапке`
+                    })()}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-sm text-ink-muted">
+                  Аккаунт открыт. Немедленное стирание доступно только после закрытия аккаунта клиентом.
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              <div>
+                <h3 className="font-semibold text-sm mb-2">Активность (входы)</h3>
+                {!data.recent_logins.length ? (
+                  <div className="text-sm text-ink-muted">Входов не зафиксировано</div>
+                ) : (
+                  <ul className="divide-y divide-surface-border text-sm">
+                    {data.recent_logins.map((l, i) => (
+                      <li key={i} className="py-1.5 flex justify-between">
+                        <span className="text-xs text-ink-muted">{new Date(l.at).toLocaleString('ru-RU')}</span>
+                        <span className="font-mono text-xs">{l.ip ?? '—'}{l.via ? ` · ${l.via}` : ''}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm mb-2">Уведомления (последние)</h3>
+                {!inbox?.notifications?.length ? (
+                  <div className="text-sm text-ink-muted">Пусто</div>
+                ) : (
+                  <ul className="divide-y divide-surface-border text-sm">
+                    {inbox.notifications.map((n) => (
+                      <li key={n.id} className="py-1.5">
+                        <span className="text-xs text-ink-muted mr-2">
+                          {new Date(n.created_at).toLocaleDateString('ru-RU')}
+                        </span>
+                        {n.title}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted text-ink-subtle text-xs uppercase tracking-wider">
-              <tr>
-                <th className="px-5 py-2 text-left">Ключ</th>
-                <th className="px-3 py-2 text-left">Система / тариф</th>
-                <th className="px-3 py-2 text-left">Клиент</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-border">
-              {Object.entries(cfg.diff).map(([key, v]) => (
-                <tr key={key} className="bg-amber-50/40">
-                  <td className="px-5 py-2 font-mono text-xs">{key}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-ink-muted">
-                    {JSON.stringify(v.system)}
-                  </td>
-                  <td className="px-3 py-2 font-mono text-xs font-semibold">
-                    {JSON.stringify(v.client)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         )}
-      </section>
 
-      {/* ADM-v3-3 #388: сводка (тренд) над деталью (таблицей) */}
-      <QualityTrendSection runs={data.training_runs} />
-
-      <section className="card-paper overflow-hidden">
-        <h3 className="font-semibold text-sm px-5 py-3 border-b border-surface-border">Обучения (последние 5)</h3>
-        {!data.training_runs.length ? (
-          <div className="px-5 py-6 text-sm text-ink-muted">Обучений не было</div>
-        ) : (
-          <table className="w-full text-sm">
-            <tbody>
-              {data.training_runs.slice(0, 5).map((r) => (
-                <tr key={r.run_id} className="border-b border-surface-border last:border-b-0">
-                  <td className="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">
-                    {r.ended_at ? new Date(r.ended_at).toLocaleString('ru-RU') : '—'}
-                  </td>
-                  <td className="px-3 py-2.5"><span className="badge-neutral">{r.status}</span></td>
-                  <td className="px-3 py-2.5 font-mono text-xs">
-                    {r.wmape != null ? `WMAPE ${Number(r.wmape).toFixed(3)}` : '—'}
-                  </td>
-                  <td className="px-3 py-2.5">{gateBadge(r)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* ── Качество ── */}
+        {tab === 'Качество' && (
+          <div className="p-5 space-y-5">
+            <QualityTrendSection runs={data.training_runs} bare />
+            <div>
+              <h3 className="font-semibold text-sm mb-2">Обучения (последние 5)</h3>
+              {!data.training_runs.length ? (
+                <div className="text-sm text-ink-muted">Обучений не было</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <tbody>
+                    {data.training_runs.slice(0, 5).map((r) => (
+                      <tr key={r.run_id} className="border-b border-surface-border last:border-b-0">
+                        <td className="py-2 pr-3 text-xs text-ink-muted whitespace-nowrap">
+                          {r.ended_at ? new Date(r.ended_at).toLocaleString('ru-RU') : '—'}
+                        </td>
+                        <td className="py-2 px-3"><span className="badge-neutral">{r.status}</span></td>
+                        <td className="py-2 px-3 font-mono text-xs">
+                          {r.wmape != null ? `WMAPE ${Number(r.wmape).toFixed(3)}` : '—'}
+                        </td>
+                        <td className="py-2 px-3"><GateBadge r={r} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         )}
-      </section>
 
-      <div className="grid grid-cols-2 gap-4">
-        <section className="card-paper overflow-hidden">
-          <h3 className="font-semibold text-sm px-5 py-3 border-b border-surface-border">Активность (входы)</h3>
-          {!data.recent_logins.length ? (
-            <div className="px-5 py-6 text-sm text-ink-muted">Входов не зафиксировано</div>
-          ) : (
-            <ul className="divide-y divide-surface-border text-sm">
-              {data.recent_logins.map((l, i) => (
-                <li key={i} className="px-5 py-2 flex justify-between">
-                  <span className="text-xs text-ink-muted">{new Date(l.at).toLocaleString('ru-RU')}</span>
-                  <span className="font-mono text-xs">{l.ip ?? '—'}{l.via ? ` · ${l.via}` : ''}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {/* ── Данные ── */}
+        {tab === 'Данные' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className={THEAD_CLS}>
+                <tr>
+                  <th className="px-4 py-2 text-left">Время</th>
+                  <th className="px-4 py-2 text-left">Файл</th>
+                  <th className="px-4 py-2 text-left">Статус</th>
+                  <th className="px-4 py-2 text-left">Строк / SKU</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-border">
+                {uploadsLoading ? (
+                  <SkeletonRows cols={4} />
+                ) : uploadsError ? (
+                  <StateRow cols={4} kind="error" what="загрузки клиента" />
+                ) : !uploads?.length ? (
+                  <StateRow cols={4} kind="empty" what="загрузки" />
+                ) : uploads.map((u) => (
+                  <tr key={u.upload_id} className={u.scan_result ? 'bg-red-50/50' : ''}>
+                    <td className="px-4 py-2 text-xs text-ink-muted whitespace-nowrap">
+                      {new Date(u.created_at).toLocaleString('ru-RU')}
+                    </td>
+                    <td className="px-4 py-2 text-xs">{u.filename}</td>
+                    <td className="px-4 py-2">
+                      <span className="badge-neutral">{u.status}</span>
+                      {u.scan_result && <span className="badge-danger ml-1">⚠ {u.scan_result}</span>}
+                    </td>
+                    <td className="px-4 py-2 font-mono text-xs">
+                      {u.row_count ?? '—'} / {u.sku_count ?? '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        <section className="card-paper overflow-hidden">
-          <h3 className="font-semibold text-sm px-5 py-3 border-b border-surface-border">Уведомления (последние 5)</h3>
-          {!inbox?.notifications?.length ? (
-            <div className="px-5 py-6 text-sm text-ink-muted">Пусто</div>
-          ) : (
-            <ul className="divide-y divide-surface-border text-sm">
-              {inbox.notifications.map((n) => (
-                <li key={n.id} className="px-5 py-2">
-                  <span className={n.read_at ? 'text-ink-muted' : 'text-ink font-medium'}>{n.title}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {/* ── Аудит ── */}
+        {tab === 'Аудит' && (
+          <div className="overflow-x-auto max-h-[55vh] overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead className={THEAD_CLS}>
+                <tr>
+                  <th className="px-4 py-2 text-left">Время</th>
+                  <th className="px-4 py-2 text-left">Событие</th>
+                  <th className="px-4 py-2 text-left">IP</th>
+                  <th className="px-4 py-2 text-left">Статус</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-border">
+                {auditLoading ? (
+                  <SkeletonRows cols={4} />
+                ) : auditError ? (
+                  <StateRow cols={4} kind="error" what="аудит клиента" />
+                ) : !auditEvents?.length ? (
+                  <StateRow cols={4} kind="empty" what="события" />
+                ) : auditEvents.map((e) => (
+                  <tr key={e.id}>
+                    <td className="px-4 py-2 text-xs text-ink-muted whitespace-nowrap">
+                      {new Date(e.ts).toLocaleString('ru-RU')}
+                    </td>
+                    <td className="px-4 py-2 font-mono text-xs">
+                      {e.event_type}{e.event_subtype ? `/${e.event_subtype}` : ''}
+                    </td>
+                    <td className="px-4 py-2 font-mono text-xs">{e.ip ?? '—'}</td>
+                    <td className="px-4 py-2">
+                      {e.success
+                        ? <span className="badge-success">ok</span>
+                        : <span className="badge-danger">fail</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── Настройки (ADM-v3-7 #392, read-only) ── */}
+        {tab === 'Настройки' && (
+          <div>
+            <div className="px-5 py-3 text-xs text-ink-muted">
+              read-only · правка настроек — право клиента
+            </div>
+            {cfgError ? (
+              <div className="px-5 pb-4 text-sm"><span className="badge-danger">настройки недоступны</span></div>
+            ) : !cfg ? (
+              <div className="px-5 pb-4 text-sm text-ink-muted">Загрузка…</div>
+            ) : !Object.keys(cfg.diff).length ? (
+              <div className="px-5 pb-4 text-sm text-ink-muted">
+                Клиент ничего не переопределял — действуют настройки системы и тарифа.
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className={THEAD_CLS}>
+                  <tr>
+                    <th className="px-5 py-2 text-left">Ключ</th>
+                    <th className="px-3 py-2 text-left">Система / тариф</th>
+                    <th className="px-3 py-2 text-left">Клиент</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-border">
+                  {Object.entries(cfg.diff).map(([key, v]) => (
+                    <tr key={key} className="bg-amber-50/40">
+                      <td className="px-5 py-2 font-mono text-xs">{key}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-ink-muted">
+                        {JSON.stringify(v.system)}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs font-semibold">
+                        {JSON.stringify(v.client)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       </div>
-    </div>
-  )
-}
 
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex justify-between border-b border-surface-border/50 pb-1">
-      <dt className="text-ink-muted">{k}</dt>
-      <dd className="font-medium text-right">{v}</dd>
+      <AdminConfirmDialog spec={confirm} onClose={() => setConfirm(null)} />
     </div>
   )
 }
