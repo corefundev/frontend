@@ -74,46 +74,63 @@ function MetricChart({ rows, metric, label }: {
 export default function QualityTrendSection({ runs, bare = false }: {
   runs: TrendRun[]; bare?: boolean
 }) {
-  const rows: Row[] = useMemo(() => {
+  const { chartRows, ribbonRows } = useMemo(() => {
     // API отдаёт DESC по enqueued_at; чемпион = самый свежий promoted.
     const championId = runs.find(
       (r) => r.status === 'finished' && r.model_path != null)?.run_id
-    return runs
+    const toRow = (r: TrendRun, idx: number): Row => ({
+      idx,
+      date: new Date(r.ended_at as string).toLocaleDateString('ru-RU'),
+      wmape: r.wmape,
+      mase: r.mase,
+      gate: r.gate_passed,
+      champion: r.run_id === championId,
+    })
+    const finished = runs
       .filter((r) => r.status === 'finished' && r.ended_at != null
         && (r.wmape != null || r.mase != null))
       .slice()
       .reverse()
-      .map((r, idx) => ({
-        idx,
-        date: new Date(r.ended_at as string).toLocaleDateString('ru-RU'),
-        wmape: r.wmape,
-        mase: r.mase,
-        gate: r.gate_passed,
-        champion: r.run_id === championId,
-      }))
+    // ЛИНИЯ — только promoted-чемпионы: реальная линия качества сервиса.
+    // Смешивание всех прогонов (эксперименты, gate-блоки) давало «пилу»,
+    // не отражающую то, что реально служило прогнозом. Все вердикты —
+    // в gate-ленте ниже.
+    const promoted = runs
+      .filter((r) => r.status === 'finished' && r.ended_at != null
+        && r.model_path != null && (r.wmape != null || r.mase != null))
+      .slice()
+      .reverse()
+    return { chartRows: promoted.map(toRow), ribbonRows: finished.map(toRow) }
   }, [runs])
 
   return (
     <section className={bare ? '' : 'card-paper p-5'}>
       <h3 className="font-semibold text-sm mb-3">Качество модели</h3>
-      {rows.length < 2 ? (
+      {ribbonRows.length < 1 ? (
         <div className="text-sm text-ink-muted">
-          Недостаточно завершённых тренировок для тренда (нужно ≥ 2).
+          Завершённых тренировок ещё нет.
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-6">
-            <MetricChart rows={rows} metric="wmape" label="WMAPE" />
-            <MetricChart rows={rows} metric="mase" label="MASE" />
-          </div>
+          {chartRows.length >= 2 ? (
+            <div className="grid grid-cols-2 gap-6">
+              <MetricChart rows={chartRows} metric="wmape" label="WMAPE (promoted-чемпионы)" />
+              <MetricChart rows={chartRows} metric="mase" label="MASE (promoted-чемпионы)" />
+            </div>
+          ) : (
+            <div className="text-sm text-ink-muted">
+              Для линии качества нужно ≥ 2 promoted-обучений (gate-блоки и
+              эксперименты в линию не входят — они в ленте ниже).
+            </div>
+          )}
           <div>
             <div className="text-xs text-ink-muted mb-1.5">
-              Gate-вердикты ({rows.length} тренировок, старые → новые;{' '}
+              Gate-вердикты ({ribbonRows.length} тренировок, старые → новые;{' '}
               <span className="inline-block w-2 h-2 rounded-full align-middle"
                     style={{ background: CHAMPION }} /> — текущий чемпион)
             </div>
             <div className="flex flex-wrap gap-1">
-              {rows.map((r) => (
+              {ribbonRows.map((r) => (
                 <span
                   key={r.idx}
                   title={`${r.date} · WMAPE ${r.wmape != null ? r.wmape.toFixed(3) : '—'} · ${
