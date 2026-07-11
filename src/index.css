@@ -36,7 +36,11 @@
    прототипа (ground #0E1320 / surface #151C2C / line #26304A / ink
    #E7EBF3 / ok #3FCE7C / danger #F2635D / warn #F0A24B / brand-в-тёмной
    #6B96FF·#8FAFFF·bg #1C2A4E / frame #C2333F). */
-.admin-dark {
+/* .admin-console.admin-dark (двойной класс): тёмные значения обязаны
+   бить светлый .admin-console-блок НЕЗАВИСИМО от порядка в файле —
+   оба класса висят на одном корне (баг: светлая уходила позже в CSS и
+   перекрывала тёмную) */
+.admin-console.admin-dark {
   color-scheme: dark;
   --surface:        14 19 32;      /* #0E1320 ground */
   --surface-muted:  27 35 54;      /* #1B2336 surface-2 */
