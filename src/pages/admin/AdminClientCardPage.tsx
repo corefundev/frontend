@@ -12,13 +12,15 @@ import { clientsApi, type ClientRecord } from '../../features/clients/api'
 import { type PlanId } from '../../features/plans/api'
 import { getNotifications } from '../../features/notifications/api'
 import AdminQueryError from './AdminQueryError'
+import QualityTrendSection from './QualityTrendSection'
 
 interface Overview {
   client: ClientRecord & { deleted_at?: string | null; pii_retention_days?: number }
   recent_logins: { at: string; ip: string | null; via: string | null }[]
   training_runs: {
     run_id: string; status: string; ended_at: string | null
-    wmape: number | null; gate_passed: boolean | null
+    wmape: number | null; mase: number | null
+    gate_passed: boolean | null
     model_path: string | null
   }[]
 }
@@ -217,6 +219,9 @@ export default function AdminClientCardPage() {
         )}
       </section>
 
+      {/* ADM-v3-3 #388: сводка (тренд) над деталью (таблицей) */}
+      <QualityTrendSection runs={data.training_runs} />
+
       <section className="card-paper overflow-hidden">
         <h3 className="font-semibold text-sm px-5 py-3 border-b border-surface-border">Обучения (последние 5)</h3>
         {!data.training_runs.length ? (
@@ -224,7 +229,7 @@ export default function AdminClientCardPage() {
         ) : (
           <table className="w-full text-sm">
             <tbody>
-              {data.training_runs.map((r) => (
+              {data.training_runs.slice(0, 5).map((r) => (
                 <tr key={r.run_id} className="border-b border-surface-border last:border-b-0">
                   <td className="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">
                     {r.ended_at ? new Date(r.ended_at).toLocaleString('ru-RU') : '—'}
