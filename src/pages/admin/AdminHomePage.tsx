@@ -33,9 +33,33 @@ interface Attention {
   to: string
 }
 
-function Kpi({ label, value, unit, foot, chip, to, danger }: {
+// #394: мини-спарклайн прототипа — только для РЕАЛЬНЫХ рядов (никаких
+// иллюстративных данных); 72×22, линия + точка на конце.
+function Spark({ points, tone }: { points: number[]; tone: 'brand' | 'ok' }) {
+  if (points.length < 2) return null
+  const min = Math.min(...points)
+  const max = Math.max(...points)
+  const span = max - min || 1
+  const xs = points.map((v, i) => [
+    (i / (points.length - 1)) * 72,
+    19 - ((v - min) / span) * 15,
+  ])
+  const color = tone === 'ok' ? 'rgb(var(--success))' : 'var(--admin-brand)'
+  const last = xs[xs.length - 1]
+  return (
+    <svg width="72" height="22" viewBox="0 0 72 22" aria-hidden className="shrink-0">
+      <polyline points={xs.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}
+                fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"
+                strokeLinejoin="round" />
+      <circle cx={last[0]} cy={last[1]} r="2.6" fill={color} />
+    </svg>
+  )
+}
+
+function Kpi({ label, value, unit, foot, chip, spark, to, danger }: {
   label: string; value: string; unit?: string; foot: string
   chip?: { tone: 'ok' | 'danger'; text: string }
+  spark?: { points: number[]; tone: 'brand' | 'ok' }
   to: string; danger?: boolean
 }) {
   return (
@@ -47,6 +71,7 @@ function Kpi({ label, value, unit, foot, chip, to, danger }: {
       </span>
       <div className="flex items-center justify-between gap-2 mt-1 text-[11.5px] text-ink-subtle">
         <span className="truncate">{foot}</span>
+        {spark && <Spark points={spark.points} tone={spark.tone} />}
         {chip && (
           <span className={`whitespace-nowrap ${chip.tone === 'ok' ? 'badge-success' : 'badge-danger'}`}>{chip.text}</span>
         )}
@@ -97,7 +122,7 @@ export default function AdminHomePage() {
     if (historyError) void refetchHistory()
   }
 
-  const { week, attention, wmapeMedian, wmapeN, lastRuns } = useMemo(() => {
+  const { week, attention, wmapeMedian, wmapeN, lastRuns, perDay, wmapeSeries } = useMemo(() => {
     const cutoff = Date.now() - WINDOW_DAYS * 86_400_000
     const threshold = oversight?.stuck_threshold_min ?? 90
     const runs = oversight?.runs ?? []
@@ -150,7 +175,23 @@ export default function AdminHomePage() {
     const lastRuns = runs
       .filter((r) => r.status === 'finished' || r.status === 'failed')
       .slice(0, 5)
-    return { week, attention, wmapeMedian, wmapeN: wmapes.length, lastRuns }
+    // реальные ряды для спарклайнов прототипа: обучения по дням окна и
+    // WMAPE по прогонам (хронологически)
+    const perDay: number[] = Array.from({ length: WINDOW_DAYS }, (_, i) => {
+      const d0 = Date.now() - (WINDOW_DAYS - i) * 86_400_000
+      const d1 = d0 + 86_400_000
+      return runs.filter((r) => {
+        const t = r.ended_at ? new Date(r.ended_at).getTime() : null
+        return t != null && t >= d0 && t < d1
+      }).length
+    })
+    const wmapeSeries = runs
+      .filter((r) => r.status === 'finished' && r.wmape != null && r.ended_at)
+      .sort((a, b) => (a.ended_at as string).localeCompare(b.ended_at as string))
+      .map((r) => r.wmape as number)
+      .slice(-12)
+    return { week, attention, wmapeMedian, wmapeN: wmapes.length, lastRuns,
+             perDay, wmapeSeries }
   }, [oversight, clients])
 
   const byPlan = clients.reduce<Record<string, number>>((acc, c) => {
@@ -171,14 +212,16 @@ export default function AdminHomePage() {
         <Kpi label="Клиенты" value={String(clients.length)} to="/admin/clients"
              foot={`${Object.entries(byPlan).map(([p, n]) => `${p}: ${n}`).join(' · ') || '—'} · заблок.: ${suspended}`} />
         <Kpi label={`Обучений за ${WINDOW_DAYS} дней`} value={String(week.finished)} to="/admin/training"
-             foot={`gate-блоков: ${week.blocked} · ошибок: ${week.failed}`} />
+             foot={`gate-блоков: ${week.blocked} · ошибок: ${week.failed}`}
+             spark={perDay.some((n) => n > 0) ? { points: perDay, tone: 'brand' } : undefined} />
         <Kpi label="Точность (WMAPE, медиана)" to="/admin/training"
              value={wmapeMedian != null ? wmapeMedian.toFixed(2) : '—'}
-             foot={wmapeMedian != null ? `по ${wmapeN} обучениям в ленте` : 'нет завершённых обучений'} />
+             foot={wmapeMedian != null ? `по ${wmapeN} обучениям` : 'нет завершённых обучений'}
+             spark={wmapeSeries.length >= 2 ? { points: wmapeSeries, tone: 'ok' } : undefined} />
         <Kpi label="Свежесть бэкапа" to="/admin/system"
              value={backup ? fmtAge(backup.age_sec).split(' ')[0] : '—'}
              unit={backup ? fmtAge(backup.age_sec).split(' ')[1] : undefined}
-             foot={backup ? 'dump · подробнее в «Системе»' : 'метрика недоступна'}
+             foot={backup ? 'dump · раздел «Система»' : 'метрика недоступна'}
              chip={backup ? (backup.stale
                ? { tone: 'danger', text: 'отстаёт' }
                : { tone: 'ok', text: 'в норме' }) : undefined}
@@ -232,6 +275,14 @@ export default function AdminHomePage() {
             <div className="px-4 py-6 text-sm text-ink-muted">Обучений пока не было</div>
           ) : (
             <table className="w-full text-[13px]">
+              <thead>
+                <tr className="text-[10.5px] font-bold uppercase tracking-widest text-ink-subtle border-b border-surface-border">
+                  <th className="px-4 py-2 text-left font-bold">Клиент</th>
+                  <th className="px-2 py-2 text-left font-bold">Итог</th>
+                  <th className="px-2 py-2 text-right font-bold">WMAPE</th>
+                  <th className="px-4 py-2 text-right font-bold">Когда</th>
+                </tr>
+              </thead>
               <tbody>
                 {lastRuns.map((r) => (
                   <tr key={r.run_id} className="border-b border-surface-border last:border-b-0 hover:bg-surface-muted/60">
