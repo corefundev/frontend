@@ -410,3 +410,12 @@ body {
    рисуется — на коротких экранах пункты остаются достижимы. */
 .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* Консоль: скроллбары скрыты ВЕЗДЕ (блоки-таблицы, списки, дропдауны) —
+   как в сайдбаре: прокрутка работает, полоса не рисуется. Страничный
+   скроллбар прячет класс admin-no-scrollbar на <html> (ставится
+   AdminLayout'ом только внутри консоли). */
+.admin-console, .admin-console * { scrollbar-width: none; -ms-overflow-style: none; }
+.admin-console::-webkit-scrollbar, .admin-console *::-webkit-scrollbar { display: none; }
+html.admin-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+html.admin-no-scrollbar::-webkit-scrollbar { display: none; }

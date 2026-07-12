@@ -305,6 +305,13 @@ export default function AdminLayout() {
   const signals = useChromeSignals()
   const [dark, themeMode, cycleTheme] = useAdminTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
+
+  // Скрыть страничный скроллбар, пока открыта консоль (снимается при
+  // уходе из админки — публичка/кабинет не затронуты)
+  useEffect(() => {
+    document.documentElement.classList.add('admin-no-scrollbar')
+    return () => document.documentElement.classList.remove('admin-no-scrollbar')
+  }, [])
   // «Контроль»/«Документы» свёрнуты по умолчанию; клик по заголовку
   // раскрывает; активный раздел внутри группы держит её раскрытой
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
