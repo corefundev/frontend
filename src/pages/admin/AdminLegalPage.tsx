@@ -20,6 +20,7 @@ const DOC_TITLES: Record<string, string> = {
   terms: 'Пользовательское соглашение',
   consent: 'Согласие на обработку ПДн',
   pdn: 'Политика обработки ПДн (152-ФЗ)',
+  requisites: 'Реквизиты',
 }
 
 export default function AdminLegalPage() {

@@ -182,6 +182,7 @@ function PublicFooter() {
             <Link to="/terms"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Пользовательское соглашение</Link>
             <Link to="/privacy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Политика конфиденциальности</Link>
             <Link to="/pdn-policy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Обработка ПДн</Link>
+            <Link to="/requisites" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Реквизиты</Link>
             <Link to="/plans"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Тарифы</Link>
           </nav>
         </div>
