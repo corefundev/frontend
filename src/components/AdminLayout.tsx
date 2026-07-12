@@ -344,8 +344,12 @@ export default function AdminLayout() {
       </header>
 
       <div className="flex min-h-[calc(100vh-59px)]">
-        {/* ── Светлая навигация группами (прототип) ── */}
-        <nav className="w-[216px] shrink-0 px-2.5 py-4 border-r border-surface-border"
+        {/* ── Светлая навигация группами (прототип). Сайдбар липнет под
+             шапкой и не уезжает при скролле рабочей области; при
+             переполнении скроллится сам. Граница — на обёртке, чтобы
+             тянулась на всю высоту колонки. ── */}
+        <div className="w-[216px] shrink-0 border-r border-surface-border">
+        <nav className="sticky top-[54px] max-h-[calc(100vh-54px)] overflow-y-auto px-2.5 py-4"
              aria-label="Разделы консоли">
           {NAV_GROUPS.map((group, gi) => (
             <div key={gi} className="mb-3.5">
@@ -398,6 +402,7 @@ export default function AdminLayout() {
             </div>
           ))}
         </nav>
+        </div>
 
         <main className="flex-1 min-w-0 px-7 pt-6 pb-12 max-w-[1160px]">
           <div className="flex items-baseline gap-3 mb-4">
