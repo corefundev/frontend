@@ -368,3 +368,40 @@ body {
     animation: progress-stripes 0.9s linear infinite;
   }
 }
+
+
+/* ── CMS-контент (новости / будущий Help Center) ─────────────────────────
+   Типографика для body_html серверного санитайзера: preflight срезает
+   стили списков — возвращаем их только внутри .cms-body (Markdown-контент
+   оператора). Без typography-плагина — ровно то, что разрешает nh3. */
+.cms-body { line-height: 1.6; }
+.cms-body p { margin: 0.5rem 0; }
+.cms-body h1, .cms-body h2, .cms-body h3, .cms-body h4 {
+  font-weight: 650; letter-spacing: -0.01em; margin: 1.1rem 0 0.4rem;
+}
+.cms-body h1 { font-size: 1.35rem; }
+.cms-body h2 { font-size: 1.15rem; }
+.cms-body h3 { font-size: 1rem; }
+.cms-body ul { list-style: disc; padding-left: 1.4rem; margin: 0.5rem 0; }
+.cms-body ol { list-style: decimal; padding-left: 1.4rem; margin: 0.5rem 0; }
+.cms-body li { margin: 0.2rem 0; }
+.cms-body a { color: rgb(29 84 200); text-decoration: underline; }
+.cms-body code {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.85em; background: rgb(var(--surface-muted));
+  padding: 0.1em 0.35em; border-radius: 4px;
+}
+.cms-body pre {
+  background: rgb(var(--surface-muted)); border-radius: 8px;
+  padding: 0.75rem 1rem; overflow-x: auto; margin: 0.6rem 0;
+}
+.cms-body pre code { background: none; padding: 0; }
+.cms-body blockquote {
+  border-left: 3px solid rgb(var(--surface-deep));
+  padding-left: 0.9rem; color: rgb(var(--ink-muted)); margin: 0.6rem 0;
+}
+.cms-body table { border-collapse: collapse; margin: 0.6rem 0; }
+.cms-body th, .cms-body td {
+  border: 1px solid rgb(var(--surface-border)); padding: 0.35rem 0.6rem;
+}
+.cms-body hr { border-color: rgb(var(--surface-border)); margin: 1rem 0; }
