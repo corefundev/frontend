@@ -13,6 +13,7 @@ import {
   helpAdminApi, type HelpArticlePayload, type HelpRevision,
 } from '../../features/help/adminApi'
 import AdminConfirmDialog, { type ConfirmSpec } from '../../components/AdminConfirmDialog'
+import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 
 // построчный diff, тот же подход что в редакторе новостей
@@ -215,11 +216,10 @@ export default function AdminHelpEditorPage() {
           <div className="grid grid-cols-[1fr_90px] gap-3">
             <div>
               <label className="label text-xs">Категория</label>
-              <select className="input" value={form.category_id}
-                      onChange={(e) => set('category_id', e.target.value)}>
-                <option value="">— выберите —</option>
-                {cats.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-              </select>
+              <AdminSelect ariaLabel="Категория" value={form.category_id}
+                           onChange={(v) => set('category_id', v)}
+                           options={[{ value: '', label: '— выберите —' },
+                                     ...cats.map((c) => ({ value: c.id, label: c.title }))]} />
             </div>
             <div>
               <label className="label text-xs">Порядок</label>

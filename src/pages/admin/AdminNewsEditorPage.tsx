@@ -13,6 +13,7 @@ import {
   type NewsCategory, type NewsDraftPayload, type NewsRevision,
 } from '../../features/news/adminApi'
 import AdminConfirmDialog, { type ConfirmSpec } from '../../components/AdminConfirmDialog'
+import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 
 // простой построчный diff (без библиотек): строки только-слева = удалены,
@@ -219,12 +220,10 @@ export default function AdminNewsEditorPage() {
           <div className="grid grid-cols-4 gap-3 items-end">
             <div>
               <label className="label text-xs">Категория</label>
-              <select className="input" value={form.category}
-                      onChange={(e) => set('category', e.target.value as NewsCategory)}>
-                {Object.entries(CATEGORY_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
-              </select>
+              <AdminSelect ariaLabel="Категория" value={form.category}
+                           onChange={(v) => set('category', v as NewsCategory)}
+                           options={Object.entries(CATEGORY_LABELS).map(([v, l]) => ({
+                             value: v, label: l }))} />
             </div>
             <label className="flex items-center gap-1.5 text-[12.5px] text-ink-muted pb-2 select-none">
               <input type="checkbox" checked={form.importance === 'important'}

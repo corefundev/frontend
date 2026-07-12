@@ -11,6 +11,7 @@ import {
   helpAdminApi, type HelpCategoryAdmin, type HelpCategoryPayload,
   type HelpStatus,
 } from '../../features/help/adminApi'
+import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 import { SkeletonRows, StateRow } from './adminTable'
 import { THEAD_CLS } from './adminTableUtils'
@@ -141,18 +142,16 @@ export default function AdminHelpPage() {
         <section className="card-paper overflow-hidden">
           <div className="px-4 py-2.5 border-b border-surface-border flex items-center gap-2">
             <span className="font-semibold text-[13px]">Статьи</span>
-            <select className="input w-40 py-1 text-xs ml-2" value={filterCat}
-                    onChange={(e) => setFilterCat(e.target.value)}>
-              <option value="">Все категории</option>
-              {cats.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-            </select>
-            <select className="input w-36 py-1 text-xs" value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value as HelpStatus | '')}>
-              <option value="">Все статусы</option>
-              <option value="draft">черновики</option>
-              <option value="published">опубликованные</option>
-              <option value="archived">архив</option>
-            </select>
+            <AdminSelect className="w-40 ml-2" ariaLabel="Фильтр по категории" value={filterCat}
+                         onChange={setFilterCat}
+                         options={[{ value: '', label: 'Все категории' },
+                                   ...cats.map((c) => ({ value: c.id, label: c.title }))]} />
+            <AdminSelect className="w-36" ariaLabel="Фильтр по статусу" value={filterStatus}
+                         onChange={(v) => setFilterStatus(v as HelpStatus | '')}
+                         options={[{ value: '', label: 'Все статусы' },
+                                   { value: 'draft', label: 'черновики' },
+                                   { value: 'published', label: 'опубликованные' },
+                                   { value: 'archived', label: 'архив' }]} />
             <Link to="/admin/help/new" className="btn-primary text-xs ml-auto">
               Новая статья
             </Link>

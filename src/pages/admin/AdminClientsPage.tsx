@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { clientsApi } from '../../features/clients/api'
 import { plansApi, type PlanId, type PlanSpec } from '../../features/plans/api'
 import { apiClient } from '../../shared/api/client'
+import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 
 const PLAN_ORDER: PlanId[] = ['free', 'start', 'business']
@@ -77,26 +78,23 @@ export default function AdminClientsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <select className="input w-40" value={planFilter}
-                onChange={(e) => setPlanFilter(e.target.value as 'all' | PlanId)}>
-          <option value="all">Все тарифы</option>
-          {PLAN_ORDER.map((p) => <option key={p} value={p}>{planMap.get(p)?.display_name ?? p}</option>)}
-        </select>
-        <select className="input w-44" value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="all">Все статусы</option>
-          <option value="ready">ready</option>
-          <option value="training">training</option>
-          <option value="registered">registered</option>
-          <option value="error">error</option>
-          <option value="suspended">заблокированные</option>
-        </select>
-        <select className="input w-48" value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
-          <option value="client_id">Сортировка: ID</option>
-          <option value="last_trained_at">Сортировка: обучение ↓</option>
-          <option value="plan">Сортировка: тариф</option>
-        </select>
+        <AdminSelect className="w-40" ariaLabel="Фильтр по тарифу" value={planFilter}
+                     onChange={(v) => setPlanFilter(v as 'all' | PlanId)}
+                     options={[{ value: 'all', label: 'Все тарифы' },
+                               ...PLAN_ORDER.map((p) => ({ value: p, label: planMap.get(p)?.display_name ?? p }))]} />
+        <AdminSelect className="w-44" ariaLabel="Фильтр по статусу" value={statusFilter}
+                     onChange={setStatusFilter}
+                     options={[{ value: 'all', label: 'Все статусы' },
+                               { value: 'ready', label: 'ready' },
+                               { value: 'training', label: 'training' },
+                               { value: 'registered', label: 'registered' },
+                               { value: 'error', label: 'error' },
+                               { value: 'suspended', label: 'заблокированные' }]} />
+        <AdminSelect className="w-48" ariaLabel="Сортировка" value={sortBy}
+                     onChange={(v) => setSortBy(v as typeof sortBy)}
+                     options={[{ value: 'client_id', label: 'Сортировка: ID' },
+                               { value: 'last_trained_at', label: 'Сортировка: обучение ↓' },
+                               { value: 'plan', label: 'Сортировка: тариф' }]} />
         <span className="text-xs text-ink-muted ml-auto">
           {visible.length} из {clients.length}
         </span>

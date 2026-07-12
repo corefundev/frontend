@@ -15,6 +15,7 @@ import { clientsApi, type ClientRecord } from '../../features/clients/api'
 import { type PlanId } from '../../features/plans/api'
 import { getNotifications } from '../../features/notifications/api'
 import AdminConfirmDialog, { type ConfirmSpec } from '../../components/AdminConfirmDialog'
+import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 import QualityTrendSection from './QualityTrendSection'
 import { SkeletonRows, StateRow } from './adminTable'
@@ -296,19 +297,18 @@ export default function AdminClientCardPage() {
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm text-ink-muted">Тариф:</span>
-              <select className="input py-1 text-sm w-44" value={c.plan}
-                      disabled={planMut.isPending}
-                      onChange={(e) => {
-                        const p = e.target.value as PlanId
-                        setConfirm({
-                          title: 'Смена тарифа',
-                          body: `Сменить тариф «${c.client_id}» на ${p}?`,
-                          actionLabel: 'Сменить',
-                          onConfirm: () => planMut.mutate(p),
-                        })
-                      }}>
-                {PLAN_ORDER.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
+              <AdminSelect className="w-44" ariaLabel="Тариф клиента" value={c.plan}
+                           onChange={(v) => {
+                             const p = v as PlanId
+                             if (p === c.plan || planMut.isPending) return
+                             setConfirm({
+                               title: 'Смена тарифа',
+                               body: `Сменить тариф «${c.client_id}» на ${p}?`,
+                               actionLabel: 'Сменить',
+                               onConfirm: () => planMut.mutate(p),
+                             })
+                           }}
+                           options={PLAN_ORDER.map((p) => ({ value: p, label: p }))} />
             </div>
 
             {/* Отдельные блоки-секции (стиль «Базы знаний»): 152-ФЗ на

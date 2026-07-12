@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { clientsApi, type RegisterClientRequest } from '../../features/clients/api'
 import { plansApi, type PlanId } from '../../features/plans/api'
 import { errorMessage } from '../../shared/api/client'
+import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 
 export default function AdminClientNewPage() {
@@ -86,12 +87,10 @@ export default function AdminClientNewPage() {
         </div>
         <div>
           <label className="label" htmlFor="plan">Тариф</label>
-          <select id="plan" className="input" value={form.plan}
-                  onChange={(e) => setForm({ ...form, plan: e.target.value as PlanId })}>
-            {plans.map((p) => (
-              <option key={p.id} value={p.id}>{p.display_name} · {p.model_display_name}</option>
-            ))}
-          </select>
+          <AdminSelect ariaLabel="Тариф" value={form.plan ?? 'free'}
+                       onChange={(v) => setForm({ ...form, plan: v as PlanId })}
+                       options={plans.map((p) => ({
+                         value: p.id, label: `${p.display_name} · ${p.model_display_name}` }))} />
         </div>
         <div>
           <label className="label" htmlFor="horizon">Горизонт по умолчанию</label>
