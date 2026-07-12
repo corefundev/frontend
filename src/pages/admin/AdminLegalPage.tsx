@@ -18,6 +18,8 @@ import AdminQueryError from './AdminQueryError'
 const DOC_TITLES: Record<string, string> = {
   privacy: 'Политика конфиденциальности',
   terms: 'Пользовательское соглашение',
+  consent: 'Согласие на обработку ПДн',
+  pdn: 'Политика обработки ПДн (152-ФЗ)',
 }
 
 export default function AdminLegalPage() {

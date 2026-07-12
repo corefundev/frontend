@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import { clientsApi } from '../../features/clients/api'
 import { plansApi, type PlanId, type PlanSpec } from '../../features/plans/api'
 import { apiClient } from '../../shared/api/client'
 import AdminSelect from '../../components/AdminSelect'
+import AdminClientNewModal from './AdminClientNewModal'
 import AdminQueryError from './AdminQueryError'
 
 const PLAN_ORDER: PlanId[] = ['free', 'start', 'business']
@@ -59,18 +60,13 @@ export default function AdminClientsPage() {
     return rows
   }, [clients, search, planFilter, statusFilter, sortBy])
 
+  // «+ Новый пользователь» переехал из сайдбара в кнопку с попапом;
+  // /admin/clients/new (⌘K, старые ссылки) открывает попап автоматически
+  const { pathname } = useLocation()
+  const [newOpen, setNewOpen] = useState<boolean>(pathname.endsWith('/new'))
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Клиенты</h1>
-          <p className="text-ink-muted mt-1 text-sm">
-            Административный просмотр: тарифы, статусы обучения, счётчики квот.
-          </p>
-        </div>
-
-      </div>
-
       <div className="flex flex-wrap items-center gap-3">
         <input
           className="input w-64"
@@ -98,6 +94,10 @@ export default function AdminClientsPage() {
         <span className="text-xs text-ink-muted ml-auto">
           {visible.length} из {clients.length}
         </span>
+        <button type="button" className="btn-primary text-sm shrink-0"
+                onClick={() => setNewOpen(true)}>
+          Новый пользователь
+        </button>
       </div>
 
       <section className="card overflow-hidden">
@@ -146,6 +146,7 @@ export default function AdminClientsPage() {
           </div>
         )}
       </section>
+      <AdminClientNewModal open={newOpen} onClose={() => setNewOpen(false)} />
     </div>
   )
 }

@@ -141,7 +141,16 @@ export default function SignupPage() {
             >
               политикой конфиденциальности
             </Link>{' '}
-            и даю согласие на обработку персональных данных.
+            и даю{' '}
+            <Link
+              to="/consent"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-500 underline underline-offset-2"
+            >
+              согласие на обработку персональных данных
+            </Link>
+            .
           </span>
         </label>
 

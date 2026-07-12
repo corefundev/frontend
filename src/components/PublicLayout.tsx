@@ -181,6 +181,7 @@ function PublicFooter() {
           <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link to="/terms"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Пользовательское соглашение</Link>
             <Link to="/privacy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Политика конфиденциальности</Link>
+            <Link to="/pdn-policy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Обработка ПДн</Link>
             <Link to="/plans"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Тарифы</Link>
           </nav>
         </div>

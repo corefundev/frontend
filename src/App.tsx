@@ -69,10 +69,8 @@ const AdminAuditPage = lazy(() => import('./pages/admin/AdminAuditPage'))
 const AdminSecurityPage = lazy(() => import('./pages/admin/AdminSecurityPage'))
 const AdminDataPage = lazy(() => import('./pages/admin/AdminDataPage'))
 const AdminClientCardPage = lazy(() => import('./pages/admin/AdminClientCardPage'))
-const AdminClientNewPage = lazy(() => import('./pages/admin/AdminClientNewPage'))
 const AdminLayout = lazy(() => import('./components/AdminLayout'))
-const PrivacyPage       = lazy(() => import('./pages/PrivacyPage'))
-const TermsPage         = lazy(() => import('./pages/TermsPage'))
+const LegalDocPage      = lazy(() => import('./pages/LegalDocPage'))
 const NewsPage          = lazy(() => import('./pages/NewsPage'))
 const NewsPostPage      = lazy(() => import('./pages/NewsPostPage'))
 const NewsClientPage    = lazy(() => import('./pages/client/NewsClientPage'))
@@ -168,7 +166,23 @@ export default function App() {
         path="/terms"
         element={
           <Suspense fallback={<SuspenseFallback />}>
-            <TermsPage />
+            <LegalDocPage docId="terms" />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/consent"
+        element={
+          <Suspense fallback={<SuspenseFallback />}>
+            <LegalDocPage docId="consent" />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/pdn-policy"
+        element={
+          <Suspense fallback={<SuspenseFallback />}>
+            <LegalDocPage docId="pdn" />
           </Suspense>
         }
       />
@@ -176,7 +190,7 @@ export default function App() {
         path="/privacy"
         element={
           <Suspense fallback={<SuspenseFallback />}>
-            <PrivacyPage />
+            <LegalDocPage docId="privacy" />
           </Suspense>
         }
       />
@@ -360,7 +374,7 @@ export default function App() {
           <Suspense fallback={<SuspenseFallback />}><AdminClientsPage /></Suspense>
         } />
         <Route path="clients/new" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminClientNewPage /></Suspense>
+          <Suspense fallback={<SuspenseFallback />}><AdminClientsPage /></Suspense>
         } />
         <Route path="clients/:clientId" element={
           <Suspense fallback={<SuspenseFallback />}><AdminClientCardPage /></Suspense>
