@@ -51,6 +51,18 @@ function ChainBadge({ s, isError }: { s: ChainStatus | undefined; isError: boole
   )
 }
 
+const EVENT_LABELS: Record<string, string> = {
+  login: 'Вход', logout: 'Выход', signup: 'Регистрация',
+  otp_send: 'Отправка кода', otp_verify: 'Проверка кода',
+  oauth_callback: 'Вход через OAuth', password_change: 'Смена пароля',
+  plan_change: 'Смена тарифа', email_change: 'Смена email',
+  model_train: 'Обучение модели', model_delete: 'Удаление модели',
+  upload_delete: 'Удаление загрузки', client_export: 'Экспорт данных',
+  client_delete: 'Закрытие аккаунта', client_purge: 'Стирание ПДн',
+  secret_rotation: 'Ротация секрета', admin_action: 'Действие админа',
+}
+const evLabel = (t: string) => EVENT_LABELS[t] ?? t
+
 export default function AdminAuditPage() {
   const [clientFilter, setClientFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
@@ -105,6 +117,24 @@ export default function AdminAuditPage() {
         <h2 className="font-semibold text-sm">Журнал действий</h2>
         <ChainBadge s={chain} isError={chainError} />
       </div>
+      {/* Проверка целостности: кнопка слева НАД фильтрами, результат справа */}
+      <div className="flex items-center gap-3">
+        <button type="button" className="btn-secondary text-sm shrink-0"
+                disabled={verifyMut.isPending}
+                onClick={() => verifyMut.mutate()}>
+          {verifyMut.isPending ? 'Проверка…' : 'Проверить целостность'}
+        </button>
+        <div className="ml-auto">
+          {verify && (
+            <span className={verify.ok ? 'badge-success' : 'badge-danger'}>
+              {verify.ok
+                ? `цепочка цела (${verify.rows_checked} строк)`
+                : `НАРУШЕНА: строка ${verify.first_bad_id}`}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* #394: все фильтры ОДНОЙ строкой — текстовые поля рядом с
           селектами, без переноса на вторую строку */}
       <form className="flex items-center gap-2"
@@ -119,7 +149,7 @@ export default function AdminAuditPage() {
         <AdminSelect className="w-44 shrink-0" ariaLabel="Фильтр по событию" value={typeFilter}
                      onChange={setTypeFilter}
                      options={[{ value: '', label: 'Все события' },
-                               ...(data?.event_types ?? []).map((t) => ({ value: t, label: t }))]} />
+                               ...(data?.event_types ?? []).map((t) => ({ value: t, label: evLabel(t) }))]} />
         <AdminSelect className="w-28 shrink-0" ariaLabel="Период" value={String(days)}
                      onChange={(v) => setDays(Number(v))}
                      options={[{ value: '1', label: '1 день' },
@@ -133,20 +163,6 @@ export default function AdminAuditPage() {
                value={actorInput}
                onChange={(e) => setActorInput(e.target.value)} />
         <button type="submit" className="btn-secondary text-sm shrink-0">Фильтр</button>
-        <div className="ml-auto flex items-center gap-3">
-          {verify && (
-            <span className={verify.ok ? 'badge-success' : 'badge-danger'}>
-              {verify.ok
-                ? `цепочка цела (${verify.rows_checked} строк)`
-                : `НАРУШЕНА: строка ${verify.first_bad_id}`}
-            </span>
-          )}
-          <button type="button" className="btn-secondary text-sm"
-                  disabled={verifyMut.isPending}
-                  onClick={() => verifyMut.mutate()}>
-            {verifyMut.isPending ? 'Проверка…' : 'Проверить целостность'}
-          </button>
-        </div>
       </form>
 
       <section className="card-paper overflow-hidden">
@@ -176,8 +192,11 @@ export default function AdminAuditPage() {
                     <td className="px-4 py-2 text-xs text-ink-muted whitespace-nowrap">
                       {new Date(e.ts).toLocaleString('ru-RU')}
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs">
-                      {e.event_type}{e.event_subtype ? `/${e.event_subtype}` : ''}
+                    <td className="px-4 py-2 text-xs">
+                      {evLabel(e.event_type)}
+                      {e.event_subtype && (
+                        <span className="font-mono text-ink-subtle"> /{e.event_subtype}</span>
+                      )}
                     </td>
                     <td className="px-4 py-2 font-mono text-xs">{e.client_id ?? '—'}</td>
                     <td className="px-4 py-2 font-mono text-xs">{e.ip ?? '—'}</td>
