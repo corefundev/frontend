@@ -25,6 +25,9 @@ export interface SignupRequest {
   email: string
   desired_client_id: string
   captcha_token?: string
+  // LEG-2 #428: сервер требует явного принятия условий и пишет факт
+  // согласия (с версиями документов) в аудит
+  accepted_terms: boolean
 }
 export interface LoginEmailRequest {
   email: string
