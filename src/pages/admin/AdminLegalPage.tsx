@@ -44,6 +44,9 @@ function LegalDocEditor({ DOC_ID }: { DOC_ID: string }) {
   const [title,   setTitle]   = useState('')
   const [content, setContent] = useState('')
   const [preview, setPreview] = useState(false)
+  // LEG-3 #431: пометка версии как требующей повторного согласия
+  const [requiresReconsent, setRequiresReconsent] = useState(false)
+  const [changeSummary, setChangeSummary] = useState('')
 
   // Seed local state once when query lands. Don't overwrite the user's
   // unsaved edits if the query refetches.
@@ -55,9 +58,15 @@ function LegalDocEditor({ DOC_ID }: { DOC_ID: string }) {
   }, [data, title, content])
 
   const save = useMutation({
-    mutationFn: () => legalApi.update(DOC_ID, { title, content }),
+    mutationFn: () => legalApi.update(DOC_ID, {
+      title, content,
+      requires_reconsent: requiresReconsent,
+      change_summary: changeSummary.trim() || undefined,
+    }),
     onSuccess: (resp) => {
       toast.success(`Сохранено (версия ${resp.version})`)
+      setRequiresReconsent(false)
+      setChangeSummary('')
       qc.invalidateQueries({ queryKey: ['legal', DOC_ID] })
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось сохранить')),
@@ -123,9 +132,30 @@ function LegalDocEditor({ DOC_ID }: { DOC_ID: string }) {
         onChange={(e) => setContent(e.target.value)}
       />
 
+      {/* LEG-3 #431: сигнал повторного согласия для НОВОЙ версии */}
+      <div className="mt-4 rounded-lg border border-surface-border p-4 space-y-2">
+        <label className="flex items-center gap-2 text-sm select-none">
+          <input type="checkbox" checked={requiresReconsent}
+                 onChange={(e) => setRequiresReconsent(e.target.checked)} />
+          Эта версия требует повторного согласия пользователей
+        </label>
+        {requiresReconsent && (
+          <input className="input text-sm" maxLength={1000}
+                 placeholder="Что изменилось (кратко — покажем пользователям)"
+                 value={changeSummary}
+                 onChange={(e) => setChangeSummary(e.target.value)} />
+        )}
+        <p className="text-xs text-ink-subtle">
+          Сбор повторных согласий (модалка на входе) — следующий этап LEG-3;
+          пометка версии уже фиксируется сейчас.
+        </p>
+      </div>
+
       <p className="text-xs text-ink-subtle mt-2">
         Текущая версия: {data?.version}. Последнее обновление:{' '}
         {data ? new Date(data.updated_at).toLocaleString('ru-RU') : '—'}
+        {typeof data?.reconsent_required_since === 'number' &&
+          ` · повторное согласие требуется с версии ${data.reconsent_required_since}`}
       </p>
 
       {preview && (
