@@ -75,6 +75,10 @@ const PrivacyPage       = lazy(() => import('./pages/PrivacyPage'))
 const NewsPage          = lazy(() => import('./pages/NewsPage'))
 const NewsPostPage      = lazy(() => import('./pages/NewsPostPage'))
 const NewsClientPage    = lazy(() => import('./pages/client/NewsClientPage'))
+const HelpPage          = lazy(() => import('./pages/HelpPage'))
+const HelpCategoryPage  = lazy(() => import('./pages/HelpCategoryPage'))
+const HelpArticlePage   = lazy(() => import('./pages/HelpArticlePage'))
+const HelpClientPage    = lazy(() => import('./pages/client/HelpClientPage'))
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const isAuthed  = useAuthStore((s) => s.isAuthenticated())
@@ -175,6 +179,18 @@ export default function App() {
         <Suspense fallback={<SuspenseFallback />}><NewsPostPage /></Suspense>
       } />
 
+      {/* HC-4 (#410): публичная база знаний — видна без логина.
+          Статья канонично /help/a/{slug} — не пересекается с категориями. */}
+      <Route path="/help" element={
+        <Suspense fallback={<SuspenseFallback />}><HelpPage /></Suspense>
+      } />
+      <Route path="/help/a/:artSlug" element={
+        <Suspense fallback={<SuspenseFallback />}><HelpArticlePage /></Suspense>
+      } />
+      <Route path="/help/:catSlug" element={
+        <Suspense fallback={<SuspenseFallback />}><HelpCategoryPage /></Suspense>
+      } />
+
       {/* Public landing — / показывает лендинг и неавторизованным, и
           авторизованным (для последних шапка ведёт в /app). */}
       <Route path="/" element={<LandingPage />} />
@@ -252,6 +268,14 @@ export default function App() {
           element={
             <Suspense fallback={<SuspenseFallback />}>
               <NewsClientPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="help/*"
+          element={
+            <Suspense fallback={<SuspenseFallback />}>
+              <HelpClientPage />
             </Suspense>
           }
         />
