@@ -122,14 +122,14 @@ export function HelpCategoriesGrid({ basePath }: { basePath: string }) {
     queryFn: () => helpPublicApi.categories(),
   })
   if (isLoading) {
-    return <div className="grid sm:grid-cols-2 gap-3">
-      {[0, 1, 2, 3].map((i) => <div key={i} className="h-24 rounded-lg bg-surface-muted animate-pulse" />)}
+    return <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {[0, 1, 2].map((i) => <div key={i} className="h-24 rounded-lg bg-surface-muted animate-pulse" />)}
     </div>
   }
   if (isError) return <p className="text-sm text-danger">Не удалось загрузить категории.</p>
   if (!cats?.length) return <p className="text-sm text-ink-muted">Статьи готовятся к публикации.</p>
   return (
-    <div className="grid sm:grid-cols-2 gap-3">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {cats.map((c) => (
         <Link key={c.slug} to={`${basePath}/${encodeURIComponent(c.slug)}`}
               className="block rounded-lg border border-surface-border bg-surface p-4 hover:border-brand-500/40 hover:shadow-paper transition-shadow">
