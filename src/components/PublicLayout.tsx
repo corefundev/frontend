@@ -108,7 +108,7 @@ function PublicFooter() {
   // внизу полоса © + правовые ссылки. Палитра — НАША, без изменений.
   return (
     <footer className="bg-[#f1f5f9] border-t border-ink/10 mt-auto">
-      <div className="mx-auto max-w-6xl px-5 lg:px-8 py-12">
+      <div className="mx-auto max-w-7xl px-5 lg:px-8 py-12">
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-20">
           {/* ── бренд ── */}
           <div className="max-w-sm shrink-0">

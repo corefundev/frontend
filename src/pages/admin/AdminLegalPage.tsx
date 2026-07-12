@@ -48,7 +48,7 @@ export default function AdminLegalPage() {
   if (isError) {
     // Editing over a failed load would let the operator save an empty doc.
     return (
-      <div className="p-6 max-w-5xl mx-auto">
+      <div className="max-w-5xl">
         <AdminQueryError what="правовые документы" onRetry={() => void refetch()} />
       </div>
     )
@@ -59,7 +59,7 @@ export default function AdminLegalPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Юридические документы</h1>
