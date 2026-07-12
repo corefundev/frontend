@@ -311,67 +311,80 @@ export default function AdminClientCardPage() {
               </select>
             </div>
 
-            {/* ПДн 152-ФЗ — статус и отсчёт авто-стирания */}
-            <div>
-              <h3 className="font-semibold text-sm mb-2">Персональные данные (152-ФЗ)</h3>
-              {c.status === 'purged' ? (
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="badge-neutral">данные стёрты</span>
-                  <span className="text-ink-muted">аккаунт анонимизирован</span>
-                </div>
-              ) : c.deleted_at ? (
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="badge-warn">аккаунт закрыт</span>
-                  <span className="text-ink-muted">
-                    закрыт {new Date(c.deleted_at).toLocaleDateString('ru-RU')}
-                    {typeof c.pii_retention_days === 'number' && (() => {
-                      const left = Math.ceil(
-                        (new Date(c.deleted_at!).getTime() + c.pii_retention_days * 86400000
-                          - Date.now()) / 86400000)
-                      return ` · авто-стирание через ${Math.max(0, left)} дн. · кнопка «Стереть данные…» — в шапке`
-                    })()}
-                  </span>
-                </div>
-              ) : (
-                <div className="text-sm text-ink-muted">
-                  Аккаунт открыт. Немедленное стирание доступно только после закрытия аккаунта клиентом.
-                </div>
-              )}
-            </div>
+            {/* Отдельные блоки-секции (стиль «Базы знаний»): 152-ФЗ на
+                всю ширину, ниже — Активность и Уведомления бок о бок */}
+            <section className="rounded-lg border border-surface-border overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-surface-border font-semibold text-[13px]">
+                Персональные данные (152-ФЗ)
+              </div>
+              <div className="px-4 py-3">
+                {c.status === 'purged' ? (
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="badge-neutral">данные стёрты</span>
+                    <span className="text-ink-muted">аккаунт анонимизирован</span>
+                  </div>
+                ) : c.deleted_at ? (
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="badge-warn">аккаунт закрыт</span>
+                    <span className="text-ink-muted">
+                      закрыт {new Date(c.deleted_at).toLocaleDateString('ru-RU')}
+                      {typeof c.pii_retention_days === 'number' && (() => {
+                        const left = Math.ceil(
+                          (new Date(c.deleted_at!).getTime() + c.pii_retention_days * 86400000
+                            - Date.now()) / 86400000)
+                        return ` · авто-стирание через ${Math.max(0, left)} дн. · кнопка «Стереть данные…» — в шапке`
+                      })()}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-sm text-ink-muted">
+                    Аккаунт открыт. Немедленное стирание доступно только после закрытия аккаунта клиентом.
+                  </div>
+                )}
+              </div>
+            </section>
 
-            <div className="grid grid-cols-2 gap-5">
-              <div>
-                <h3 className="font-semibold text-sm mb-2">Активность (входы)</h3>
-                {!data.recent_logins.length ? (
-                  <div className="text-sm text-ink-muted">Входов не зафиксировано</div>
-                ) : (
-                  <ul className="divide-y divide-surface-border text-sm">
-                    {data.recent_logins.map((l, i) => (
-                      <li key={i} className="py-1.5 flex justify-between">
-                        <span className="text-xs text-ink-muted">{new Date(l.at).toLocaleString('ru-RU')}</span>
-                        <span className="font-mono text-xs">{l.ip ?? '—'}{l.via ? ` · ${l.via}` : ''}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm mb-2">Уведомления (последние)</h3>
-                {!inbox?.notifications?.length ? (
-                  <div className="text-sm text-ink-muted">Пусто</div>
-                ) : (
-                  <ul className="divide-y divide-surface-border text-sm">
-                    {inbox.notifications.map((n) => (
-                      <li key={n.id} className="py-1.5">
-                        <span className="text-xs text-ink-muted mr-2">
-                          {new Date(n.created_at).toLocaleDateString('ru-RU')}
-                        </span>
-                        {n.title}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+            <div className="grid grid-cols-2 gap-4 items-start">
+              <section className="rounded-lg border border-surface-border overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-surface-border font-semibold text-[13px]">
+                  Активность (входы)
+                </div>
+                <div className="px-4 py-2">
+                  {!data.recent_logins.length ? (
+                    <div className="text-sm text-ink-muted py-1.5">Входов не зафиксировано</div>
+                  ) : (
+                    <ul className="divide-y divide-surface-border text-sm">
+                      {data.recent_logins.map((l, i) => (
+                        <li key={i} className="py-1.5 flex justify-between">
+                          <span className="text-xs text-ink-muted">{new Date(l.at).toLocaleString('ru-RU')}</span>
+                          <span className="font-mono text-xs">{l.ip ?? '—'}{l.via ? ` · ${l.via}` : ''}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </section>
+              <section className="rounded-lg border border-surface-border overflow-hidden">
+                <div className="px-4 py-2.5 border-b border-surface-border font-semibold text-[13px]">
+                  Уведомления (последние)
+                </div>
+                <div className="px-4 py-2">
+                  {!inbox?.notifications?.length ? (
+                    <div className="text-sm text-ink-muted py-1.5">Пусто</div>
+                  ) : (
+                    <ul className="divide-y divide-surface-border text-sm">
+                      {inbox.notifications.map((n) => (
+                        <li key={n.id} className="py-1.5">
+                          <span className="text-xs text-ink-muted mr-2">
+                            {new Date(n.created_at).toLocaleDateString('ru-RU')}
+                          </span>
+                          {n.title}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </section>
             </div>
           </div>
         )}

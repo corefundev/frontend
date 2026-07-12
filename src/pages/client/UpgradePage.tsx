@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
+import AdminConfirmDialog, { type ConfirmSpec } from '../../components/AdminConfirmDialog'
 import { useAuthStore } from '../../features/auth/store'
 import { useUsage } from '../../features/plans/useUsage'
 import { apiClient, errorMessage } from '../../shared/api/client'
@@ -92,10 +93,18 @@ export default function UpgradePage() {
     },
   })
 
+  // Стилизованное подтверждение вместо нативного confirm (вид системного
+  // окна ОС выбивался из дизайна — тот же компонент, что в консоли).
+  const [confirmSpec, setConfirmSpec] = useState<ConfirmSpec | null>(null)
+
   function handlePick(plan: PlanId) {
     if (plan === currentPlan) return
-    if (!confirm(`Сменить тариф на ${plan.toUpperCase()}? (Изменение применяется сразу)`)) return
-    upgradeMut.mutate(plan)
+    setConfirmSpec({
+      title: 'Смена тарифа',
+      body: `Сменить тариф на ${plan.toUpperCase()}? Изменение применяется сразу.`,
+      actionLabel: 'Сменить',
+      onConfirm: () => upgradeMut.mutate(plan),
+    })
   }
 
   return (
@@ -185,6 +194,7 @@ export default function UpgradePage() {
         и Промо-режим (Business). При даунгрейде модель не пересчитывается
         — следующее обучение применит лимиты нового тарифа.
       </div>
+      <AdminConfirmDialog spec={confirmSpec} onClose={() => setConfirmSpec(null)} />
     </div>
   )
 }
