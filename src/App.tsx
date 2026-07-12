@@ -187,6 +187,14 @@ export default function App() {
         }
       />
       <Route
+        path="/requisites"
+        element={
+          <Suspense fallback={<SuspenseFallback />}>
+            <LegalDocPage docId="requisites" />
+          </Suspense>
+        }
+      />
+      <Route
         path="/privacy"
         element={
           <Suspense fallback={<SuspenseFallback />}>

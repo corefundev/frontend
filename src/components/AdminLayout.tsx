@@ -48,6 +48,7 @@ const NAV_GROUPS: {
     { to: '/admin/legal/terms', label: 'Terms', end: false },
     { to: '/admin/legal/consent', label: 'Согласие ПДн', end: false },
     { to: '/admin/legal/pdn', label: 'Политика ПДн', end: false },
+    { to: '/admin/legal/requisites', label: 'Реквизиты', end: false },
   ] },
 ]
 
@@ -68,6 +69,7 @@ const TITLES: Record<string, string> = {
   '/admin/legal/terms':   'Terms',
   '/admin/legal/consent': 'Согласие на обработку ПДн',
   '/admin/legal/pdn':     'Политика обработки ПДн (152-ФЗ)',
+  '/admin/legal/requisites': 'Реквизиты',
   '/admin/system':        'Система',
 }
 
