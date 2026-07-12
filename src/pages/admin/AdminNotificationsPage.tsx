@@ -56,7 +56,7 @@ export default function AdminNotificationsPage() {
     body.length <= 2000 && broadcastArmed && !sendMut.isPending
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Уведомления</h1>
         <p className="text-ink-muted mt-1 text-sm">
@@ -137,7 +137,7 @@ export default function AdminNotificationsPage() {
         </button>
       </form>
 
-      <div className="card-paper overflow-hidden max-w-4xl">
+      <div className="card-paper overflow-hidden max-w-5xl">
         <div className="px-5 py-3 border-b border-surface-border font-semibold text-sm">
           История отправок
         </div>

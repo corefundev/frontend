@@ -28,7 +28,7 @@ export default function AdminSecurityPage() {
 
   if (isError) {
     return (
-      <div className="max-w-4xl">
+      <div className="max-w-5xl">
         <AdminQueryError what="данные безопасности" onRetry={() => void refetch()} />
       </div>
     )
@@ -36,7 +36,7 @@ export default function AdminSecurityPage() {
   if (!data) return <div className="h-40" aria-hidden />
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       <div className="grid grid-cols-3 gap-4">
         <div className="card-paper p-5">
           <div className="text-sm font-medium text-ink mb-2">ADMIN_API_KEY</div>

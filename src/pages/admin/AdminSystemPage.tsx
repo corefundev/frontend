@@ -94,7 +94,7 @@ export default function AdminSystemPage() {
 
   if (isError) {
     return (
-      <div className="max-w-4xl">
+      <div className="max-w-5xl">
         <AdminQueryError what="состояние системы" onRetry={() => void refetch()} />
       </div>
     )
@@ -102,7 +102,7 @@ export default function AdminSystemPage() {
   if (!data) return <div className="h-40" aria-hidden />
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       <section className="card-paper overflow-hidden">
         <div className="px-5 py-3 border-b border-surface-border font-semibold text-sm flex items-center gap-2">
           Алерты
