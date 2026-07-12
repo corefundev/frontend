@@ -1,4 +1,6 @@
 import { Fragment } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { newsPublicApi } from '../features/news/publicApi'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../features/auth/store'
 import { NotificationBell } from '../features/notifications/NotificationBell'
@@ -24,6 +26,7 @@ const NAV = [
   { to: 'training/history', label: 'История обучений', pageTitle: 'История обучений', icon: IconHistory, minPlan: 'free' },
   { to: 'scenarios',   label: 'Сценарии',      pageTitle: 'Сценарии',           icon: IconSplit,   minPlan: 'business' },
   { to: 'promo',       label: 'Промо',         pageTitle: 'Промо-планировщик',  icon: IconSpark,   minPlan: 'business' },
+  { to: 'news',        label: 'Новости',       pageTitle: 'Новости',            icon: IconMegaphone, minPlan: 'free'   },
   { to: 'settings',    label: 'Настройки',     pageTitle: 'Настройки модели',   icon: IconSlider,  minPlan: 'free'     },
   { to: 'upgrade',     label: 'Апгрейд',       pageTitle: 'Тариф',              icon: IconStar,    minPlan: 'free'     },
 ] as const
@@ -42,6 +45,14 @@ const ACCOUNT_NAV = [
 const PLAN_RANK: Record<PlanId, number> = { free: 0, start: 1, business: 2 }
 
 export default function AppLayout() {
+  // NEWS-7 (#409): бейдж непрочитанных новостей (тихий поллинг)
+  const { data: newsUnread = 0 } = useQuery({
+    queryKey: ['news-unread'],
+    queryFn: () => newsPublicApi.unreadCount(),
+    refetchInterval: 300_000,
+    meta: { silent: true },
+    retry: 1,
+  })
   const location = useLocation()
   const clientId = useAuthStore((s) => s.clientId)
   const { data: usage } = useUsage()
@@ -137,6 +148,11 @@ export default function AppLayout() {
               <>
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="flex-1 truncate">{label}</span>
+                {to === 'news' && newsUnread > 0 && (
+                  <span className="px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold tabular-nums">
+                    {newsUnread}
+                  </span>
+                )}
                 {locked && <LockTag required={minPlan} compact />}
               </>
             )
@@ -223,6 +239,17 @@ export default function AppLayout() {
 
 // ── Icons — keeping them inline keeps the bundle tiny ──────────────────
 type IconProps = { className?: string }
+function IconMegaphone({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M3 11v3a1 1 0 0 0 1 1h2l3.5 4.5a1 1 0 0 0 1.8-.6V5.1a1 1 0 0 0-1.8-.6L6 9H4a1 1 0 0 0-1 1z" />
+      <path d="M15 8.5a5 5 0 0 1 0 7" />
+      <path d="M17.7 5.5a9 9 0 0 1 0 13" />
+    </svg>
+  )
+}
+
 function IconHome({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"

@@ -57,6 +57,8 @@ const OAuthReturnPage   = lazy(() => import('./pages/OAuthReturnPage'))
 const AdminClientsPage  = lazy(() => import('./pages/admin/AdminClientsPage'))
 const AdminLegalPage    = lazy(() => import('./pages/admin/AdminLegalPage'))
 const AdminNotificationsPage = lazy(() => import('./pages/admin/AdminNotificationsPage'))
+const AdminNewsPage = lazy(() => import('./pages/admin/AdminNewsPage'))
+const AdminNewsEditorPage = lazy(() => import('./pages/admin/AdminNewsEditorPage'))
 const AdminHomePage = lazy(() => import('./pages/admin/AdminHomePage'))
 const AdminPlansPage = lazy(() => import('./pages/admin/AdminPlansPage'))
 const AdminTrainingPage = lazy(() => import('./pages/admin/AdminTrainingPage'))
@@ -68,6 +70,9 @@ const AdminClientCardPage = lazy(() => import('./pages/admin/AdminClientCardPage
 const AdminClientNewPage = lazy(() => import('./pages/admin/AdminClientNewPage'))
 const AdminLayout = lazy(() => import('./components/AdminLayout'))
 const PrivacyPage       = lazy(() => import('./pages/PrivacyPage'))
+const NewsPage          = lazy(() => import('./pages/NewsPage'))
+const NewsPostPage      = lazy(() => import('./pages/NewsPostPage'))
+const NewsClientPage    = lazy(() => import('./pages/client/NewsClientPage'))
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const isAuthed  = useAuthStore((s) => s.isAuthenticated())
@@ -157,6 +162,12 @@ export default function App() {
         element={
           <Suspense fallback={<SuspenseFallback />}>
             <PrivacyPage />
+      <Route path="/news" element={
+        <Suspense fallback={<SuspenseFallback />}><NewsPage /></Suspense>
+      } />
+      <Route path="/news/:slug" element={
+        <Suspense fallback={<SuspenseFallback />}><NewsPostPage /></Suspense>
+      } />
           </Suspense>
         }
       />
@@ -230,6 +241,14 @@ export default function App() {
           element={
             <Suspense fallback={<SuspenseFallback />}>
               <ForecastsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="news/*"
+          element={
+            <Suspense fallback={<SuspenseFallback />}>
+              <NewsClientPage />
             </Suspense>
           }
         />
@@ -318,6 +337,15 @@ export default function App() {
         } />
         <Route path="notifications" element={
           <Suspense fallback={<SuspenseFallback />}><AdminNotificationsPage /></Suspense>
+        } />
+        <Route path="news" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminNewsPage /></Suspense>
+        } />
+        <Route path="news/new" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminNewsEditorPage /></Suspense>
+        } />
+        <Route path="news/:postId" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminNewsEditorPage /></Suspense>
         } />
         <Route path="legal" element={
           <Suspense fallback={<SuspenseFallback />}><AdminLegalPage /></Suspense>
