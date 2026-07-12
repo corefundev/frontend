@@ -34,7 +34,7 @@ function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
   //   • Регистрация CTA text   #f8fafc  (slate-50)
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-ink/10">
-      <div className="mx-auto max-w-6xl px-5 lg:px-8 h-16 flex items-center justify-between text-sm leading-5 text-[#020817]">
+      <div className="mx-auto max-w-7xl px-5 lg:px-8 h-16 flex items-center justify-between text-sm leading-5 text-[#020817]">
         <Link to="/" className="flex items-center gap-2.5">
           <div className="h-8 w-8 rounded bg-brand-500 grid place-items-center text-white font-bold text-sm">
             S

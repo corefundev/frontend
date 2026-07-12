@@ -76,20 +76,20 @@ export default function AdminNotificationsPage() {
         onSubmit={(e) => { e.preventDefault(); if (canSend) sendMut.mutate() }}
       >
         <div className="grid grid-cols-2 gap-4">
-          <label className="block text-sm">
+          <div className="block text-sm">
             <span className="text-ink-muted">Получатель</span>
             <AdminSelect className="mt-1 w-full" ariaLabel="Получатель" value={target}
                          onChange={(v) => { setTarget(v); setConfirmAll('') }}
                          options={[{ value: 'all', label: `Все клиенты (${clients.length})` },
                                    ...clients.map((c) => ({ value: c.client_id, label: c.client_id }))]} />
-          </label>
-          <label className="block text-sm">
+          </div>
+          <div className="block text-sm">
             <span className="text-ink-muted">Важность</span>
             <AdminSelect className="mt-1 w-full" ariaLabel="Важность" value={severity}
                          onChange={(v) => setSeverity(v as 'info' | 'warning')}
                          options={[{ value: 'info', label: 'Информация' },
                                    { value: 'warning', label: 'Предупреждение' }]} />
-          </label>
+          </div>
         </div>
 
         <label className="block text-sm">
