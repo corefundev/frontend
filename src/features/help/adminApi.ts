@@ -40,6 +40,26 @@ export interface HelpRevision {
   created_at: string
 }
 
+export interface HelpArticleAnalytics {
+  id: string
+  slug: string
+  title: string
+  status: HelpStatus
+  view_count: number
+  helpful: number
+  total: number
+  helpful_ratio: number | null
+}
+
+export interface HelpFeedbackComment {
+  article_id: string
+  helpful: boolean
+  comment: string
+  created_at: string
+  slug: string | null
+  title: string | null
+}
+
 export interface HelpSearchStat {
   query: string
   hits: number
@@ -129,6 +149,14 @@ export const helpAdminApi = {
     const { data } = await apiClient.post<{ body_html: string }>(
       '/admin/help/preview', { body_md })
     return data.body_html
+  },
+  // HC-6 (#337): аналитика контента
+  async analytics() {
+    const { data } = await apiClient.get<{
+      articles: HelpArticleAnalytics[]
+      comments: HelpFeedbackComment[]
+    }>('/admin/help/analytics')
+    return data
   },
   // HC-5 (#336): аналитика поиска
   async searchInsights() {

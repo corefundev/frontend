@@ -193,12 +193,95 @@ export default function AdminHelpPage() {
           </div>
         </section>
       </div>
+      {/* ── HC-6: аналитика контента ── */}
+      <ContentAnalyticsSection />
       {/* ── HC-5: аналитика поиска ── */}
       <SearchInsightsSection />
       <div className="text-xs text-ink-muted">
         Публичный центр показывает только опубликованные статьи; категории
         без опубликованных статей на витрине скрываются автоматически.
       </div>
+    </div>
+  )
+}
+
+// HC-6: просмотры/голоса/доля «полезно» (низкорейтинговые сверху) +
+// последние комментарии читателей. Ratio null (нет голосов) — «—».
+function ContentAnalyticsSection() {
+  const { data, isError } = useQuery({
+    queryKey: ['admin-help-analytics'],
+    queryFn: () => helpAdminApi.analytics(),
+  })
+  if (isError) return null
+  const rows = [...(data?.articles ?? [])].sort((a, b) => {
+    if (a.helpful_ratio === null && b.helpful_ratio === null) return b.view_count - a.view_count
+    if (a.helpful_ratio === null) return 1
+    if (b.helpful_ratio === null) return -1
+    return a.helpful_ratio - b.helpful_ratio
+  })
+  const pct = (r: number | null) => (r === null ? '—' : `${Math.round(r * 100)}%`)
+  return (
+    <div className="grid grid-cols-[1.4fr_1fr] gap-3 items-start">
+      <section className="card-paper overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-surface-border flex items-baseline gap-2">
+          <span className="font-semibold text-[13px]">Аналитика контента</span>
+          <span className="text-[11px] text-ink-subtle">низкорейтинговые — сверху</span>
+        </div>
+        <div className="overflow-x-auto max-h-80 overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className={THEAD_CLS}>
+              <tr>
+                <th className="px-4 py-2 text-left">Статья</th>
+                <th className="px-4 py-2 text-right">Просмотры</th>
+                <th className="px-4 py-2 text-right">Голоса</th>
+                <th className="px-4 py-2 text-right">Полезно</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-surface-border">
+              {!rows.length ? (
+                <StateRow cols={4} kind="empty" what="статистику" />
+              ) : rows.map((r) => (
+                <tr key={r.id} className="hover:bg-surface-muted/60">
+                  <td className="px-4 py-2">
+                    <Link to={`/admin/help/${encodeURIComponent(r.id)}`}
+                          className="hover:underline">{r.title}</Link>
+                    {r.status !== 'published' && (
+                      <span className="badge-neutral ml-2">{r.status === 'draft' ? 'черновик' : 'архив'}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono text-xs tabular-nums">{r.view_count}</td>
+                  <td className="px-4 py-2 text-right font-mono text-xs tabular-nums">{r.total}</td>
+                  <td className={`px-4 py-2 text-right font-mono text-xs tabular-nums ${
+                    r.helpful_ratio !== null && r.helpful_ratio < 0.5 ? 'text-danger' : ''}`}>
+                    {pct(r.helpful_ratio)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="card-paper overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-surface-border font-semibold text-[13px]">
+          Комментарии читателей
+        </div>
+        {!data?.comments.length ? (
+          <div className="px-4 py-4 text-sm text-ink-muted">Комментариев пока нет</div>
+        ) : (
+          <ul className="divide-y divide-surface-border max-h-80 overflow-y-auto">
+            {data.comments.map((c, i) => (
+              <li key={i} className="px-4 py-2.5">
+                <div className="text-[13px]">{c.comment}</div>
+                <div className="text-[11px] text-ink-subtle mt-0.5">
+                  {c.helpful ? '👍 полезно' : '👎 не помогло'} ·{' '}
+                  {c.title ?? c.article_id} ·{' '}
+                  {new Date(c.created_at).toLocaleDateString('ru-RU')}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }
