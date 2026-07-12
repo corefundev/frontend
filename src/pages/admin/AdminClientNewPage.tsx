@@ -87,7 +87,7 @@ export default function AdminClientNewPage() {
         </div>
         <div>
           <label className="label" htmlFor="plan">Тариф</label>
-          <AdminSelect ariaLabel="Тариф" value={form.plan}
+          <AdminSelect ariaLabel="Тариф" value={form.plan ?? 'free'}
                        onChange={(v) => setForm({ ...form, plan: v as PlanId })}
                        options={plans.map((p) => ({
                          value: p.id, label: `${p.display_name} · ${p.model_display_name}` }))} />
