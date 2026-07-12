@@ -405,3 +405,8 @@ body {
   border: 1px solid rgb(var(--surface-border)); padding: 0.35rem 0.6rem;
 }
 .cms-body hr { border-color: rgb(var(--surface-border)); margin: 1rem 0; }
+
+/* Невидимый скроллбар (сайдбар консоли): прокрутка работает, полоса не
+   рисуется — на коротких экранах пункты остаются достижимы. */
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
