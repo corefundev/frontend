@@ -30,6 +30,7 @@ const SECTIONS: Item[] = [
   { kind: 'Разделы', label: 'Обучение', to: '/admin/training' },
   { kind: 'Разделы', label: 'Данные', to: '/admin/data' },
   { kind: 'Разделы', label: 'Уведомления', to: '/admin/notifications' },
+  { kind: 'Разделы', label: 'Новости', to: '/admin/news' },
   { kind: 'Разделы', label: 'Аудит', to: '/admin/audit' },
   { kind: 'Разделы', label: 'Безопасность', to: '/admin/security' },
   { kind: 'Разделы', label: 'Система', to: '/admin/system' },
@@ -41,6 +42,7 @@ const ACTIONS: Item[] = [
   { kind: 'Действия', label: 'Reconcile зависших тренировок', hint: 'Обучение', to: '/admin/training' },
   { kind: 'Действия', label: 'Проверить консистентность хранилища', hint: 'Данные', to: '/admin/data' },
   { kind: 'Действия', label: 'Новый анонс клиентам', hint: 'Уведомления', to: '/admin/notifications' },
+  { kind: 'Действия', label: 'Новый пост в «Новости»', hint: 'Новости', to: '/admin/news/new' },
   { kind: 'Действия', label: 'Проверить целостность audit-цепочки', hint: 'Аудит', to: '/admin/audit' },
 ]
 
