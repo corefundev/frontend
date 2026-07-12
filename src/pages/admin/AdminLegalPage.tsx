@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 
 import { useParams } from 'react-router-dom'
 
-import { legalApi } from '../../features/legal/api'
+import { legalApi, legalRevisionsApi } from '../../features/legal/api'
 import SimpleMarkdown from '../../components/SimpleMarkdown'
 import { errorMessage } from '../../shared/api/client'
 import AdminQueryError from './AdminQueryError'
@@ -158,6 +158,10 @@ function LegalDocEditor({ DOC_ID }: { DOC_ID: string }) {
           ` · повторное согласие требуется с версии ${data.reconsent_required_since}`}
       </p>
 
+      {/* LEG-3 #431: история версий — тексты снапшотятся с миграции 027;
+          более ранние версии невосстановимы (задокументировано) */}
+      <RevisionHistory docId={DOC_ID} currentVersion={data?.version} />
+
       {preview && (
         <div className="card p-6 mt-6">
           <h2 className="text-sm font-semibold text-ink-muted mb-4 uppercase tracking-wider">
@@ -167,5 +171,52 @@ function LegalDocEditor({ DOC_ID }: { DOC_ID: string }) {
         </div>
       )}
     </div>
+  )
+}
+
+
+function RevisionHistory({ docId, currentVersion }: {
+  docId: string
+  currentVersion?: number
+}) {
+  const { data: revs = [] } = useQuery({
+    queryKey: ['legal-revisions', docId],
+    queryFn: () => legalRevisionsApi.list(docId),
+    staleTime: 60_000,
+  })
+  const [openVersion, setOpenVersion] = useState<number | null>(null)
+  const { data: openRev } = useQuery({
+    queryKey: ['legal-revision', docId, openVersion],
+    queryFn: () => legalRevisionsApi.get(docId, openVersion as number),
+    enabled: openVersion !== null,
+  })
+  if (!revs.length) return null
+  return (
+    <section className="mt-6 rounded-lg border border-surface-border overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-surface-border font-semibold text-[13px]">
+        История версий
+      </div>
+      <ul className="divide-y divide-surface-border">
+        {revs.map((r) => (
+          <li key={r.version} className="px-4 py-2.5">
+            <button type="button" className="w-full text-left flex items-center gap-3 text-[13px]"
+                    onClick={() => setOpenVersion(openVersion === r.version ? null : r.version)}>
+              <span className="font-mono font-semibold">v{r.version}</span>
+              {r.version === currentVersion && <span className="badge-success">текущая</span>}
+              {r.requires_reconsent && <span className="badge-warn">re-consent</span>}
+              {r.change_summary && <span className="text-ink-muted truncate">{r.change_summary}</span>}
+              <span className="text-[11.5px] text-ink-subtle ml-auto whitespace-nowrap">
+                {new Date(r.created_at).toLocaleString('ru-RU')}{r.created_by ? ` · ${r.created_by}` : ''}
+              </span>
+            </button>
+            {openVersion === r.version && openRev && (
+              <pre className="mt-2 text-[11px] font-mono whitespace-pre-wrap max-h-64 overflow-y-auto rounded-md bg-surface-muted p-3 text-ink-muted">
+                {openRev.content}
+              </pre>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
