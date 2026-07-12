@@ -25,7 +25,12 @@ interface Overview {
   client: ClientRecord & { deleted_at?: string | null; pii_retention_days?: number }
   // LEG-2 #428: факт согласия при регистрации (null = записи нет —
   // клиент старше учёта согласий; undefined = старый бэкенд)
-  consent?: { at: string; doc_versions: Record<string, number> } | null
+  consent?: {
+    at: string
+    last_at?: string
+    doc_versions: Record<string, number>
+    outdated?: { doc_id: string; accepted_version: number; current_version: number }[]
+  } | null
   recent_logins: { at: string; ip: string | null; via: string | null }[]
   training_runs: {
     run_id: string; status: string; ended_at: string | null
@@ -349,13 +354,26 @@ export default function AdminClientCardPage() {
                     <span className="text-ink-muted">Согласие на обработку:</span>
                     {data.consent ? (
                       <>
-                        <span className="badge-success">принято</span>
+                        {data.consent.outdated?.length ? (
+                          <span className="badge-warn">⚠️ требуется повторное</span>
+                        ) : (
+                          <span className="badge-success">принято</span>
+                        )}
                         <span className="text-ink-muted">
                           {new Date(data.consent.at).toLocaleString('ru-RU')}
+                          {data.consent.last_at && data.consent.last_at !== data.consent.at &&
+                            ` · обновлено ${new Date(data.consent.last_at).toLocaleString('ru-RU')}`}
                           {Object.keys(data.consent.doc_versions).length > 0 &&
                             ' · версии: ' + Object.entries(data.consent.doc_versions)
                               .map(([d, v]) => `${d} v${v}`).join(', ')}
                         </span>
+                        {!!data.consent.outdated?.length && (
+                          <span className="text-warn text-xs w-full">
+                            Рассинхрон: {data.consent.outdated
+                              .map((o) => `${o.doc_id} (принято v${o.accepted_version}, текущая v${o.current_version})`)
+                              .join('; ')} — клиент увидит модалку при следующем входе
+                          </span>
+                        )}
                       </>
                     ) : (
                       <span className="text-ink-subtle">
