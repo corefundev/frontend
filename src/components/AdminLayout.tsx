@@ -43,7 +43,10 @@ const NAV_GROUPS: {
     { to: '/admin/security', label: 'Безопасность', end: false },
     { to: '/admin/system', label: 'Система', end: false, badge: 'firing' },
   ] },
-  { header: 'Прочее', items: [{ to: '/admin/legal', label: 'Юр. документы', end: false }] },
+  { header: 'Документы', items: [
+    { to: '/admin/legal', label: 'Политика конфиденциальности', end: true },
+    { to: '/admin/legal/terms', label: 'Пользовательское соглашение', end: false },
+  ] },
 ]
 
 const TITLES: Record<string, string> = {
@@ -59,7 +62,8 @@ const TITLES: Record<string, string> = {
   '/admin/help/new': 'Новая статья',
   '/admin/audit':         'Аудит',
   '/admin/security':      'Безопасность',
-  '/admin/legal':         'Юридические документы',
+  '/admin/legal':         'Политика конфиденциальности',
+  '/admin/legal/terms':   'Пользовательское соглашение',
   '/admin/system':        'Система',
 }
 

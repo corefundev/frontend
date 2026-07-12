@@ -8,14 +8,21 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
+import { useParams } from 'react-router-dom'
+
 import { legalApi } from '../../features/legal/api'
 import SimpleMarkdown from '../../components/SimpleMarkdown'
 import { errorMessage } from '../../shared/api/client'
 import AdminQueryError from './AdminQueryError'
 
-const DOC_ID = 'privacy'
+const DOC_TITLES: Record<string, string> = {
+  privacy: 'Политика конфиденциальности',
+  terms: 'Пользовательское соглашение',
+}
 
 export default function AdminLegalPage() {
+  const { docId = 'privacy' } = useParams()
+  const DOC_ID = docId in DOC_TITLES ? docId : 'privacy'
   const qc = useQueryClient()
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -62,9 +69,11 @@ export default function AdminLegalPage() {
     <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Юридические документы</h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Markdown: # H1, ## H2, ### H3, **bold**, *italic*, - bullet
+          {/* заголовок раздела рендерит топ-бар консоли (TITLES) —
+              в теле не дублируем, только подсказка по разметке */}
+          <p className="text-sm text-ink-muted">
+            Публичный документ «{DOC_TITLES[DOC_ID]}». Markdown: # H1, ## H2,
+            ### H3, **bold**, *italic*, - bullet
           </p>
         </div>
         <div className="flex gap-2">

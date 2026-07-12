@@ -72,6 +72,7 @@ const AdminClientCardPage = lazy(() => import('./pages/admin/AdminClientCardPage
 const AdminClientNewPage = lazy(() => import('./pages/admin/AdminClientNewPage'))
 const AdminLayout = lazy(() => import('./components/AdminLayout'))
 const PrivacyPage       = lazy(() => import('./pages/PrivacyPage'))
+const TermsPage         = lazy(() => import('./pages/TermsPage'))
 const NewsPage          = lazy(() => import('./pages/NewsPage'))
 const NewsPostPage      = lazy(() => import('./pages/NewsPostPage'))
 const NewsClientPage    = lazy(() => import('./pages/client/NewsClientPage'))
@@ -162,7 +163,15 @@ export default function App() {
         }
       />
 
-      {/* Public legal — privacy policy (admin-editable via /admin/legal) */}
+      {/* Public legal — admin-editable via /admin/legal (LEG-1 #427: + terms) */}
+      <Route
+        path="/terms"
+        element={
+          <Suspense fallback={<SuspenseFallback />}>
+            <TermsPage />
+          </Suspense>
+        }
+      />
       <Route
         path="/privacy"
         element={
@@ -384,6 +393,9 @@ export default function App() {
           <Suspense fallback={<SuspenseFallback />}><AdminHelpEditorPage /></Suspense>
         } />
         <Route path="legal" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminLegalPage /></Suspense>
+        } />
+        <Route path="legal/:docId" element={
           <Suspense fallback={<SuspenseFallback />}><AdminLegalPage /></Suspense>
         } />
         <Route path="system" element={
