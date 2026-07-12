@@ -1,7 +1,6 @@
-// src/pages/PrivacyPage.tsx
-//
-// Публичная страница политики конфиденциальности. Использует PublicLayout
-// (общий header/footer). Markdown рендерится через SimpleMarkdown.
+// LEG-2 (#428): единая публичная страница юр-документа (/privacy, /terms,
+// /consent, /pdn-policy — общий контур /legal/{doc_id}). Заменила
+// близнецов PrivacyPage/TermsPage.
 
 import { useQuery } from '@tanstack/react-query'
 
@@ -9,10 +8,10 @@ import { legalApi } from '../features/legal/api'
 import SimpleMarkdown from '../components/SimpleMarkdown'
 import PublicLayout from '../components/PublicLayout'
 
-export default function PrivacyPage() {
+export default function LegalDocPage({ docId }: { docId: string }) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['legal', 'privacy'],
-    queryFn:  () => legalApi.get('privacy'),
+    queryKey: ['legal', docId],
+    queryFn:  () => legalApi.get(docId),
     staleTime: 5 * 60_000,
   })
 
@@ -20,8 +19,6 @@ export default function PrivacyPage() {
     <PublicLayout>
       <section className="py-12 lg:py-16">
         <div className="mx-auto max-w-3xl px-5 lg:px-8">
-          {/* PJAX-loader at viewport top covers the wait; spacer here
-              just reserves vertical room so the layout doesn't pop. */}
           {isLoading && <div className="h-48" aria-hidden="true" />}
 
           {error && (

@@ -27,8 +27,7 @@ const NAV_GROUPS: {
 }[] = [
   { header: null, items: [{ to: '/admin', label: 'Обзор', end: true }] },
   { header: 'Клиенты', items: [
-    { to: '/admin/clients', label: 'Клиенты', end: false, badge: 'clients',
-      children: [{ to: '/admin/clients/new', label: 'Новый пользователь' }] },
+    { to: '/admin/clients', label: 'Клиенты', end: false, badge: 'clients' },
     { to: '/admin/plans', label: 'Тарифы', end: false },
   ] },
   { header: 'Операции', items: [
@@ -44,8 +43,10 @@ const NAV_GROUPS: {
     { to: '/admin/system', label: 'Система', end: false, badge: 'firing' },
   ] },
   { header: 'Документы', items: [
-    { to: '/admin/legal', label: 'Политика конфиденциальности', end: true },
-    { to: '/admin/legal/terms', label: 'Пользовательское соглашение', end: false },
+    { to: '/admin/legal', label: 'Privacy', end: true },
+    { to: '/admin/legal/terms', label: 'Terms', end: false },
+    { to: '/admin/legal/consent', label: 'Согласие ПДн', end: false },
+    { to: '/admin/legal/pdn', label: 'Политика ПДн', end: false },
   ] },
 ]
 
@@ -55,15 +56,17 @@ const TITLES: Record<string, string> = {
   '/admin/plans':         'Тарифы',
   '/admin/training':      'Обучение',
   '/admin/data':          'Данные',
-  '/admin/clients/new':   'Новый пользователь',
+  '/admin/clients/new':   'Клиенты',
   '/admin/notifications': 'Уведомления клиентам',
   '/admin/news': 'Новости',
   '/admin/help': 'База знаний',
   '/admin/help/new': 'Новая статья',
   '/admin/audit':         'Аудит',
   '/admin/security':      'Безопасность',
-  '/admin/legal':         'Политика конфиденциальности',
-  '/admin/legal/terms':   'Пользовательское соглашение',
+  '/admin/legal':         'Privacy',
+  '/admin/legal/terms':   'Terms',
+  '/admin/legal/consent': 'Согласие на обработку ПДн',
+  '/admin/legal/pdn':     'Политика обработки ПДн (152-ФЗ)',
   '/admin/system':        'Система',
 }
 
