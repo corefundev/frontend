@@ -8,6 +8,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { apiClient, errorMessage } from '../../shared/api/client'
 import { clientsApi } from '../../features/clients/api'
 import toast from 'react-hot-toast'
+import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 import { SkeletonRows, StateRow, ShowMore } from './adminTable'
 import { THEAD_CLS } from './adminTableUtils'
@@ -111,25 +112,20 @@ export default function AdminAuditPage() {
               e.preventDefault()
               setApplied({ subtype: subtypeInput.trim(), actor: actorInput.trim() })
             }}>
-        <select className="input w-40 shrink-0" value={clientFilter}
-                onChange={(e) => setClientFilter(e.target.value)}>
-          <option value="">Все клиенты</option>
-          {clients.map((c) => (
-            <option key={c.client_id} value={c.client_id}>{c.client_id}</option>
-          ))}
-        </select>
-        <select className="input w-44 shrink-0" value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}>
-          <option value="">Все события</option>
-          {(data?.event_types ?? []).map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select className="input w-28 shrink-0" value={days}
-                onChange={(e) => setDays(Number(e.target.value))}>
-          <option value={1}>1 день</option>
-          <option value={7}>7 дней</option>
-          <option value={30}>30 дней</option>
-          <option value={90}>90 дней</option>
-        </select>
+        <AdminSelect className="w-40 shrink-0" ariaLabel="Фильтр по клиенту" value={clientFilter}
+                     onChange={setClientFilter}
+                     options={[{ value: '', label: 'Все клиенты' },
+                               ...clients.map((c) => ({ value: c.client_id, label: c.client_id }))]} />
+        <AdminSelect className="w-44 shrink-0" ariaLabel="Фильтр по событию" value={typeFilter}
+                     onChange={setTypeFilter}
+                     options={[{ value: '', label: 'Все события' },
+                               ...(data?.event_types ?? []).map((t) => ({ value: t, label: t }))]} />
+        <AdminSelect className="w-28 shrink-0" ariaLabel="Период" value={String(days)}
+                     onChange={(v) => setDays(Number(v))}
+                     options={[{ value: '1', label: '1 день' },
+                               { value: '7', label: '7 дней' },
+                               { value: '30', label: '30 дней' },
+                               { value: '90', label: '90 дней' }]} />
         <input className="input w-40 shrink-0" placeholder="подтип (точно)"
                value={subtypeInput}
                onChange={(e) => setSubtypeInput(e.target.value)} />

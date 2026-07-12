@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { adminNotificationsApi } from '../../features/notifications/api'
 import { clientsApi } from '../../features/clients/api'
 import { errorMessage } from '../../shared/api/client'
+import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 
 const SEVERITY_BADGE: Record<string, string> = {
@@ -77,27 +78,17 @@ export default function AdminNotificationsPage() {
         <div className="grid grid-cols-2 gap-4">
           <label className="block text-sm">
             <span className="text-ink-muted">Получатель</span>
-            <select
-              className="input mt-1 w-full"
-              value={target}
-              onChange={(e) => { setTarget(e.target.value); setConfirmAll('') }}
-            >
-              <option value="all">Все клиенты ({clients.length})</option>
-              {clients.map((c) => (
-                <option key={c.client_id} value={c.client_id}>{c.client_id}</option>
-              ))}
-            </select>
+            <AdminSelect className="mt-1 w-full" ariaLabel="Получатель" value={target}
+                         onChange={(v) => { setTarget(v); setConfirmAll('') }}
+                         options={[{ value: 'all', label: `Все клиенты (${clients.length})` },
+                                   ...clients.map((c) => ({ value: c.client_id, label: c.client_id }))]} />
           </label>
           <label className="block text-sm">
             <span className="text-ink-muted">Важность</span>
-            <select
-              className="input mt-1 w-full"
-              value={severity}
-              onChange={(e) => setSeverity(e.target.value as 'info' | 'warning')}
-            >
-              <option value="info">Информация</option>
-              <option value="warning">Предупреждение</option>
-            </select>
+            <AdminSelect className="mt-1 w-full" ariaLabel="Важность" value={severity}
+                         onChange={(v) => setSeverity(v as 'info' | 'warning')}
+                         options={[{ value: 'info', label: 'Информация' },
+                                   { value: 'warning', label: 'Предупреждение' }]} />
           </label>
         </div>
 

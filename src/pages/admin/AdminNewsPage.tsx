@@ -9,6 +9,7 @@ import {
   CATEGORY_LABELS, newsAdminApi,
   type NewsCategory, type NewsStatus,
 } from '../../features/news/adminApi'
+import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 import { SkeletonRows, StateRow } from './adminTable'
 import { THEAD_CLS } from './adminTableUtils'
@@ -39,20 +40,16 @@ export default function AdminNewsPage() {
     <div className="space-y-4 max-w-5xl">
       {isError && <AdminQueryError what="список новостей" onRetry={() => void refetch()} />}
       <div className="flex items-center gap-2">
-        <select className="input w-40 shrink-0" value={status}
-                onChange={(e) => setStatus(e.target.value as NewsStatus | '')}>
-          <option value="">Все статусы</option>
-          <option value="draft">черновики</option>
-          <option value="published">опубликованные</option>
-          <option value="archived">архив</option>
-        </select>
-        <select className="input w-44 shrink-0" value={category}
-                onChange={(e) => setCategory(e.target.value as NewsCategory | '')}>
-          <option value="">Все категории</option>
-          {Object.entries(CATEGORY_LABELS).map(([v, l]) => (
-            <option key={v} value={v}>{l}</option>
-          ))}
-        </select>
+        <AdminSelect className="w-40 shrink-0" ariaLabel="Фильтр по статусу" value={status}
+                     onChange={(v) => setStatus(v as NewsStatus | '')}
+                     options={[{ value: '', label: 'Все статусы' },
+                               { value: 'draft', label: 'черновики' },
+                               { value: 'published', label: 'опубликованные' },
+                               { value: 'archived', label: 'архив' }]} />
+        <AdminSelect className="w-44 shrink-0" ariaLabel="Фильтр по категории" value={category}
+                     onChange={(v) => setCategory(v as NewsCategory | '')}
+                     options={[{ value: '', label: 'Все категории' },
+                               ...Object.entries(CATEGORY_LABELS).map(([v, l]) => ({ value: v, label: l }))]} />
         <label className="flex items-center gap-1.5 text-[12.5px] text-ink-muted select-none">
           <input type="checkbox" checked={pinnedOnly}
                  onChange={(e) => setPinnedOnly(e.target.checked)} />
