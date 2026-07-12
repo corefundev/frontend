@@ -300,7 +300,11 @@ export default function AdminLayout() {
   const cardMatch = pathname.match(/^\/admin\/clients\/([^/]+)$/)
   const cardId = cardMatch && cardMatch[1] !== 'new'
     ? decodeURIComponent(cardMatch[1]) : null
-  const title = TITLES[pathname] ?? (cardId ? 'Клиенты' : 'Админ-консоль')
+  const title = TITLES[pathname]
+    ?? (cardId ? 'Клиенты'
+      : pathname.startsWith('/admin/news/') ? 'Новости'
+      : pathname.startsWith('/admin/help/') ? 'База знаний'
+      : 'Админ-консоль')
 
   const navBadge = (kind?: 'stuck' | 'firing' | 'clients'): number => {
     if (kind === 'stuck') return signals.stuck ?? 0
