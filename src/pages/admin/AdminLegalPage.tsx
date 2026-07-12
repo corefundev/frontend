@@ -21,8 +21,16 @@ const DOC_TITLES: Record<string, string> = {
 }
 
 export default function AdminLegalPage() {
+  // Обёртка: key=DOC_ID полностью пересоздаёт редактор при переключении
+  // документа — локальное состояние (title/content) не перетекает между
+  // документами (баг: после переключения «Сохранить» записал бы текст
+  // одного документа в другой).
   const { docId = 'privacy' } = useParams()
   const DOC_ID = docId in DOC_TITLES ? docId : 'privacy'
+  return <LegalDocEditor key={DOC_ID} DOC_ID={DOC_ID} />
+}
+
+function LegalDocEditor({ DOC_ID }: { DOC_ID: string }) {
   const qc = useQueryClient()
 
   const { data, isLoading, isError, refetch } = useQuery({
