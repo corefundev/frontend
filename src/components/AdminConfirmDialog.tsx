@@ -36,13 +36,18 @@ export default function AdminConfirmDialog({ spec, onClose }: {
   const ready = !spec.confirmText || typed === spec.confirmText
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/45 flex items-center justify-center p-4"
+    <div className="fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-[2px] flex items-start justify-center pt-[22vh] p-4"
          role="dialog" aria-modal="true" aria-label={spec.title}
          onClick={onClose}>
-      <div className="w-full max-w-md card-paper overflow-hidden"
+      <div className="w-full max-w-md card-paper overflow-hidden admin-pop"
+           style={{ boxShadow: 'var(--admin-shadow-lg)' }}
            onClick={(e) => e.stopPropagation()}>
-        <div className={`px-5 py-3 border-b border-surface-border font-semibold text-sm ${
-          spec.danger ? 'text-danger' : 'text-ink'}`}>
+        <div className={`px-5 py-3 border-b font-semibold text-[13px] flex items-center gap-2 ${
+          spec.danger
+            ? 'border-danger/30 text-danger bg-danger-bg/40'
+            : 'border-surface-border text-ink bg-surface-muted/50'}`}>
+          <span aria-hidden className={`h-[7px] w-[7px] rounded-full shrink-0 ${
+            spec.danger ? 'bg-danger' : 'bg-brand-500'}`} />
           {spec.title}
         </div>
         <div className="px-5 py-4 space-y-3">
