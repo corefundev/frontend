@@ -23,6 +23,9 @@ import { THEAD_CLS } from './adminTableUtils'
 
 interface Overview {
   client: ClientRecord & { deleted_at?: string | null; pii_retention_days?: number }
+  // LEG-2 #428: факт согласия при регистрации (null = записи нет —
+  // клиент старше учёта согласий; undefined = старый бэкенд)
+  consent?: { at: string; doc_versions: Record<string, number> } | null
   recent_logins: { at: string; ip: string | null; via: string | null }[]
   training_runs: {
     run_id: string; status: string; ended_at: string | null
@@ -339,6 +342,26 @@ export default function AdminClientCardPage() {
                 ) : (
                   <div className="text-sm text-ink-muted">
                     Аккаунт открыт. Немедленное стирание доступно только после закрытия аккаунта клиентом.
+                  </div>
+                )}
+                {data.consent !== undefined && (
+                  <div className="text-sm mt-2 pt-2 border-t border-surface-border flex items-center gap-2 flex-wrap">
+                    <span className="text-ink-muted">Согласие на обработку:</span>
+                    {data.consent ? (
+                      <>
+                        <span className="badge-success">принято</span>
+                        <span className="text-ink-muted">
+                          {new Date(data.consent.at).toLocaleString('ru-RU')}
+                          {Object.keys(data.consent.doc_versions).length > 0 &&
+                            ' · версии: ' + Object.entries(data.consent.doc_versions)
+                              .map(([d, v]) => `${d} v${v}`).join(', ')}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-ink-subtle">
+                        записи нет (регистрация до введения учёта согласий)
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
