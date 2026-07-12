@@ -7,17 +7,25 @@ import { Link } from 'react-router-dom'
 import { CATEGORY_LABELS } from './adminApi'
 import { newsPublicApi, type NewsFeedItem } from './publicApi'
 
-const CATEGORY_BADGE: Record<string, string> = {
-  release: 'badge-info',
-  improvement: 'badge-success',
-  maintenance: 'badge-warn',
-  tip: 'badge-neutral',
-  announcement: 'badge-info',
+// Утверждённый вариант A (2026-07-12): цвет категории = левая оконтовка
+// 4px + мелкая цветная подпись (не пилюля — категория читается не только
+// цветом). Без 📌 и без бейджей.
+const CATEGORY_COLOR: Record<string, string> = {
+  release: '#2463EB',
+  improvement: '#178A46',
+  maintenance: '#B45309',
+  tip: '#94A3B8',
+  announcement: '#C79A33',
 }
 
-export function NewsCategoryChip({ category }: { category: string }) {
+function categoryColor(category: string): string {
+  return CATEGORY_COLOR[category] ?? '#94A3B8'
+}
+
+function CategoryLabel({ category }: { category: string }) {
   return (
-    <span className={CATEGORY_BADGE[category] ?? 'badge-neutral'}>
+    <span className="text-[11.5px] font-semibold"
+          style={{ color: categoryColor(category) }}>
       {CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] ?? category}
     </span>
   )
@@ -56,10 +64,10 @@ export function NewsFeedList({ basePath }: { basePath: string }) {
     <div className="space-y-3">
       {data.posts.map((p: NewsFeedItem) => (
         <Link key={p.id} to={`${basePath}/${encodeURIComponent(p.slug)}`}
-              className="card block p-5 hover:shadow-md transition-shadow">
+              className="card block p-5 hover:shadow-md transition-shadow"
+              style={{ borderLeft: `4px solid ${categoryColor(p.category)}` }}>
           <div className="flex items-center gap-2 flex-wrap">
-            {p.pinned && <span title="закреплено">📌</span>}
-            <NewsCategoryChip category={p.category} />
+            <CategoryLabel category={p.category} />
             {p.read === false && (
               <span className="h-2 w-2 rounded-full bg-brand-500" title="не прочитано" />
             )}
@@ -112,9 +120,10 @@ export function NewsPostView({ slug, markRead }: { slug: string; markRead: boole
     )
   }
   return (
-    <article className="card p-6">
+    <article className="card p-6"
+             style={{ borderLeft: `4px solid ${categoryColor(data.category)}` }}>
       <div className="flex items-center gap-2 flex-wrap">
-        <NewsCategoryChip category={data.category} />
+        <CategoryLabel category={data.category} />
         <span className="text-xs text-ink-subtle">
           {data.published_at
             ? new Date(data.published_at).toLocaleDateString('ru-RU', { dateStyle: 'long' })
