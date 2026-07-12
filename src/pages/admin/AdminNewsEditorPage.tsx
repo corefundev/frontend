@@ -267,7 +267,7 @@ export default function AdminNewsEditorPage() {
             Превью — как увидит клиент (санировано сервером)
           </div>
           {preview ? (
-            <div className="prose prose-sm max-w-none text-ink [&_a]:text-brand-700"
+            <div className="cms-body text-sm text-ink"
                  dangerouslySetInnerHTML={{ __html: preview }} />
           ) : (
             <div className="text-sm text-ink-muted">Начните печатать…</div>

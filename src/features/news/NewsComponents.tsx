@@ -123,7 +123,7 @@ export function NewsPostView({ slug, markRead }: { slug: string; markRead: boole
       </div>
       <h1 className="text-2xl font-semibold tracking-tight mt-3 text-ink">{data.title}</h1>
       {/* body_html — ТОЛЬКО серверный санитайзер (nh3), клиент не рендерит MD */}
-      <div className="prose prose-sm max-w-none mt-4 text-ink [&_a]:text-brand-700"
+      <div className="cms-body mt-4 text-sm text-ink"
            dangerouslySetInnerHTML={{ __html: data.body_html }} />
     </article>
   )
