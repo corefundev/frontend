@@ -162,15 +162,16 @@ export default function App() {
         element={
           <Suspense fallback={<SuspenseFallback />}>
             <PrivacyPage />
+          </Suspense>
+        }
+      />
+      {/* NEWS-7 (#409): публичные новости — видны без логина */}
       <Route path="/news" element={
         <Suspense fallback={<SuspenseFallback />}><NewsPage /></Suspense>
       } />
       <Route path="/news/:slug" element={
         <Suspense fallback={<SuspenseFallback />}><NewsPostPage /></Suspense>
       } />
-          </Suspense>
-        }
-      />
 
       {/* Public landing — / показывает лендинг и неавторизованным, и
           авторизованным (для последних шапка ведёт в /app). */}
