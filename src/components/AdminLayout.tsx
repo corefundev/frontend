@@ -360,7 +360,7 @@ export default function AdminLayout() {
              переполнении скроллится сам. Граница — на обёртке, чтобы
              тянулась на всю высоту колонки. ── */}
         <div className="w-[216px] shrink-0 border-r border-surface-border">
-        <nav className="sticky top-[54px] max-h-[calc(100vh-54px)] overflow-y-auto px-2.5 py-4"
+        <nav className="sticky top-[54px] max-h-[calc(100vh-54px)] overflow-y-auto scrollbar-none px-2.5 py-4"
              aria-label="Разделы консоли">
           {NAV_GROUPS.map((group, gi) => {
             const hasActive = group.items.some((i) =>
