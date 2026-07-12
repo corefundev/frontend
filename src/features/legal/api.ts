@@ -31,3 +31,21 @@ export const legalApi = {
       payload,
     ).then((r) => r.data),
 }
+
+// LEG-3 #431: история версий (доказуемость принятого текста)
+export interface LegalRevisionMeta {
+  version: number
+  title: string
+  requires_reconsent: boolean
+  change_summary: string | null
+  created_at: string
+  created_by: string | null
+}
+export const legalRevisionsApi = {
+  list: (docId: string) =>
+    apiClient.get<{ revisions: LegalRevisionMeta[] }>(
+      `/admin/legal/${docId}/revisions`).then((r) => r.data.revisions),
+  get: (docId: string, version: number) =>
+    apiClient.get<LegalRevisionMeta & { content: string }>(
+      `/admin/legal/${docId}/revisions/${version}`).then((r) => r.data),
+}
