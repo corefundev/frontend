@@ -146,28 +146,30 @@ function PublicFooter() {
             <FooterCol
               title="Продукт"
               links={[
-                { label: 'Возможности',       href: '/#benefits' },
-                { label: 'Для кого',          href: '/#audience' },
-                { label: 'Тарифы',            href: '/plans' },
-                { label: 'Новости',           href: '/news' },
-              ]}
-            />
-            <FooterCol
-              title="Применение"
-              links={[
-                { label: 'Розница',            href: '/#audience' },
-                { label: 'E-commerce',         href: '/#audience' },
-                { label: 'Маркетплейсы',       href: '/#audience' },
-                { label: 'Производство и опт', href: '/#audience' },
-              ]}
-            />
-            <FooterCol
-              title="Ресурсы"
-              links={[
-                { label: 'База знаний',        href: '/help' },
+                { label: 'Возможности',        href: '/#benefits' },
+                { label: 'Для кого',           href: '/#audience' },
+                { label: 'Тарифы',             href: '/plans' },
                 { label: 'Войти',              href: '/login' },
                 { label: 'Зарегистрироваться', href: '/signup' },
-                { label: 'Обратная связь',     href: 'mailto:dochub.org@gmail.com', external: true },
+              ]}
+            />
+            <FooterCol
+              title="Поддержка"
+              links={[
+                { label: 'База знаний',    href: '/help' },
+                { label: 'Обратная связь', href: 'mailto:dochub.org@gmail.com', external: true },
+                { label: 'Telegram',       href: 'https://t.me/dochub_support', external: true },
+                { label: 'API-документация', soon: true },
+                { label: 'Статус сервиса',   soon: true },
+              ]}
+            />
+            <FooterCol
+              title="О компании"
+              links={[
+                { label: 'Новости',        href: '/news' },
+                { label: 'Реквизиты',      href: '/requisites' },
+                { label: 'Обработка ПДн',  href: '/pdn-policy' },
+                { label: 'Блог',           soon: true },
               ]}
             />
           </div>
@@ -181,9 +183,6 @@ function PublicFooter() {
           <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link to="/terms"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Пользовательское соглашение</Link>
             <Link to="/privacy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Политика конфиденциальности</Link>
-            <Link to="/pdn-policy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Обработка ПДн</Link>
-            <Link to="/requisites" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Реквизиты</Link>
-            <Link to="/plans"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Тарифы</Link>
           </nav>
         </div>
       </div>
@@ -193,8 +192,10 @@ function PublicFooter() {
 
 interface FooterLink {
   label:    string
-  href:     string
+  href?:    string
   external?: boolean
+  /** заглушка будущего раздела: не ссылка, приглушённая с меткой «скоро» */
+  soon?: boolean
 }
 
 function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
@@ -205,10 +206,17 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
       </h4>
       <ul className="space-y-2.5">
         {links.map((l) =>
-          l.external ? (
+          l.soon ? (
+            <li key={l.label}>
+              <span className="text-sm text-[#94A3B8] cursor-default select-none">
+                {l.label}
+                <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]/80 border border-[#CBD5E1] rounded px-1 py-px align-middle">скоро</span>
+              </span>
+            </li>
+          ) : l.external ? (
             <li key={l.label}>
               <a
-                href={l.href}
+                href={l.href!}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-[#64748B] hover:text-[#020817] transition-colors"
@@ -219,7 +227,7 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
           ) : (
             <li key={l.label}>
               <Link
-                to={l.href}
+                to={l.href!}
                 className="text-sm text-[#64748B] hover:text-[#020817] transition-colors"
               >
                 {l.label}
