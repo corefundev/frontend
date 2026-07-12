@@ -27,6 +27,7 @@ const NAV = [
   { to: 'scenarios',   label: 'Сценарии',      pageTitle: 'Сценарии',           icon: IconSplit,   minPlan: 'business' },
   { to: 'promo',       label: 'Промо',         pageTitle: 'Промо-планировщик',  icon: IconSpark,   minPlan: 'business' },
   { to: 'news',        label: 'Новости',       pageTitle: 'Новости',            icon: IconMegaphone, minPlan: 'free'   },
+  { to: 'help',        label: 'Помощь',        pageTitle: 'Помощь',             icon: IconLifebuoy, minPlan: 'free'    },
   { to: 'settings',    label: 'Настройки',     pageTitle: 'Настройки модели',   icon: IconSlider,  minPlan: 'free'     },
   { to: 'upgrade',     label: 'Апгрейд',       pageTitle: 'Тариф',              icon: IconStar,    minPlan: 'free'     },
 ] as const
@@ -246,6 +247,17 @@ function IconMegaphone({ className }: IconProps) {
       <path d="M3 11v3a1 1 0 0 0 1 1h2l3.5 4.5a1 1 0 0 0 1.8-.6V5.1a1 1 0 0 0-1.8-.6L6 9H4a1 1 0 0 0-1 1z" />
       <path d="M15 8.5a5 5 0 0 1 0 7" />
       <path d="M17.7 5.5a9 9 0 0 1 0 13" />
+    </svg>
+  )
+}
+
+function IconLifebuoy({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M5.6 5.6l3.6 3.6M18.4 5.6l-3.6 3.6M18.4 18.4l-3.6-3.6M5.6 18.4l3.6-3.6" />
     </svg>
   )
 }
