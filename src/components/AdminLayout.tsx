@@ -21,6 +21,7 @@ import AdminCommandPalette from './AdminCommandPalette'
 
 const NAV_GROUPS: {
   header: string | null
+  collapsible?: boolean
   items: { to: string; label: string; end: boolean
            badge?: 'stuck' | 'firing' | 'clients'
            children?: { to: string; label: string }[] }[]
@@ -37,12 +38,12 @@ const NAV_GROUPS: {
     { to: '/admin/news', label: 'Новости', end: false },
     { to: '/admin/help', label: 'База знаний', end: false },
   ] },
-  { header: 'Контроль', items: [
+  { header: 'Контроль', collapsible: true, items: [
     { to: '/admin/audit', label: 'Аудит', end: false },
     { to: '/admin/security', label: 'Безопасность', end: false },
     { to: '/admin/system', label: 'Система', end: false, badge: 'firing' },
   ] },
-  { header: 'Документы', items: [
+  { header: 'Документы', collapsible: true, items: [
     { to: '/admin/legal', label: 'Privacy', end: true },
     { to: '/admin/legal/terms', label: 'Terms', end: false },
     { to: '/admin/legal/consent', label: 'Согласие ПДн', end: false },
@@ -304,6 +305,9 @@ export default function AdminLayout() {
   const signals = useChromeSignals()
   const [dark, themeMode, cycleTheme] = useAdminTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
+  // «Контроль»/«Документы» свёрнуты по умолчанию; клик по заголовку
+  // раскрывает; активный раздел внутри группы держит её раскрытой
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const cardMatch = pathname.match(/^\/admin\/clients\/([^/]+)$/)
   const cardId = cardMatch && cardMatch[1] !== 'new'
     ? decodeURIComponent(cardMatch[1]) : null
@@ -358,14 +362,33 @@ export default function AdminLayout() {
         <div className="w-[216px] shrink-0 border-r border-surface-border">
         <nav className="sticky top-[54px] max-h-[calc(100vh-54px)] overflow-y-auto px-2.5 py-4"
              aria-label="Разделы консоли">
-          {NAV_GROUPS.map((group, gi) => (
+          {NAV_GROUPS.map((group, gi) => {
+            const hasActive = group.items.some((i) =>
+              pathname === i.to || pathname.startsWith(i.to + '/'))
+            const open = !group.collapsible || hasActive
+              || openGroups[group.header ?? ''] === true
+            return (
             <div key={gi} className="mb-3.5">
-              {group.header && (
+              {group.header && (group.collapsible ? (
+                <button type="button"
+                        className="w-full flex items-center gap-1 m-0 mb-1 px-2.5 text-[10px] font-bold uppercase tracking-widest text-ink-subtle hover:text-ink-muted transition-colors"
+                        aria-expanded={open}
+                        onClick={() => setOpenGroups((g) => ({
+                          ...g, [group.header ?? '']: !open }))}>
+                  {group.header}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                       strokeLinecap="round" strokeLinejoin="round"
+                       className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`}
+                       aria-hidden>
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              ) : (
                 <p className="m-0 mb-1 px-2.5 text-[10px] font-bold uppercase tracking-widest text-ink-subtle">
                   {group.header}
                 </p>
-              )}
-              {group.items.map((item) => (
+              ))}
+              {open && group.items.map((item) => (
                 <div key={item.to}>
                   <NavLink
                     to={item.to}
@@ -407,7 +430,8 @@ export default function AdminLayout() {
                 </div>
               ))}
             </div>
-          ))}
+            )
+          })}
         </nav>
         </div>
 
