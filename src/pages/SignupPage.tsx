@@ -34,6 +34,7 @@ export default function SignupPage() {
       email: email.trim().toLowerCase(),
       desired_client_id: clientId.trim().toLowerCase(),
       captcha_token: captcha || undefined,
+      accepted_terms: agreed,
     }),
     onSuccess: (resp) => {
       toast.success(`Код отправлен на ${resp.email}`)

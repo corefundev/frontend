@@ -54,6 +54,8 @@ export default function SignupVerifyPage() {
         email,
         desired_client_id: clientId,
         captcha_token: resendCaptcha || undefined,
+        // повторная отправка кода = та же заявка; согласие уже дано на шаге 1
+        accepted_terms: true,
       }),
     onSuccess: () => {
       toast.success('Новый код отправлен')
