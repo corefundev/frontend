@@ -87,3 +87,20 @@ export const authApi = {
       .get<{ providers: OAuthProvider[] }>('/auth/oauth/providers')
       .then((r) => r.data.providers),
 }
+
+// LEG-3 #431: повторное согласие при смене версии документов
+export interface ConsentStatusDoc {
+  doc_id: string
+  title: string
+  current_version: number
+  accepted_version: number
+  change_summary: string | null
+}
+export const consentApi = {
+  status: () =>
+    apiClient.get<{ required: boolean; docs: ConsentStatusDoc[] }>(
+      '/auth/consent-status').then((r) => r.data),
+  accept: () =>
+    apiClient.post<{ ok: boolean }>('/auth/re-consent', { accepted: true })
+      .then((r) => r.data),
+}

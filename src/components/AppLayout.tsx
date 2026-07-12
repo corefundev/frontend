@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { newsPublicApi } from '../features/news/publicApi'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../features/auth/store'
+import ConsentGate from './ConsentGate'
 import { NotificationBell } from '../features/notifications/NotificationBell'
 import { ProfileMenu } from '../features/account/ProfileMenu'
 import { useUsage } from '../features/plans/useUsage'
@@ -234,6 +235,8 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+      {/* LEG-3 #431: блокирующая модалка повторного согласия */}
+      <ConsentGate />
     </div>
   )
 }
