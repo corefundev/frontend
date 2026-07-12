@@ -193,10 +193,66 @@ export default function AdminHelpPage() {
           </div>
         </section>
       </div>
+      {/* ── HC-5: аналитика поиска ── */}
+      <SearchInsightsSection />
       <div className="text-xs text-ink-muted">
         Публичный центр показывает только опубликованные статьи; категории
         без опубликованных статей на витрине скрываются автоматически.
       </div>
+    </div>
+  )
+}
+
+function SearchInsightsSection() {
+  const { data, isError } = useQuery({
+    queryKey: ['admin-help-search-insights'],
+    queryFn: () => helpAdminApi.searchInsights(),
+  })
+  if (isError) return null
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU')
+  return (
+    <div className="grid grid-cols-2 gap-3 items-start">
+      <section className="card-paper overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-surface-border font-semibold text-[13px]">
+          Топ поисковых запросов
+        </div>
+        {!data?.top.length ? (
+          <div className="px-4 py-4 text-sm text-ink-muted">Запросов пока не было</div>
+        ) : (
+          <ul className="divide-y divide-surface-border">
+            {data.top.slice(0, 10).map((s) => (
+              <li key={s.query} className="px-4 py-2 flex items-center gap-2 text-[13px]">
+                <span className="truncate">{s.query}</span>
+                <span className="ml-auto text-[11px] text-ink-subtle tabular-nums whitespace-nowrap">
+                  {s.hits}× · ~{s.avg_results ?? 0} рез. · {fmtDate(s.last_at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="card-paper overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-surface-border flex items-baseline gap-2">
+          <span className="font-semibold text-[13px]">Запросы без результатов</span>
+          <span className="text-[11px] text-ink-subtle">сигнал дыр в контенте</span>
+        </div>
+        {!data?.zero_results.length ? (
+          <div className="px-4 py-4 text-sm text-ink-muted">
+            Всё находится — пробелов не видно
+          </div>
+        ) : (
+          <ul className="divide-y divide-surface-border">
+            {data.zero_results.slice(0, 10).map((s) => (
+              <li key={s.query} className="px-4 py-2 flex items-center gap-2 text-[13px]">
+                <span className="truncate">{s.query}</span>
+                <span className="ml-auto text-[11px] text-ink-subtle tabular-nums whitespace-nowrap">
+                  {s.hits}× · {fmtDate(s.last_at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }

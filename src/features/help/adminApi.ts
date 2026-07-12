@@ -40,6 +40,13 @@ export interface HelpRevision {
   created_at: string
 }
 
+export interface HelpSearchStat {
+  query: string
+  hits: number
+  last_at: string
+  avg_results?: number
+}
+
 export interface HelpCategoryPayload {
   slug: string
   title: string
@@ -122,6 +129,14 @@ export const helpAdminApi = {
     const { data } = await apiClient.post<{ body_html: string }>(
       '/admin/help/preview', { body_md })
     return data.body_html
+  },
+  // HC-5 (#336): аналитика поиска
+  async searchInsights() {
+    const { data } = await apiClient.get<{
+      top: HelpSearchStat[]
+      zero_results: HelpSearchStat[]
+    }>('/admin/help/search/insights')
+    return data
   },
   async uploadMedia(file: File) {
     const form = new FormData()
