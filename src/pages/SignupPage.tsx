@@ -123,7 +123,16 @@ export default function SignupPage() {
             className="mt-0.5 h-4 w-4 rounded border-ink-subtle/40 text-brand-600 focus:ring-brand-500"
           />
           <span className="text-ink-muted leading-snug">
-            Я согласен с{' '}
+            Я принимаю{' '}
+            <Link
+              to="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-500 underline underline-offset-2"
+            >
+              пользовательское соглашение
+            </Link>
+            , согласен с{' '}
             <Link
               to="/privacy"
               target="_blank"
