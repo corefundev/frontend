@@ -59,6 +59,8 @@ const AdminLegalPage    = lazy(() => import('./pages/admin/AdminLegalPage'))
 const AdminNotificationsPage = lazy(() => import('./pages/admin/AdminNotificationsPage'))
 const AdminNewsPage = lazy(() => import('./pages/admin/AdminNewsPage'))
 const AdminNewsEditorPage = lazy(() => import('./pages/admin/AdminNewsEditorPage'))
+const AdminHelpPage = lazy(() => import('./pages/admin/AdminHelpPage'))
+const AdminHelpEditorPage = lazy(() => import('./pages/admin/AdminHelpEditorPage'))
 const AdminHomePage = lazy(() => import('./pages/admin/AdminHomePage'))
 const AdminPlansPage = lazy(() => import('./pages/admin/AdminPlansPage'))
 const AdminTrainingPage = lazy(() => import('./pages/admin/AdminTrainingPage'))
@@ -347,6 +349,15 @@ export default function App() {
         } />
         <Route path="news/:postId" element={
           <Suspense fallback={<SuspenseFallback />}><AdminNewsEditorPage /></Suspense>
+        } />
+        <Route path="help" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminHelpPage /></Suspense>
+        } />
+        <Route path="help/new" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminHelpEditorPage /></Suspense>
+        } />
+        <Route path="help/:articleId" element={
+          <Suspense fallback={<SuspenseFallback />}><AdminHelpEditorPage /></Suspense>
         } />
         <Route path="legal" element={
           <Suspense fallback={<SuspenseFallback />}><AdminLegalPage /></Suspense>
