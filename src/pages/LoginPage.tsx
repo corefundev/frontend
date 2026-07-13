@@ -15,8 +15,9 @@ import { errorMessage } from '../shared/api/client'
 //  паролем (?confirmed=1 с /signup/verify показывает бейдж и подставляет
 //  email; ?reset=1 — после смены пароля). Бэкенд ставит httpOnly
 //  remember-me куку — возврат в кабинет без пароля (silent refresh).
-//  Капча рендерится всегда (если сконфигурирована) — сервер требует её
-//  только после 2 неудач, лишний токен безвреден.
+//  Капча — ПО ТРЕБОВАНИЮ сервера (решение владельца: после 2 неудач):
+//  виджет скрыт, пока /auth/login/password не ответит 422
+//  «captcha_token is required» — тогда показываем и повторяем.
 // ─────────────────────────────────────────────────────────────────────────
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined
@@ -33,6 +34,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState(prefillEmail)
   const [password, setPassword] = useState('')
   const [captcha, setCaptcha] = useState('')
+  const [captchaNeeded, setCaptchaNeeded] = useState(false)
 
   const login = useMutation({
     mutationFn: () => authApi.loginPassword({
@@ -46,6 +48,15 @@ export default function LoginPage() {
       nav('/app', { replace: true })
     },
     onError: (e) => {
+      // Сервер требует капчу после 2 неудач — показать виджет и не
+      // сбрасывать пароль (пользователь просто решает капчу и повторяет).
+      const detail = errorMessage(e, '')
+      const status = (e as { response?: { status?: number } })?.response?.status
+      if (status === 422 && detail.includes('captcha_token')) {
+        setCaptchaNeeded(true)
+        toast.error('Подтвердите, что вы не робот, и повторите вход')
+        return
+      }
       setPassword('')
       toast.error(errorMessage(e, 'Не удалось войти'))
     },
@@ -82,6 +93,7 @@ export default function LoginPage() {
             e.preventDefault()
             if (!email.trim()) return toast.error('Введите email')
             if (!password) return toast.error('Введите пароль')
+            if (captchaNeeded && !captcha) return toast.error('Пройдите captcha')
             login.mutate()
           }}
         >
@@ -112,7 +124,7 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          {TURNSTILE_SITE_KEY && (
+          {TURNSTILE_SITE_KEY && captchaNeeded && (
             <div className="mt-4">
               <TurnstileWidget siteKey={TURNSTILE_SITE_KEY} onToken={setCaptcha} />
             </div>
