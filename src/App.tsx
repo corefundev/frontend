@@ -1,7 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 
 import { useAuthStore } from './features/auth/store'
+import { tryRefreshToken } from './shared/api/client'
 import AppLayout from './components/AppLayout'
 import AdminGuard from './components/AdminGuard'
 import PjaxLoader from './components/PjaxLoader'
@@ -53,6 +54,8 @@ const PlansPage         = lazy(() => import('./pages/PlansPage'))
 const OnboardingPage    = lazy(() => import('./pages/OnboardingPage'))
 const SignupPage        = lazy(() => import('./pages/SignupPage'))
 const SignupVerifyPage  = lazy(() => import('./pages/SignupVerifyPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage  = lazy(() => import('./pages/ResetPasswordPage'))
 const OAuthReturnPage   = lazy(() => import('./pages/OAuthReturnPage'))
 const AdminClientsPage  = lazy(() => import('./pages/admin/AdminClientsPage'))
 const AdminLegalPage    = lazy(() => import('./pages/admin/AdminLegalPage'))
@@ -84,20 +87,29 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
   const expiresAt = useAuthStore((s) => s.expiresAt)
   const logout    = useAuthStore((s) => s.logout)
 
-  // R11-L3: react to time-based JWT expiry on an IDLE tab. isAuthenticated()
-  // is only evaluated on render, so without this an idle tab keeps showing
-  // authed chrome until the next nav / API 401. Schedule a logout exactly
-  // when the token expires → the store update re-renders this guard → it
-  // bounces to /login. (The server 401 remains the real boundary; this is
-  // a client-side UX correctness fix.)
+  // AUTH-2 #446: remember-me. Нет живого access-токена → ОДНА тихая
+  // попытка обменять httpOnly refresh-куку на свежий JWT, и только при
+  // неудаче — /login. Это и есть «пользователь заходит без пароля».
+  const [restoring, setRestoring] = useState(() => !isAuthed)
+  useEffect(() => {
+    if (isAuthed) { setRestoring(false); return }
+    let alive = true
+    tryRefreshToken().finally(() => { if (alive) setRestoring(false) })
+    return () => { alive = false }
+  }, [isAuthed])
+
+  // R11-L3 (+AUTH-2): истечение JWT в фоне — сперва тихий refresh по
+  // куке; logout только если кука мертва. Сервер остаётся границей.
   useEffect(() => {
     if (!expiresAt) return
-    const ms = expiresAt - Date.now()
-    if (ms <= 0) { logout(); return }
-    const t = setTimeout(() => logout(), ms)
+    const ms = Math.max(0, expiresAt - Date.now())
+    const t = setTimeout(() => {
+      void tryRefreshToken().then((fresh) => { if (!fresh) logout() })
+    }, ms)
     return () => clearTimeout(t)
   }, [expiresAt, logout])
 
+  if (restoring) return <SuspenseFallback />
   if (!isAuthed) return <Navigate to="/login" replace />
   return children
 }
@@ -130,6 +142,22 @@ export default function App() {
         element={
           <Suspense fallback={<SuspenseFallback />}>
             <SignupVerifyPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/forgot"
+        element={
+          <Suspense fallback={<SuspenseFallback />}>
+            <ForgotPasswordPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/auth/reset"
+        element={
+          <Suspense fallback={<SuspenseFallback />}>
+            <ResetPasswordPage />
           </Suspense>
         }
       />

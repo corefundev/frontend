@@ -3,6 +3,7 @@
 // close account (two-step), and a link to the full privacy policy (/privacy,
 // admin-editable legal doc).
 import { useState } from 'react'
+import { authApi } from '../auth/api'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -40,7 +41,7 @@ export default function DataSection() {
     mutationFn: async () => { await apiClient.delete(`/clients/${clientId}`) },
     onSuccess: () => {
       toast.success('Аккаунт закрыт')
-      setTimeout(() => { logout(); nav('/login') }, 1200)
+      setTimeout(() => { void authApi.logout().catch(() => undefined); logout(); nav('/login') }, 1200)
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось закрыть аккаунт')),
   })

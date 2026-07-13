@@ -3,6 +3,7 @@
 // live), and logout. The 152-ФЗ PII controls (export / close account) moved to
 // the account "Данные и приватность" section (AC-3 #314).
 import { useEffect, useRef, useState } from 'react'
+import { authApi } from '../auth/api'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuthStore } from '../auth/store'
@@ -52,7 +53,7 @@ export function ProfileMenu() {
 
           <button
             className="w-full text-left px-4 py-3 text-sm text-ink-muted hover:text-ink hover:bg-surface-sunken transition-colors"
-            onClick={() => { logout(); nav('/login') }}
+            onClick={() => { void authApi.logout().catch(() => undefined); logout(); nav('/login') }}
           >
             Выйти
           </button>

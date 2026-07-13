@@ -23,11 +23,14 @@ export interface TokenResponse {
 
 export interface SignupRequest {
   email: string
-  desired_client_id: string
+  // AUTH-3 #447: в парольном флоу идентификатор генерирует бэкенд
+  desired_client_id?: string
   captcha_token?: string
   // LEG-2 #428: сервер требует явного принятия условий и пишет факт
   // согласия (с версиями документов) в аудит
   accepted_terms: boolean
+  // AUTH-1 #445: пароль задаётся на форме регистрации
+  password?: string
 }
 export interface LoginEmailRequest {
   email: string
@@ -46,8 +49,10 @@ export interface SignupVerifyResponse {
   client_id: string
   plan: 'free' | 'start' | 'business'
   model_name: string
-  api_key: string                 // ⚠ shown once
-  access_token: string
+  // AUTH-1 #445: в парольном флоу оба null — ни api-key-окна, ни
+  // авто-сессии (после подтверждения пользователь входит паролем)
+  api_key: string | null
+  access_token: string | null
   token_type: 'bearer'
   warning: string
 }
@@ -86,6 +91,28 @@ export const authApi = {
     apiClient
       .get<{ providers: OAuthProvider[] }>('/auth/oauth/providers')
       .then((r) => r.data.providers),
+
+  // ── AUTH-1/2 (#445/#446): пароль + remember-me ────────────────────
+  // withCredentials — refresh-кука (httpOnly, Path=/auth) ходит только
+  // на эти вызовы.
+  loginPassword: (payload: { email: string; password: string; captcha_token?: string }) =>
+    apiClient
+      .post<LoginVerifyResponse>('/auth/login/password', payload, { withCredentials: true })
+      .then((r) => r.data),
+  logout: () =>
+    apiClient.post('/auth/logout', {}, { withCredentials: true }).then(() => undefined),
+  resetRequest: (payload: { email: string; captcha_token?: string }) =>
+    apiClient.post<OtpAcceptedResponse>('/auth/password/reset-request', payload)
+      .then((r) => r.data),
+  resetPeek: (token: string) =>
+    apiClient.post<{ valid: boolean }>('/auth/password/reset/peek', { token })
+      .then((r) => r.data),
+  resetConfirm: (payload: { token: string; new_password: string }) =>
+    apiClient.post<{ status: string }>('/auth/password/reset', payload)
+      .then((r) => r.data),
+  changePassword: (payload: { current_password?: string; new_password: string }) =>
+    apiClient.post<{ status: string }>('/auth/password/change', payload)
+      .then((r) => r.data),
 }
 
 // LEG-3 #431: повторное согласие при смене версии документов

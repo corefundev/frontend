@@ -62,21 +62,57 @@ function attachAuth(config: InternalAxiosRequestConfig) {
 apiClient.interceptors.request.use(attachAuth)
 uploadClient.interceptors.request.use(attachAuth)
 
-// ── Response interceptor: 401 → logout + redirect ─────────────────────────
+// ── AUTH-2 #446: silent refresh (remember-me httpOnly cookie) ─────────────
+//
+// Single-flight: параллельные 401 делят один POST /auth/refresh (иначе
+// вторая ротация съест токен первой и сработает reuse-detection).
+// Плоский axios.post, НЕ apiClient — без интерсепторов, без рекурсии.
+let refreshInFlight: Promise<string | null> | null = null
+
+export function tryRefreshToken(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = axios
+      .post<{ access_token: string; client_id: string }>(
+        `${BASE_URL}/auth/refresh`, {},
+        { withCredentials: true, timeout: 15_000 })
+      .then((r) => {
+        const t = r.data?.access_token
+        if (t) useAuthStore.getState().setAuth(t, r.data.client_id)
+        return t ?? null
+      })
+      .catch(() => null)
+      .finally(() => { refreshInFlight = null })
+  }
+  return refreshInFlight
+}
+
+// ── Response interceptor: 401 → refresh-retry → logout + redirect ────────
 //
 // Only treat 401 as "session expired" for REGULAR endpoints. A 401 on
-// the auth endpoints themselves (/auth/login, /auth/login/verify,
-// /auth/signup, /auth/signup/verify, /auth/token) means "wrong
-// credentials this attempt" — a normal mutation error to surface as a
-// toast, not a reason to wipe state and reload the page.
-function handle401(error: AxiosError) {
+// the auth endpoints themselves (login / signup / token / refresh /
+// password flows) means "wrong credentials this attempt" — a normal
+// mutation error to surface as a toast, not a reason to wipe state.
+// For regular endpoints we first try ONE silent refresh (remember-me
+// cookie) and replay the request; only a failed refresh logs out.
+async function handle401(error: AxiosError) {
   const url = error.config?.url ?? ''
   const isAuthAttempt =
     url.startsWith('/auth/login') ||
     url.startsWith('/auth/signup') ||
-    url.startsWith('/auth/token')
+    url.startsWith('/auth/token') ||
+    url.startsWith('/auth/refresh') ||
+    url.startsWith('/auth/password')
 
   if (error.response?.status === 401 && !isAuthAttempt) {
+    const cfg = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined
+    if (cfg && !cfg._retried) {
+      const fresh = await tryRefreshToken()
+      if (fresh) {
+        cfg._retried = true
+        cfg.headers.Authorization = `Bearer ${fresh}`
+        return axios.request(cfg)
+      }
+    }
     useAuthStore.getState().logout()
     if (!window.location.pathname.startsWith('/login')) {
       window.location.href = '/login'
