@@ -5,7 +5,10 @@ import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
+import { useNavigate } from 'react-router-dom'
+
 import { apiClient, errorMessage } from '../../shared/api/client'
+import { authApi } from '../auth/api'
 import { clientsApi } from '../clients/api'
 import { useAuthStore } from '../auth/store'
 
@@ -48,10 +51,14 @@ export default function SecuritySection() {
       <section className="card p-6 sm:p-8">
         <div className="text-sm text-ink-muted mb-2">Способы входа</div>
         <ul className="text-sm text-ink space-y-1">
-          <li>• Email (одноразовый код на почту){rec?.email ? ` — ${rec.email}` : ''}</li>
+          <li>• Email + пароль{rec?.email ? ` — ${rec.email}` : ''}</li>
           {rec?.oauth_provider && <li>• {PROVIDER_LABEL[rec.oauth_provider] ?? rec.oauth_provider}</li>}
         </ul>
       </section>
+
+      {/* AUTH-3 #447: смена пароля. После успеха сервер отзывает ВСЕ
+          сессии (включая текущую) — честно разлогиниваем и ведём на вход. */}
+      <PasswordChangeCard />
 
       {/* API key */}
       <section className="card p-6 sm:p-8">
@@ -114,5 +121,69 @@ export default function SecuritySection() {
         )}
       </section>
     </div>
+  )
+}
+
+
+function PasswordChangeCard() {
+  const nav = useNavigate()
+  const logout = useAuthStore((s) => s.logout)
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [next2, setNext2] = useState('')
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: () => authApi.changePassword({
+      current_password: current || undefined,
+      new_password: next,
+    }),
+    onSuccess: () => {
+      toast.success('Пароль изменён — войдите с новым паролем')
+      void authApi.logout().catch(() => undefined)
+      logout()
+      nav('/login?reset=1', { replace: true })
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Не удалось сменить пароль')),
+  })
+
+  return (
+    <section className="card p-6 sm:p-8">
+      <div className="font-medium text-ink">Пароль</div>
+      <p className="text-xs text-ink-muted mt-1 mb-4">
+        После смены пароля все активные сессии будут завершены — вход с новым паролем.
+      </p>
+      <form
+        className="max-w-sm space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (next.length < 10) return toast.error('Пароль — не менее 10 символов')
+          if (next !== next2) return toast.error('Пароли не совпадают')
+          mutate()
+        }}
+      >
+        <div>
+          <label className="label" htmlFor="cur-pwd">Текущий пароль</label>
+          <input id="cur-pwd" type="password" className="input" value={current}
+                 onChange={(e) => setCurrent(e.target.value)}
+                 autoComplete="current-password"
+                 placeholder="если пароля ещё нет — оставьте пустым" />
+        </div>
+        <div>
+          <label className="label" htmlFor="new-pwd">Новый пароль</label>
+          <input id="new-pwd" type="password" className="input" value={next}
+                 onChange={(e) => setNext(e.target.value)}
+                 autoComplete="new-password" required minLength={10} maxLength={128} />
+        </div>
+        <div>
+          <label className="label" htmlFor="new-pwd2">Повторите новый пароль</label>
+          <input id="new-pwd2" type="password" className="input" value={next2}
+                 onChange={(e) => setNext2(e.target.value)}
+                 autoComplete="new-password" required />
+        </div>
+        <button type="submit" className="btn-primary" disabled={isPending}>
+          {isPending ? 'Сохранение…' : 'Сменить пароль'}
+        </button>
+      </form>
+    </section>
   )
 }

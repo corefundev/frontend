@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 
 import { authApi } from '../features/auth/api'
 import { errorMessage } from '../shared/api/client'
-import { OAuthButtons } from '../components/OAuthButtons'
+import { SsoBadges } from '../components/SsoBadges'
 
 // ─────────────────────────────────────────────────────────────────────────
 //  SignupPage — step 1 of email-OTP registration.
@@ -22,30 +22,29 @@ import { OAuthButtons } from '../components/OAuthButtons'
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined
 
+const PASSWORD_MIN = 10
+
 export default function SignupPage() {
   const nav = useNavigate()
   const [email,    setEmail]    = useState('')
-  const [clientId, setClientId] = useState('')
+  const [password, setPassword] = useState('')
+  const [password2, setPassword2] = useState('')
   const [captcha,  setCaptcha]  = useState<string>('')
   const [agreed,   setAgreed]   = useState<boolean>(false)
 
   const { mutate, isPending } = useMutation({
     mutationFn: () => authApi.signup({
       email: email.trim().toLowerCase(),
-      desired_client_id: clientId.trim().toLowerCase(),
+      password,
       captcha_token: captcha || undefined,
       accepted_terms: agreed,
     }),
     onSuccess: (resp) => {
       toast.success(`Код отправлен на ${resp.email}`)
-      // Pass desired_client_id along — /signup/verify needs it for the
-      // in-place "resend" flow (re-POST to /auth/signup without bouncing
-      // the user back to step 1).
-      const cid = clientId.trim().toLowerCase()
-      nav(
-        `/signup/verify?email=${encodeURIComponent(resp.email)}&client_id=${encodeURIComponent(cid)}`,
-        { replace: true },
-      )
+      // Пароль — в router state (НЕ в URL): /signup/verify пере-POST-ит
+      // /auth/signup при «Отправить ещё раз», для этого нужен пароль.
+      nav(`/signup/verify?email=${encodeURIComponent(resp.email)}`,
+          { replace: true, state: { password } })
     },
     onError: (e) => toast.error(errorMessage(e, 'Регистрация не удалась')),
   })
@@ -53,7 +52,9 @@ export default function SignupPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email.trim())    return toast.error('Введите email')
-    if (!clientId.trim()) return toast.error('Введите идентификатор организации')
+    if (password.length < PASSWORD_MIN)
+      return toast.error(`Пароль — не менее ${PASSWORD_MIN} символов`)
+    if (password !== password2) return toast.error('Пароли не совпадают')
     if (!agreed)          return toast.error('Подтвердите согласие с политикой конфиденциальности')
     if (TURNSTILE_SITE_KEY && !captcha) return toast.error('Пройдите captcha')
     mutate()
@@ -72,7 +73,7 @@ export default function SignupPage() {
             Создать аккаунт
           </h1>
           <p className="text-sm text-ink-muted mt-2">
-            Мы отправим код подтверждения на ваш email — никаких паролей.
+            Придумайте пароль — на почту придёт код подтверждения.
           </p>
         </div>
 
@@ -88,23 +89,32 @@ export default function SignupPage() {
           placeholder="vasya@acme.ru"
         />
 
-        <label className="label mt-4" htmlFor="cid">Идентификатор организации</label>
+        <label className="label mt-4" htmlFor="password">Пароль</label>
         <input
-          id="cid"
-          type="text"
-          className="input font-mono"
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-          autoComplete="off"
+          id="password"
+          type="password"
+          className="input"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
           required
-          minLength={3}
-          maxLength={64}
-          placeholder="acme-shop"
-          spellCheck={false}
+          minLength={PASSWORD_MIN}
+          maxLength={128}
         />
         <p className="eyebrow mt-1.5">
-          Латиница, цифры и дефис. От 3 до 64 символов. Останется навсегда — не спешите.
+          Не менее {PASSWORD_MIN} символов. Спецсимволы не обязательны — длина важнее.
         </p>
+
+        <label className="label mt-4" htmlFor="password2">Повторите пароль</label>
+        <input
+          id="password2"
+          type="password"
+          className="input"
+          value={password2}
+          onChange={(e) => setPassword2(e.target.value)}
+          autoComplete="new-password"
+          required
+        />
 
         {/* Turnstile widget — silent if site key not provided */}
         {TURNSTILE_SITE_KEY && (
@@ -160,12 +170,10 @@ export default function SignupPage() {
           className="btn-primary w-full mt-5"
           disabled={isPending || !agreed}
         >
-          {isPending ? 'Отправка кода…' : 'Получить код'}
+          {isPending ? 'Отправка кода…' : 'Подтвердить'}
         </button>
 
-        <div className="mt-6">
-          <OAuthButtons />
-        </div>
+        <SsoBadges />
 
         <p className="text-xs text-ink-subtle text-center mt-5">
           Уже есть аккаунт?{' '}

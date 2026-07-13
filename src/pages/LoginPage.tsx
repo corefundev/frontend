@@ -1,23 +1,56 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { authApi } from '../features/auth/api'
 import { useAuthStore } from '../features/auth/store'
-import { OtpInput } from '../components/OtpInput'
-import { OAuthButtons } from '../components/OAuthButtons'
+import { SsoBadges } from '../components/SsoBadges'
 import { errorMessage } from '../shared/api/client'
 
 // ─────────────────────────────────────────────────────────────────────────
-//  LoginPage — email + OTP. The previous Client ID + API key tab has
-//  moved to /login/admin (linked from API docs and ops runbooks). End
-//  users no longer see token-shaped fields here.
+//  LoginPage — AUTH-3 #447: классический вход email + пароль.
+//
+//  Флоу владельца: подтверждение почты кодом → пользователь входит СВОИМ
+//  паролем (?confirmed=1 с /signup/verify показывает бейдж и подставляет
+//  email; ?reset=1 — после смены пароля). Бэкенд ставит httpOnly
+//  remember-me куку — возврат в кабинет без пароля (silent refresh).
+//  Капча рендерится всегда (если сконфигурирована) — сервер требует её
+//  только после 2 неудач, лишний токен безвреден.
 // ─────────────────────────────────────────────────────────────────────────
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined
 
 export default function LoginPage() {
+  const nav = useNavigate()
+  const setAuth = useAuthStore((s) => s.setAuth)
+  const [params] = useSearchParams()
+
+  const confirmed = params.get('confirmed') === '1'
+  const afterReset = params.get('reset') === '1'
+  const prefillEmail = useMemo(() => (params.get('email') ?? '').toLowerCase(), [params])
+
+  const [email, setEmail] = useState(prefillEmail)
+  const [password, setPassword] = useState('')
+  const [captcha, setCaptcha] = useState('')
+
+  const login = useMutation({
+    mutationFn: () => authApi.loginPassword({
+      email: email.trim().toLowerCase(),
+      password,
+      captcha_token: captcha || undefined,
+    }),
+    onSuccess: (resp) => {
+      setAuth(resp.access_token, resp.client_id)
+      toast.success(`Добро пожаловать, ${resp.client_id}`)
+      nav('/app', { replace: true })
+    },
+    onError: (e) => {
+      setPassword('')
+      toast.error(errorMessage(e, 'Не удалось войти'))
+    },
+  })
+
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center p-6">
       <div className="w-full max-w-md card p-8 animate-fade-in">
@@ -33,16 +66,73 @@ export default function LoginPage() {
           </h1>
         </div>
 
-        <EmailLoginForm />
+        {confirmed && (
+          <div className="mb-5 rounded-md bg-success-bg text-success px-4 py-2.5 text-sm font-medium text-center">
+            ✓ Почта подтверждена — войдите с вашим паролем
+          </div>
+        )}
+        {afterReset && (
+          <div className="mb-5 rounded-md bg-success-bg text-success px-4 py-2.5 text-sm font-medium text-center">
+            ✓ Пароль изменён — войдите с новым паролем
+          </div>
+        )}
 
-        <div className="mt-6">
-          <OAuthButtons />
-        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!email.trim()) return toast.error('Введите email')
+            if (!password) return toast.error('Введите пароль')
+            login.mutate()
+          }}
+        >
+          <label className="label" htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            className="input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+          />
+
+          <label className="label mt-4" htmlFor="password">Пароль</label>
+          <input
+            id="password"
+            type="password"
+            className="input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
+          <div className="flex justify-end mt-1.5">
+            <Link to="/forgot" className="text-xs text-brand-500 underline underline-offset-2">
+              Забыли пароль?
+            </Link>
+          </div>
+
+          {TURNSTILE_SITE_KEY && (
+            <div className="mt-4">
+              <TurnstileWidget siteKey={TURNSTILE_SITE_KEY} onToken={setCaptcha} />
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="btn-primary w-full mt-5"
+            disabled={login.isPending}
+          >
+            {login.isPending ? 'Вход…' : 'Войти'}
+          </button>
+        </form>
+
+        <SsoBadges />
 
         <p className="text-xs text-ink-subtle text-center mt-6">
           Нет аккаунта?{' '}
           <Link to="/signup" className="text-brand-500 underline underline-offset-2">
-            Создать
+            Создать аккаунт
           </Link>
         </p>
       </div>
@@ -50,124 +140,7 @@ export default function LoginPage() {
   )
 }
 
-// ── Email + OTP — the only flow users see here ──────────────────────────
-
-function EmailLoginForm() {
-  const nav = useNavigate()
-  const setAuth = useAuthStore((s) => s.setAuth)
-
-  const [step,    setStep]    = useState<'email' | 'code'>('email')
-  const [email,   setEmail]   = useState('')
-  const [captcha, setCaptcha] = useState('')
-  const [code,    setCode]    = useState('')
-
-  const sendOtp = useMutation({
-    mutationFn: () => authApi.loginEmail({
-      email: email.trim().toLowerCase(),
-      captcha_token: captcha || undefined,
-    }),
-    onSuccess: () => {
-      toast.success('Код отправлен (если email зарегистрирован)')
-      setStep('code')
-    },
-    onError: (e) => toast.error(errorMessage(e, 'Не удалось отправить код')),
-  })
-
-  const verify = useMutation({
-    mutationFn: () => authApi.loginEmailVerify({ email: email.trim().toLowerCase(), code }),
-    onSuccess: (resp) => {
-      setAuth(resp.access_token, resp.client_id)
-      toast.success(`Добро пожаловать, ${resp.client_id}`)
-      nav('/app', { replace: true })
-    },
-    onError: (e) => {
-      setCode('')
-      toast.error(errorMessage(e, 'Код не подошёл'))
-    },
-  })
-
-  if (step === 'email') {
-    return (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (!email.trim()) return toast.error('Введите email')
-          if (TURNSTILE_SITE_KEY && !captcha) return toast.error('Пройдите captcha')
-          sendOtp.mutate()
-        }}
-        autoComplete="off"
-      >
-        <label className="label" htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          className="input"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          required
-        />
-
-        {TURNSTILE_SITE_KEY && (
-          <div className="mt-4">
-            <TurnstileWidget siteKey={TURNSTILE_SITE_KEY} onToken={setCaptcha} />
-          </div>
-        )}
-
-        <button
-          type="submit"
-          className="btn-primary w-full mt-5"
-          disabled={sendOtp.isPending}
-        >
-          {sendOtp.isPending ? 'Отправка…' : 'Отправить код'}
-        </button>
-      </form>
-    )
-  }
-
-  return (
-    <div>
-      <p className="text-sm text-ink-muted mb-5">
-        Код отправлен на{' '}
-        <strong className="text-ink font-mono">{email}</strong>.
-      </p>
-
-      <div className="flex justify-center">
-        <OtpInput
-          value={code}
-          onChange={setCode}
-          onComplete={(full) => {
-            if (!verify.isPending) {
-              setCode(full)
-              verify.mutate()
-            }
-          }}
-          disabled={verify.isPending}
-        />
-      </div>
-
-      <button
-        type="button"
-        className="btn-primary w-full mt-6"
-        onClick={() => verify.mutate()}
-        disabled={verify.isPending || code.length !== 6}
-      >
-        {verify.isPending ? 'Проверка…' : 'Войти'}
-      </button>
-
-      <button
-        type="button"
-        className="btn-ghost w-full mt-2 text-ink-subtle"
-        onClick={() => { setStep('email'); setCode('') }}
-      >
-        ← Изменить email
-      </button>
-    </div>
-  )
-}
-
-// ── Turnstile widget (duplicate of SignupPage's helper, kept local
-//    to LoginPage so dropping signup wouldn't dead-code this) ─────────────
+// ── Turnstile widget (локальная копия; см. коммент в SignupPage) ────────
 
 function TurnstileWidget({
   siteKey, onToken,
