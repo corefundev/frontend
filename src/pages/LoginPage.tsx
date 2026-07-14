@@ -182,6 +182,7 @@ function TurnstileWidget({
       el.innerHTML = ''
       widgetId = turnstile.render(el, {
         sitekey: siteKey,
+        theme: 'light',
         callback: (t: string) => cbRef.current(t),
         'error-callback': () => cbRef.current(''),
         'expired-callback': () => cbRef.current(''),

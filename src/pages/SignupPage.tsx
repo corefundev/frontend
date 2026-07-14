@@ -66,9 +66,6 @@ export default function SignupPage() {
     <AuthShell>
       <div className="text-center">
         <h1 className="text-[28px] font-bold text-ink">Регистрация</h1>
-        <p className="text-sm text-ink-muted mt-2">
-          Придумайте пароль — на почту придёт код подтверждения.
-        </p>
       </div>
 
       <div className="mt-9">
@@ -228,6 +225,7 @@ function TurnstileWidget({
       el.innerHTML = ''
       widgetId = turnstile.render(el, {
         sitekey: siteKey,
+        theme: 'light',
         callback: (t: string) => cbRef.current(t),
         'error-callback': () => cbRef.current(''),
         'expired-callback': () => cbRef.current(''),

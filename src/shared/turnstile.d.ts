@@ -7,6 +7,7 @@ interface TurnstileApi {
     container: HTMLElement,
     params: {
       sitekey: string
+      theme?: 'light' | 'dark' | 'auto'
       callback?: (token: string) => void
       'error-callback'?: () => void
       'expired-callback'?: () => void
