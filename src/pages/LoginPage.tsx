@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 
 import { authApi } from '../features/auth/api'
 import { useAuthStore } from '../features/auth/store'
+import AuthShell from '../components/AuthShell'
 import { SsoBadges } from '../components/SsoBadges'
 import { errorMessage } from '../shared/api/client'
 
@@ -63,7 +64,7 @@ export default function LoginPage() {
   })
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+    <AuthShell>
       <div className="w-full max-w-md card p-8 animate-fade-in">
         <div className="mb-6 flex flex-col items-center">
           <div
@@ -148,7 +149,7 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </AuthShell>
   )
 }
 

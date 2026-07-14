@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import toast from 'react-hot-toast'
 
 import { authApi } from '../features/auth/api'
+import AuthShell from '../components/AuthShell'
 import { OtpInput } from '../components/OtpInput'
 import { errorMessage } from '../shared/api/client'
 
@@ -99,7 +100,7 @@ export default function SignupVerifyPage() {
   })
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+    <AuthShell>
       <div className="card w-full max-w-md p-8 animate-fade-in">
         <div className="chapter-num">— шаг 02 из 02</div>
         <h1 className="display-em text-brand-700 text-3xl mt-2 leading-tight">
@@ -184,7 +185,7 @@ export default function SignupVerifyPage() {
           </Link>
         </div>
       </div>
-    </div>
+    </AuthShell>
   )
 }
 

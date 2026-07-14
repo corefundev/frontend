@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { authApi } from '../features/auth/api'
+import AuthShell from '../components/AuthShell'
 import { errorMessage } from '../shared/api/client'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -99,9 +100,9 @@ export default function ForgotPasswordPage() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+    <AuthShell>
       <div className="w-full max-w-md card p-8 animate-fade-in">{children}</div>
-    </div>
+    </AuthShell>
   )
 }
 
