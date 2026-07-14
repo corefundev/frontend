@@ -138,6 +138,13 @@
 
 html, body, #root { height: 100%; }
 
+/* Классический (не-overlay) скроллбар съедает ~15px ширины вьюпорта:
+   между страницами со скроллом и без него центр и правый край шапки
+   прыгали влево-вправо (репорт владельца 2026-07-15, Safari). stable
+   резервирует жёлоб всегда — ширина контента одинакова на всех
+   страницах; overlay-скроллбары (дефолт macOS без мыши) не трогает. */
+html { scrollbar-gutter: stable; }
+
 body {
   @apply bg-surface text-ink font-sans antialiased;
   -webkit-font-smoothing: antialiased;
