@@ -66,7 +66,7 @@ export default function ResetPasswordPage() {
             Запросить новую ссылку
           </Link>
           <p className="text-xs text-ink-subtle text-center mt-4">
-            <Link to="/login" className="text-brand-500 underline underline-offset-2">
+            <Link to="/login" className="text-brand-500">
               ← Назад ко входу
             </Link>
           </p>
