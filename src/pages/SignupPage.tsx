@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 
 import { authApi } from '../features/auth/api'
 import { errorMessage } from '../shared/api/client'
+import AuthShell from '../components/AuthShell'
 import { SsoBadges } from '../components/SsoBadges'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+    <AuthShell>
       <form
         onSubmit={handleSubmit}
         className="card w-full max-w-md p-8 animate-fade-in"
@@ -182,7 +183,7 @@ export default function SignupPage() {
           </Link>
         </p>
       </form>
-    </div>
+    </AuthShell>
   )
 }
 

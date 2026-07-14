@@ -25,8 +25,10 @@ export default function PublicLayout({ children }: Props) {
 }
 
 // ── Header ─────────────────────────────────────────────────────────────
+// Экспортируется отдельно: auth-страницы (AuthShell) носят ту же шапку
+// без футера — единая навигация на всём публичном контуре.
 
-function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
+export function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
   // Header palette spec:
   //   • foreground (all text)  #020817  (slate-950)
   //   • link hover background  #f1f5f9  (slate-100), 2px radius
