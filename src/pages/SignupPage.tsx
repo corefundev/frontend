@@ -64,8 +64,7 @@ export default function SignupPage() {
   return (
     <AuthShell>
       <div className="text-center">
-        <div className="chapter-num">— шаг 01 из 02</div>
-        <h1 className="text-[28px] font-bold text-ink mt-1.5">Регистрация</h1>
+        <h1 className="text-[28px] font-bold text-ink">Регистрация</h1>
         <p className="text-sm text-ink-muted mt-2">
           Придумайте пароль — на почту придёт код подтверждения.
         </p>
@@ -139,7 +138,7 @@ export default function SignupPage() {
               to="/terms"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand-500 underline underline-offset-2"
+              className="text-brand-500"
             >
               пользовательское соглашение
             </Link>
@@ -148,7 +147,7 @@ export default function SignupPage() {
               to="/privacy"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand-500 underline underline-offset-2"
+              className="text-brand-500"
             >
               политикой конфиденциальности
             </Link>{' '}
@@ -157,7 +156,7 @@ export default function SignupPage() {
               to="/consent"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand-500 underline underline-offset-2"
+              className="text-brand-500"
             >
               согласие на обработку персональных данных
             </Link>

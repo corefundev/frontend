@@ -14,10 +14,10 @@ import { PublicHeader } from './PublicLayout'
 export default function AuthShell({ children }: { children: ReactNode }) {
   const isAuthed = useAuthStore((s) => s.isAuthenticated())
   return (
-    <div className="min-h-screen bg-surface flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       <PublicHeader isAuthed={isAuthed} />
-      <main className="flex-1 px-6 py-10 sm:py-14">
-        <div className="mx-auto w-full max-w-[540px] animate-fade-in">
+      <main className="flex-1 px-6 pt-7 pb-10 sm:pt-9">
+        <div className="mx-auto w-full max-w-md animate-fade-in">
           {children}
         </div>
       </main>

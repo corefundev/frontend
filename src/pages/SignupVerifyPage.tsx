@@ -103,8 +103,7 @@ export default function SignupVerifyPage() {
     <AuthShell>
       <div className="mx-auto w-full max-w-md">
         <div className="text-center">
-          <div className="chapter-num">— шаг 02 из 02</div>
-          <h1 className="text-[28px] font-bold text-ink mt-1.5">
+          <h1 className="text-[28px] font-bold text-ink">
             Введите код из email
           </h1>
         </div>
