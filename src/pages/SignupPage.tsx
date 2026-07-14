@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { authApi } from '../features/auth/api'
 import { errorMessage } from '../shared/api/client'
 import AuthShell from '../components/AuthShell'
+import { LabelHint, PasswordInput } from '../components/PasswordInput'
 import { SsoBadges, SsoDivider } from '../components/SsoBadges'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ export default function SignupPage() {
       <div className="mt-9">
         <SsoBadges />
       </div>
-      <SsoDivider label="Или введите емейл" />
+      <SsoDivider label="или" />
 
       <form onSubmit={handleSubmit} autoComplete="off">
         <label className="label" htmlFor="email">Емейл</label>
@@ -88,11 +89,12 @@ export default function SignupPage() {
           placeholder="vasya@acme.ru"
         />
 
-        <label className="label mt-4" htmlFor="password">Пароль</label>
-        <input
+        <label className="label mt-4 flex items-center" htmlFor="password">
+          Пароль
+          <LabelHint text={`Не менее ${PASSWORD_MIN} символов. Спецсимволы не обязательны — длина важнее.`} />
+        </label>
+        <PasswordInput
           id="password"
-          type="password"
-          className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
@@ -100,15 +102,10 @@ export default function SignupPage() {
           minLength={PASSWORD_MIN}
           maxLength={128}
         />
-        <p className="eyebrow mt-1.5">
-          Не менее {PASSWORD_MIN} символов. Спецсимволы не обязательны — длина важнее.
-        </p>
 
         <label className="label mt-4" htmlFor="password2">Повторите пароль</label>
-        <input
+        <PasswordInput
           id="password2"
-          type="password"
-          className="input"
           value={password2}
           onChange={(e) => setPassword2(e.target.value)}
           autoComplete="new-password"

@@ -56,9 +56,6 @@ export default function ForgotPasswordPage() {
   return (
     <Shell>
       <h1 className="text-[28px] font-bold text-ink text-center">Сброс пароля</h1>
-      <p className="text-sm text-ink-muted mt-2 text-center">
-        Пришлём ссылку для смены пароля на вашу почту.
-      </p>
       <form
         className="mt-5"
         onSubmit={(e) => {

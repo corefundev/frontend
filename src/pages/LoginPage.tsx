@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { authApi } from '../features/auth/api'
 import { useAuthStore } from '../features/auth/store'
 import AuthShell from '../components/AuthShell'
+import { PasswordInput } from '../components/PasswordInput'
 import { SsoBadges, SsoDivider } from '../components/SsoBadges'
 import { errorMessage } from '../shared/api/client'
 
@@ -81,7 +82,7 @@ export default function LoginPage() {
       <div className="mt-9">
         <SsoBadges />
       </div>
-      <SsoDivider label="Или введите емейл" />
+      <SsoDivider label="или" />
 
       <form
           onSubmit={(e) => {
@@ -105,10 +106,8 @@ export default function LoginPage() {
           />
 
           <label className="label mt-5" htmlFor="password">Введите пароль</label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
-            className="input"
             placeholder="Пароль"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
