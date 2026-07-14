@@ -57,7 +57,7 @@ export default function ResetPasswordPage() {
       <Shell>
         <div className="text-center">
           <div className="text-3xl mb-3" aria-hidden>⏱</div>
-          <h1 className="display-em text-brand-700 text-2xl">Ссылка недействительна</h1>
+          <h1 className="text-[28px] font-bold text-ink">Ссылка недействительна</h1>
           <p className="text-sm text-ink-muted mt-3">
             Ссылка устарела или уже была использована.
             Запросите новую — это занимает минуту.
@@ -77,7 +77,7 @@ export default function ResetPasswordPage() {
 
   return (
     <Shell>
-      <h1 className="display-em text-brand-700 text-2xl">Новый пароль</h1>
+      <h1 className="text-[28px] font-bold text-ink text-center">Новый пароль</h1>
       <form
         className="mt-5"
         onSubmit={(e) => {
@@ -129,7 +129,7 @@ export default function ResetPasswordPage() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <AuthShell>
-      <div className="w-full max-w-md card p-8 animate-fade-in">{children}</div>
+      <div className="mx-auto w-full max-w-md">{children}</div>
     </AuthShell>
   )
 }

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import { authApi } from '../features/auth/api'
 import { errorMessage } from '../shared/api/client'
 import AuthShell from '../components/AuthShell'
-import { SsoBadges } from '../components/SsoBadges'
+import { SsoBadges, SsoDivider } from '../components/SsoBadges'
 
 // ─────────────────────────────────────────────────────────────────────────
 //  SignupPage — step 1 of email-OTP registration.
@@ -63,22 +63,21 @@ export default function SignupPage() {
 
   return (
     <AuthShell>
-      <form
-        onSubmit={handleSubmit}
-        className="card w-full max-w-md p-8 animate-fade-in"
-        autoComplete="off"
-      >
-        <div className="mb-7">
-          <div className="chapter-num">— шаг 01 из 02</div>
-          <h1 className="display-em text-brand-700 text-3xl mt-2 leading-tight">
-            Создать аккаунт
-          </h1>
-          <p className="text-sm text-ink-muted mt-2">
-            Придумайте пароль — на почту придёт код подтверждения.
-          </p>
-        </div>
+      <div className="text-center">
+        <div className="chapter-num">— шаг 01 из 02</div>
+        <h1 className="text-[28px] font-bold text-ink mt-1.5">Регистрация</h1>
+        <p className="text-sm text-ink-muted mt-2">
+          Придумайте пароль — на почту придёт код подтверждения.
+        </p>
+      </div>
 
-        <label className="label" htmlFor="email">Email</label>
+      <div className="mt-9">
+        <SsoBadges />
+      </div>
+      <SsoDivider label="Или введите емейл" />
+
+      <form onSubmit={handleSubmit} autoComplete="off">
+        <label className="label" htmlFor="email">Емейл</label>
         <input
           id="email"
           type="email"
@@ -168,21 +167,19 @@ export default function SignupPage() {
 
         <button
           type="submit"
-          className="btn-primary w-full mt-5"
+          className="btn-primary block mx-auto px-10 mt-8"
           disabled={isPending || !agreed}
         >
           {isPending ? 'Отправка кода…' : 'Подтвердить'}
         </button>
-
-        <SsoBadges />
-
-        <p className="text-xs text-ink-subtle text-center mt-5">
-          Уже есть аккаунт?{' '}
-          <Link to="/login" className="text-brand-500 underline underline-offset-2">
-            Войти
-          </Link>
-        </p>
       </form>
+
+      <p className="text-sm text-ink text-center mt-6 font-medium">
+        Уже есть аккаунт?{' '}
+        <Link to="/login" className="text-brand-500 font-normal">
+          Войти
+        </Link>
+      </p>
     </AuthShell>
   )
 }
