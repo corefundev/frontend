@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 
 import { authApi } from '../features/auth/api'
 import AuthShell from '../components/AuthShell'
+import { LabelHint, PasswordInput } from '../components/PasswordInput'
 import { errorMessage } from '../shared/api/client'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -88,11 +89,12 @@ export default function ResetPasswordPage() {
           mutate()
         }}
       >
-        <label className="label" htmlFor="password">Новый пароль</label>
-        <input
+        <label className="label flex items-center" htmlFor="password">
+          Новый пароль
+          <LabelHint text={`Не менее ${PASSWORD_MIN} символов. Спецсимволы не обязательны — длина важнее.`} />
+        </label>
+        <PasswordInput
           id="password"
-          type="password"
-          className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
@@ -100,15 +102,10 @@ export default function ResetPasswordPage() {
           minLength={PASSWORD_MIN}
           maxLength={128}
         />
-        <p className="eyebrow mt-1.5">
-          Не менее {PASSWORD_MIN} символов. Спецсимволы не обязательны — длина важнее.
-        </p>
 
         <label className="label mt-4" htmlFor="password2">Повторите пароль</label>
-        <input
+        <PasswordInput
           id="password2"
-          type="password"
-          className="input"
           value={password2}
           onChange={(e) => setPassword2(e.target.value)}
           autoComplete="new-password"
