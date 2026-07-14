@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
       <Shell>
         <div className="text-center">
           <div className="text-3xl mb-3" aria-hidden>✉️</div>
-          <h1 className="display-em text-brand-700 text-2xl">Проверьте почту</h1>
+          <h1 className="text-[28px] font-bold text-ink">Проверьте почту</h1>
           <p className="text-sm text-ink-muted mt-3 leading-relaxed">
             Если аккаунт с адресом{' '}
             <strong className="text-ink font-mono">{sentTo}</strong> существует —
@@ -55,8 +55,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <Shell>
-      <h1 className="display-em text-brand-700 text-2xl">Сброс пароля</h1>
-      <p className="text-sm text-ink-muted mt-2">
+      <h1 className="text-[28px] font-bold text-ink text-center">Сброс пароля</h1>
+      <p className="text-sm text-ink-muted mt-2 text-center">
         Пришлём ссылку для смены пароля на вашу почту.
       </p>
       <form
@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <AuthShell>
-      <div className="w-full max-w-md card p-8 animate-fade-in">{children}</div>
+      <div className="mx-auto w-full max-w-md">{children}</div>
     </AuthShell>
   )
 }

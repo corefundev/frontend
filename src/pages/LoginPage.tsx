@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import { authApi } from '../features/auth/api'
 import { useAuthStore } from '../features/auth/store'
 import AuthShell from '../components/AuthShell'
-import { SsoBadges } from '../components/SsoBadges'
+import { SsoBadges, SsoDivider } from '../components/SsoBadges'
 import { errorMessage } from '../shared/api/client'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -65,31 +65,25 @@ export default function LoginPage() {
 
   return (
     <AuthShell>
-      <div className="w-full max-w-md card p-8 animate-fade-in">
-        <div className="mb-6 flex flex-col items-center">
-          <div
-            aria-hidden
-            className="h-12 w-12 rounded-md bg-brand-500 flex items-center justify-center text-ink-invert font-bold"
-          >
-            SKU
-          </div>
-          <h1 className="display-em text-brand-700 text-2xl mt-3">
-            Вход в SKU&nbsp;Forecasting
-          </h1>
+      <h1 className="text-[28px] font-bold text-ink text-center">Авторизация</h1>
+
+      {confirmed && (
+        <div className="mt-5 rounded-md bg-success-bg text-success px-4 py-2.5 text-sm font-medium text-center">
+          ✓ Почта подтверждена — войдите с вашим паролем
         </div>
+      )}
+      {afterReset && (
+        <div className="mt-5 rounded-md bg-success-bg text-success px-4 py-2.5 text-sm font-medium text-center">
+          ✓ Пароль изменён — войдите с новым паролем
+        </div>
+      )}
 
-        {confirmed && (
-          <div className="mb-5 rounded-md bg-success-bg text-success px-4 py-2.5 text-sm font-medium text-center">
-            ✓ Почта подтверждена — войдите с вашим паролем
-          </div>
-        )}
-        {afterReset && (
-          <div className="mb-5 rounded-md bg-success-bg text-success px-4 py-2.5 text-sm font-medium text-center">
-            ✓ Пароль изменён — войдите с новым паролем
-          </div>
-        )}
+      <div className="mt-9">
+        <SsoBadges />
+      </div>
+      <SsoDivider label="Или введите емейл" />
 
-        <form
+      <form
           onSubmit={(e) => {
             e.preventDefault()
             if (!email.trim()) return toast.error('Введите email')
@@ -98,57 +92,56 @@ export default function LoginPage() {
             login.mutate()
           }}
         >
-          <label className="label" htmlFor="email">Email</label>
+          <label className="label" htmlFor="email">Емейл</label>
           <input
             id="email"
             type="email"
             className="input"
+            placeholder="name@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             required
           />
 
-          <label className="label mt-4" htmlFor="password">Пароль</label>
+          <label className="label mt-5" htmlFor="password">Введите пароль</label>
           <input
             id="password"
             type="password"
             className="input"
+            placeholder="Пароль"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
             required
           />
-          <div className="flex justify-end mt-1.5">
-            <Link to="/forgot" className="text-xs text-brand-500 underline underline-offset-2">
-              Забыли пароль?
+          <div className="mt-2">
+            <Link to="/forgot" className="text-sm text-brand-500">
+              Восстановить пароль
             </Link>
           </div>
 
           {TURNSTILE_SITE_KEY && captchaNeeded && (
-            <div className="mt-4">
+            <div className="mt-5">
               <TurnstileWidget siteKey={TURNSTILE_SITE_KEY} onToken={setCaptcha} />
             </div>
           )}
 
           <button
             type="submit"
-            className="btn-primary w-full mt-5"
+            className="btn-primary block mx-auto px-10 mt-8"
             disabled={login.isPending}
           >
-            {login.isPending ? 'Вход…' : 'Войти'}
+            {login.isPending ? 'Вход…' : 'Авторизоваться'}
           </button>
         </form>
 
-        <SsoBadges />
-
-        <p className="text-xs text-ink-subtle text-center mt-6">
-          Нет аккаунта?{' '}
-          <Link to="/signup" className="text-brand-500 underline underline-offset-2">
-            Создать аккаунт
-          </Link>
-        </p>
-      </div>
+      <p className="text-sm text-ink text-center mt-6 font-medium">
+        Нет аккаунта?{' '}
+        <Link to="/signup" className="text-brand-500 font-normal">
+          Зарегистрируйтесь
+        </Link>
+      </p>
     </AuthShell>
   )
 }

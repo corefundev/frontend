@@ -101,12 +101,14 @@ export default function SignupVerifyPage() {
 
   return (
     <AuthShell>
-      <div className="card w-full max-w-md p-8 animate-fade-in">
-        <div className="chapter-num">— шаг 02 из 02</div>
-        <h1 className="display-em text-brand-700 text-3xl mt-2 leading-tight">
-          Введите код из email
-        </h1>
-        <p className="text-sm text-ink-muted mt-2">
+      <div className="mx-auto w-full max-w-md">
+        <div className="text-center">
+          <div className="chapter-num">— шаг 02 из 02</div>
+          <h1 className="text-[28px] font-bold text-ink mt-1.5">
+            Введите код из email
+          </h1>
+        </div>
+        <p className="text-sm text-ink-muted mt-3 text-center">
           Мы отправили 6-значный код на{' '}
           <strong className="text-ink font-mono">{email}</strong>.
           Код действует 10 минут.
