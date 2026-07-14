@@ -32,10 +32,6 @@ export interface SignupRequest {
   // AUTH-1 #445: пароль задаётся на форме регистрации
   password?: string
 }
-export interface LoginEmailRequest {
-  email: string
-  captcha_token?: string
-}
 export interface VerifyOtpRequest {
   email: string
   code: string         // 6 digits
@@ -62,12 +58,6 @@ export interface LoginVerifyResponse {
   token_type: 'bearer'
 }
 
-export interface OAuthProvider {
-  id:           'google' | 'yandex'
-  display_name: string         // 'Google' | 'Яндекс'
-  start_url:    string         // '/auth/oauth/google/start'
-}
-
 export const authApi = {
   // Classic
   login: (payload: TokenRequest) =>
@@ -78,19 +68,6 @@ export const authApi = {
     apiClient.post<OtpAcceptedResponse>('/auth/signup', payload).then((r) => r.data),
   signupVerify: (payload: VerifyOtpRequest) =>
     apiClient.post<SignupVerifyResponse>('/auth/signup/verify', payload).then((r) => r.data),
-
-  // Email-OTP login
-  loginEmail: (payload: LoginEmailRequest) =>
-    apiClient.post<OtpAcceptedResponse>('/auth/login', payload).then((r) => r.data),
-  loginEmailVerify: (payload: VerifyOtpRequest) =>
-    apiClient.post<LoginVerifyResponse>('/auth/login/verify', payload).then((r) => r.data),
-
-  // OAuth providers list — frontend uses this to decide which buttons
-  // to render. If the backend has both disabled, no buttons appear.
-  oauthProviders: () =>
-    apiClient
-      .get<{ providers: OAuthProvider[] }>('/auth/oauth/providers')
-      .then((r) => r.data.providers),
 
   // ── AUTH-1/2 (#445/#446): пароль + remember-me ────────────────────
   // withCredentials — refresh-кука (httpOnly, Path=/auth) ходит только
