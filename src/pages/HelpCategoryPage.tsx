@@ -17,7 +17,7 @@ export default function HelpCategoryPage() {
   return (
     <PublicLayout>
       <section className="py-12 lg:py-16">
-        <div className="mx-auto max-w-3xl px-5 lg:px-8">
+        <div className="mx-auto max-w-4xl px-5 lg:px-8">
           <div className="mb-6"><HelpSearchBox basePath="/help" /></div>
           {isLoading ? (
             <div className="h-32 rounded-lg bg-surface-muted animate-pulse" />

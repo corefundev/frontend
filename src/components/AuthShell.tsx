@@ -17,7 +17,7 @@ export default function AuthShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-white flex flex-col">
       <PublicHeader isAuthed={isAuthed} />
       <main className="flex-1 px-6 pt-7 pb-10 sm:pt-9">
-        <div className="mx-auto w-full max-w-md animate-fade-in">
+        <div className="mx-auto w-full max-w-[26rem] animate-fade-in">
           {children}
         </div>
       </main>

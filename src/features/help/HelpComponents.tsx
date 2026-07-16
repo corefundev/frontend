@@ -129,19 +129,23 @@ export function HelpCategoriesGrid({ basePath }: { basePath: string }) {
   if (isError) return <p className="text-sm text-danger">Не удалось загрузить категории.</p>
   if (!cats?.length) return <p className="text-sm text-ink-muted">Статьи готовятся к публикации.</p>
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div className="grid sm:grid-cols-2 gap-3">
       {cats.map((c) => (
         <Link key={c.slug} to={`${basePath}/${encodeURIComponent(c.slug)}`}
-              className="block rounded-lg border border-surface-border bg-surface p-4 hover:border-brand-500/40 hover:shadow-paper transition-shadow">
-          <div className="font-medium text-ink">
-            {c.icon && <span className="mr-1.5">{c.icon}</span>}{c.title}
-          </div>
-          {c.description && (
-            <div className="text-sm text-ink-muted mt-1">{c.description}</div>
-          )}
-          <div className="text-xs text-ink-subtle mt-2">
-            {c.articles_count ?? 0} стат{plural(c.articles_count ?? 0)}
-          </div>
+              className="flex items-start gap-3.5 rounded-lg border border-surface-border bg-surface p-4 hover:border-brand-500/40 hover:shadow-paper transition-shadow">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-lg"
+                aria-hidden>
+            {c.icon || '📄'}
+          </span>
+          <span className="min-w-0">
+            <span className="block font-medium text-ink">{c.title}</span>
+            {c.description && (
+              <span className="block text-sm text-ink-muted mt-0.5">{c.description}</span>
+            )}
+            <span className="block text-xs text-ink-subtle mt-1.5">
+              {c.articles_count ?? 0} стат{plural(c.articles_count ?? 0)}
+            </span>
+          </span>
         </Link>
       ))}
     </div>
@@ -184,6 +188,7 @@ export function HelpArticleView({ slug, basePath }: {
     queryKey: ['help-article', slug],
     queryFn: () => helpPublicApi.article(slug),
   })
+  const bodyRef = useRef<HTMLDivElement>(null)
   // SEO из API (публичная витрина)
   useEffect(() => {
     if (!art) return
@@ -202,31 +207,104 @@ export function HelpArticleView({ slug, basePath }: {
     )
   }
   return (
-    <article>
-      <HelpBreadcrumbs crumbs={art.breadcrumbs} basePath={basePath} />
-      <h1 className="text-2xl font-semibold tracking-tight text-ink mt-3">{art.title}</h1>
-      {art.published_at && (
-        <div className="text-xs text-ink-subtle mt-1">
-          Обновлено {new Date(art.updated_at).toLocaleDateString('ru-RU')}
-        </div>
-      )}
-      <div className="cms-body text-[15px] text-ink mt-5"
-           dangerouslySetInnerHTML={{ __html: art.body_html }} />
-      <HelpFeedbackBlock slug={art.slug} />
-      {!!art.related.length && (
-        <div className="mt-8">
-          <div className="text-sm font-semibold text-ink mb-2">Ещё по теме</div>
-          <ul className="space-y-1.5">
-            {art.related.map((r) => (
-              <li key={r.slug}>
-                <Link to={`${basePath}/a/${encodeURIComponent(r.slug)}`}
-                      className="text-sm text-brand-600 hover:underline">{r.title}</Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </article>
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_200px] lg:gap-12">
+      <article className="min-w-0">
+        <HelpBreadcrumbs crumbs={art.breadcrumbs} basePath={basePath} />
+        <h1 className="text-2xl font-semibold tracking-tight text-ink mt-3">{art.title}</h1>
+        {art.published_at && (
+          <div className="text-xs text-ink-subtle mt-1">
+            Обновлено {new Date(art.updated_at).toLocaleDateString('ru-RU')}
+          </div>
+        )}
+        <div ref={bodyRef} className="cms-body text-[15px] text-ink mt-5"
+             dangerouslySetInnerHTML={{ __html: art.body_html }} />
+        <HelpFeedbackBlock slug={art.slug} />
+        {!!art.related.length && (
+          <div className="mt-8">
+            <div className="text-sm font-semibold text-ink mb-2">Ещё по теме</div>
+            <ul className="space-y-1.5">
+              {art.related.map((r) => (
+                <li key={r.slug}>
+                  <Link to={`${basePath}/a/${encodeURIComponent(r.slug)}`}
+                        className="text-sm text-brand-600 hover:underline">{r.title}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </article>
+      <HelpArticleToc bodyRef={bodyRef} articleKey={art.slug} />
+    </div>
+  )
+}
+
+// ── оглавление статьи (правый рейл, lg+) ─────────────────────────────────
+// Секции берём из УЖЕ отрендеренного санированного body (h2/h3 —
+// содержимое прошло серверный санитайзер, мы только читаем текст и
+// проставляем id для якорей). Активная секция — по IntersectionObserver;
+// рейл = сплошная светлая линия, активный сегмент — тёмный (референс —
+// help-центры Anthropic/Intercom).
+function HelpArticleToc({ bodyRef, articleKey }: {
+  bodyRef: React.RefObject<HTMLDivElement>
+  articleKey: string
+}) {
+  const [items, setItems] = useState<{ id: string; text: string; sub: boolean }[]>([])
+  const [active, setActive] = useState<string | null>(null)
+
+  useEffect(() => {
+    const root = bodyRef.current
+    if (!root) return
+    const seen = new Map<string, number>()
+    const found = Array.from(root.querySelectorAll<HTMLElement>('h2, h3')).map((h) => {
+      const text = (h.textContent || '').trim()
+      let id = h.id || text.toLowerCase()
+        .replace(/[^a-zа-яё0-9\s-]/gi, '').trim().replace(/\s+/g, '-') || 'section'
+      const n = seen.get(id) ?? 0
+      seen.set(id, n + 1)
+      if (n > 0) id = `${id}-${n + 1}`
+      h.id = id
+      h.style.scrollMarginTop = '84px'
+      return { id, text, sub: h.tagName === 'H3', el: h }
+    }).filter((i) => i.text)
+    setItems(found.map((i) => ({ id: i.id, text: i.text, sub: i.sub })))
+    setActive(found[0]?.id ?? null)
+    if (!found.length) return
+
+    const io = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((e) => e.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+      if (visible[0]) setActive(visible[0].target.id)
+    }, { rootMargin: '-80px 0px -70% 0px' })
+    found.forEach((i) => io.observe(i.el))
+    return () => io.disconnect()
+  }, [bodyRef, articleKey])
+
+  if (items.length < 2) return null
+  return (
+    <nav className="hidden lg:block" aria-label="Содержание статьи">
+      <ul className="sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto border-l border-surface-border">
+        {items.map((i) => (
+          <li key={i.id}>
+            <a href={`#${i.id}`}
+               onClick={(e) => {
+                 e.preventDefault()
+                 document.getElementById(i.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                 setActive(i.id)
+               }}
+               className={[
+                 'block -ml-px border-l-2 py-1.5 pr-2 text-[13px] leading-snug transition-colors',
+                 i.sub ? 'pl-7' : 'pl-4',
+                 active === i.id
+                   ? 'border-ink text-ink font-medium'
+                   : 'border-transparent text-ink-muted hover:text-ink',
+               ].join(' ')}>
+              {i.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
   )
 }
 
@@ -248,7 +326,7 @@ function HelpFeedbackBlock({ slug }: { slug: string }) {
 
   if (voted) {
     return (
-      <div className="mt-8 rounded-lg border border-surface-border bg-surface-muted/40 px-4 py-3 text-sm text-ink-muted">
+      <div className="mt-8 rounded-lg border border-surface-border bg-surface-muted/40 px-4 py-3 text-sm text-ink-muted text-center">
         {voted === 'dup'
           ? 'Ваш голос по этой статье уже учтён.'
           : 'Спасибо! Ваш отзыв поможет сделать статьи лучше.'}
@@ -256,8 +334,8 @@ function HelpFeedbackBlock({ slug }: { slug: string }) {
     )
   }
   return (
-    <div className="mt-8 rounded-lg border border-surface-border bg-surface-muted/40 px-4 py-3">
-      <div className="flex items-center gap-3 flex-wrap">
+    <div className="mt-8 rounded-lg border border-surface-border bg-surface-muted/40 px-4 py-4">
+      <div className="flex items-center justify-center gap-3 flex-wrap text-center">
         <span className="text-sm text-ink">Была ли статья полезна?</span>
         <button type="button" className="btn-secondary text-xs" disabled={mut.isPending}
                 onClick={() => mut.mutate({ helpful: true, comment })}>

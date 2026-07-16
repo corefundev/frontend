@@ -9,7 +9,7 @@ export default function HelpArticlePage() {
   return (
     <PublicLayout>
       <section className="py-12 lg:py-16">
-        <div className="mx-auto max-w-3xl px-5 lg:px-8">
+        <div className="mx-auto max-w-5xl px-5 lg:px-8">
           <div className="mb-6"><HelpSearchBox basePath="/help" /></div>
           <HelpArticleView slug={artSlug} basePath="/help" />
         </div>
