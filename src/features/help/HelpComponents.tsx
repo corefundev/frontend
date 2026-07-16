@@ -266,7 +266,7 @@ function HelpArticleToc({ bodyRef, articleKey }: {
       h.style.scrollMarginTop = '84px'
       return { id, text, sub: h.tagName === 'H3', el: h }
     }).filter((i) => i.text)
-    setItems(found.map(({ el: _el, ...rest }) => rest))
+    setItems(found.map((i) => ({ id: i.id, text: i.text, sub: i.sub })))
     setActive(found[0]?.id ?? null)
     if (!found.length) return
 
