@@ -16,6 +16,7 @@ const UpgradePage       = lazy(() => import('./pages/client/UpgradePage'))
 const ScenariosPage     = lazy(() => import('./pages/client/ScenariosPage'))
 const PromoPage         = lazy(() => import('./pages/client/PromoPage'))
 const ForecastsPage     = lazy(() => import('./pages/client/ForecastsPage'))
+const OrdersPage        = lazy(() => import('./pages/client/OrdersPage'))
 const TrainingPage      = lazy(() => import('./pages/client/TrainingPage'))
 const TrainingHistoryPage = lazy(() => import('./pages/client/TrainingHistoryPage'))
 const SettingsPage      = lazy(() => import('./pages/client/SettingsPage'))
@@ -319,6 +320,14 @@ export default function App() {
           element={
             <Suspense fallback={<SuspenseFallback />}>
               <ForecastsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="orders"
+          element={
+            <Suspense fallback={<SuspenseFallback />}>
+              <OrdersPage />
             </Suspense>
           }
         />
