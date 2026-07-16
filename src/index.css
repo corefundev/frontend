@@ -96,6 +96,19 @@
    никакого кремового зерна card-paper, тень из --admin-shadow (светлая /
    тёмная задаётся переменной; тёплая shadow-paper на тёмном давала
    «свечение», на светлом — не-прототипную «бумагу») */
+/* ── Кабинет v2 (эпик #463): светлый язык утверждённых прототипов.
+   Плоские белые карточки без кремового зерна, тонкая граница, лёгкая
+   тень — тот же приём, что .admin-console (скоуп на корне AppLayout). */
+.cabinet-v2 .card-paper,
+.cabinet-v2 .card {
+  background-image: none;
+  background-color: rgb(var(--surface-raised));
+  --tw-ring-color: rgb(var(--surface-border));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.05);
+  border-radius: 8px;
+  border: 1px solid rgb(var(--surface-border));
+}
+
 .admin-console .card-paper,
 .admin-console .card {
   background-image: none;

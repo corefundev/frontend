@@ -82,23 +82,18 @@ export default function AppLayout() {
   })()
 
   return (
-    <div className="min-h-screen flex bg-surface">
+    <div className="cabinet-v2 min-h-screen flex bg-surface">
       {/* ── Sidebar ─────────────────────────────────────────────── */}
-      <aside className="w-64 bg-brand-700 text-ink-invert flex flex-col relative">
+      <aside className="w-64 bg-surface-raised text-ink border-r border-surface-border flex flex-col relative">
         {/* Editorial ambient decoration — thin gold vertical rule */}
-        <span
-          aria-hidden
-          className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-gold-600/30 to-transparent"
-        />
-
-        <div className="px-6 py-6 flex items-center gap-3 border-b border-brand-600">
+        <div className="px-6 py-6 flex items-center gap-3">
           <div className="h-9 w-9 rounded-md bg-brand-500 flex items-center justify-center text-[11px] font-semibold tracking-wider">
             SKU
           </div>
           <div className="leading-tight">
-            <div className="font-display italic text-lg">Forecasting</div>
+            <div className="font-semibold text-lg text-ink">Forecasting</div>
             {usage && (
-              <div className="eyebrow !text-gold-300 !tracking-[0.16em]">
+              <div className="eyebrow !text-ink-subtle !tracking-[0.16em]">
                 {usage.model_display_name}
               </div>
             )}
@@ -110,7 +105,7 @@ export default function AppLayout() {
             <NavLink
               to=""
               end
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-brand-50/70 hover:bg-brand-600 hover:text-ink-invert transition-colors"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink-muted hover:bg-surface-muted hover:text-ink transition-colors"
             >
               <span aria-hidden>←</span>
               <span className="truncate">Назад в приложение</span>
@@ -123,8 +118,8 @@ export default function AppLayout() {
                 className={({ isActive }) => [
                   'block rounded-md px-3 py-2 text-sm transition-colors',
                   isActive
-                    ? 'bg-brand-500 text-ink-invert'
-                    : 'text-brand-50/80 hover:bg-brand-600 hover:text-ink-invert',
+                    ? 'bg-brand-50 text-brand-700 font-medium'
+                    : 'text-ink-muted hover:bg-surface-muted hover:text-ink',
                 ].join(' ')}
               >
                 {s.label}
@@ -163,7 +158,7 @@ export default function AppLayout() {
               <div
                 role="link"
                 aria-disabled="true"
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-brand-50/40 cursor-not-allowed"
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-ink-subtle/60 cursor-not-allowed"
                 title={`Доступно в тарифе ${minPlan === 'start' ? 'Start' : 'Business'}`}
               >
                 {inner}
@@ -179,8 +174,8 @@ export default function AppLayout() {
                   'flex items-center gap-3 rounded-md px-3 py-2 text-sm',
                   'transition-colors',
                   isActive
-                    ? 'bg-brand-500 text-ink-invert'
-                    : 'text-brand-50/80 hover:bg-brand-600 hover:text-ink-invert',
+                    ? 'bg-brand-50 text-brand-700 font-medium'
+                    : 'text-ink-muted hover:bg-surface-muted hover:text-ink',
                 ].join(' ')}
               >
                 {inner}
@@ -189,7 +184,7 @@ export default function AppLayout() {
             return (
               <Fragment key={to}>
                 {showGroupHeader && (
-                  <div className="px-3 pt-4 pb-1 eyebrow !text-brand-50/40">{group}</div>
+                  <div className="px-3 pt-4 pb-1 eyebrow !text-ink-subtle">{group}</div>
                 )}
                 {itemEl}
               </Fragment>
@@ -199,9 +194,9 @@ export default function AppLayout() {
         )}
 
         {/* Footer of sidebar — client identity */}
-        <div className="p-4 border-t border-brand-600">
-          <div className="eyebrow !text-brand-50/50">Клиент</div>
-          <div className="font-mono text-xs text-ink-invert truncate">{clientId ?? '—'}</div>
+        <div className="p-4 border-t border-surface-border">
+          <div className="eyebrow !text-ink-subtle">Клиент</div>
+          <div className="font-mono text-xs text-ink truncate">{clientId ?? '—'}</div>
         </div>
       </aside>
 
