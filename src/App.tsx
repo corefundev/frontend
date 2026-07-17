@@ -121,7 +121,63 @@ function SuspenseFallback() {
   return <div className="h-64" aria-hidden="true" />
 }
 
+// ── MIGR-1 (#424): сервис-поддомены news.<домен> / help.<домен> ──────────
+// Решение владельца 2026-07-17: «Новости» и «База знаний» живут на своих
+// поддоменах. Тот же бандл, раздел выбирается по hostname: на news.* /
+// help.* раздел рендерится ОТ КОРНЯ (basePath=''), любой чужой путь
+// уезжает full-reload'ом на основной домен (пути кабинета/лендинга на
+// поддомене не существуют). На основном домене поведение прежнее.
+const HOSTNAME = typeof window !== 'undefined' ? window.location.hostname : ''
+const SECTION_HOST: 'news' | 'help' | null =
+  HOSTNAME.startsWith('news.') ? 'news'
+  : HOSTNAME.startsWith('help.') ? 'help'
+  : null
+const MAIN_ORIGIN = SECTION_HOST
+  ? `${window.location.protocol}//${HOSTNAME.replace(/^(news|help)\./, '')}`
+  : ''
+
+function ToMainDomain() {
+  useEffect(() => {
+    window.location.replace(MAIN_ORIGIN + window.location.pathname + window.location.search)
+  }, [])
+  return <SuspenseFallback />
+}
+
+function SectionHostApp({ section }: { section: 'news' | 'help' }) {
+  return (
+    <>
+      <PjaxLoader />
+      <Routes>
+        {section === 'news' ? (
+          <>
+            <Route path="/" element={
+              <Suspense fallback={<SuspenseFallback />}><NewsPage basePath="" /></Suspense>
+            } />
+            <Route path="/:slug" element={
+              <Suspense fallback={<SuspenseFallback />}><NewsPostPage basePath="" /></Suspense>
+            } />
+          </>
+        ) : (
+          <>
+            <Route path="/" element={
+              <Suspense fallback={<SuspenseFallback />}><HelpPage basePath="" /></Suspense>
+            } />
+            <Route path="/a/:artSlug" element={
+              <Suspense fallback={<SuspenseFallback />}><HelpArticlePage basePath="" /></Suspense>
+            } />
+            <Route path="/:catSlug" element={
+              <Suspense fallback={<SuspenseFallback />}><HelpCategoryPage basePath="" /></Suspense>
+            } />
+          </>
+        )}
+        <Route path="*" element={<ToMainDomain />} />
+      </Routes>
+    </>
+  )
+}
+
 export default function App() {
+  if (SECTION_HOST) return <SectionHostApp section={SECTION_HOST} />
   return (
     <>
       {/* GitHub-style pjax progress bar — fixed-top, brand-500.

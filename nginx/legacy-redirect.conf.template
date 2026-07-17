@@ -1,0 +1,54 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MIGR-1 (#424) Фаза 2: ${WEB_DOMAIN} (легаси skusystem.ru) → 301 на
+# ${NEW_DOMAIN} ПОСТРАНИЧНО (не в лоб на корень): /news/* и /help/* уезжают
+# на свои поддомены, остальное — тот же путь на apex. Включается
+# entrypoint'ом при LEGACY_REDIRECT=1 (вместо SPA-блока app.conf).
+# Серт легаси-домена продолжает продлеваться (ACME-локация ниже).
+# envsubst подставляет только ${WEB_DOMAIN}/${NEW_DOMAIN} — nginx-переменные
+# ($host, $request_uri, именованные capture-группы) не трогает.
+# ─────────────────────────────────────────────────────────────────────────────
+
+map $request_uri $migr_target {
+    ~^/news(?<rest_news>.*)$   https://news.${NEW_DOMAIN}$rest_news;
+    ~^/help(?<rest_help>.*)$   https://help.${NEW_DOMAIN}$rest_help;
+    default                    https://${NEW_DOMAIN}$request_uri;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${WEB_DOMAIN} www.${WEB_DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type "text/plain";
+    }
+    location = /nginx-healthz {
+        access_log off;
+        return 200 "ok\n";
+        default_type text/plain;
+    }
+    location / {
+        return 301 $migr_target;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${WEB_DOMAIN} www.${WEB_DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${WEB_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${WEB_DOMAIN}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    location = /nginx-healthz {
+        access_log off;
+        return 200 "ok\n";
+        default_type text/plain;
+    }
+    location / {
+        return 301 $migr_target;
+    }
+}

@@ -29,7 +29,9 @@ FROM nginx:1.27-alpine
 RUN apk add --no-cache gettext tini
 
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx/app.conf.template /etc/nginx/templates/app.conf.template
+COPY nginx/app.conf.template            /etc/nginx/templates/app.conf.template
+COPY nginx/sprosly.conf.template        /etc/nginx/templates/sprosly.conf.template
+COPY nginx/legacy-redirect.conf.template /etc/nginx/templates/legacy-redirect.conf.template
 COPY nginx/entrypoint.sh     /entrypoint.sh
 RUN  chmod +x /entrypoint.sh
 

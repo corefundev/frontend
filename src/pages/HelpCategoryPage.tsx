@@ -8,7 +8,7 @@ import {
 } from '../features/help/HelpComponents'
 import { helpPublicApi } from '../features/help/publicApi'
 
-export default function HelpCategoryPage() {
+export default function HelpCategoryPage({ basePath = '/help' }: { basePath?: string } = {}) {
   const { catSlug = '' } = useParams()
   const { data: cat, isLoading, isError } = useQuery({
     queryKey: ['help-category', catSlug],
@@ -18,7 +18,7 @@ export default function HelpCategoryPage() {
     <PublicLayout>
       <section className="py-12 lg:py-16">
         <div className="mx-auto max-w-4xl px-5 lg:px-8">
-          <div className="mb-6"><HelpSearchBox basePath="/help" /></div>
+          <div className="mb-6"><HelpSearchBox basePath={basePath} /></div>
           {isLoading ? (
             <div className="h-32 rounded-lg bg-surface-muted animate-pulse" />
           ) : isError || !cat ? (
@@ -28,13 +28,13 @@ export default function HelpCategoryPage() {
             </p>
           ) : (
             <>
-              <HelpBreadcrumbs crumbs={cat.breadcrumbs.slice(0, -1)} basePath="/help" />
+              <HelpBreadcrumbs crumbs={cat.breadcrumbs.slice(0, -1)} basePath={basePath} />
               <h1 className="text-2xl font-semibold tracking-tight text-ink mt-3">
                 {cat.icon && <span className="mr-2">{cat.icon}</span>}{cat.title}
               </h1>
               {cat.description && <p className="text-ink-muted mt-1">{cat.description}</p>}
               <div className="mt-6">
-                <HelpTeaserList items={cat.articles} basePath="/help" />
+                <HelpTeaserList items={cat.articles} basePath={basePath} />
               </div>
             </>
           )}

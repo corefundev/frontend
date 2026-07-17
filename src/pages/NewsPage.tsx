@@ -2,7 +2,7 @@
 import PublicLayout from '../components/PublicLayout'
 import { NewsFeedList } from '../features/news/NewsComponents'
 
-export default function NewsPage() {
+export default function NewsPage({ basePath = '/news' }: { basePath?: string } = {}) {
   return (
     <PublicLayout>
       <section className="py-12 lg:py-16">
@@ -11,7 +11,7 @@ export default function NewsPage() {
           <p className="text-ink-muted mt-2 mb-8">
             Релизы, улучшения точности и плановые работы сервиса.
           </p>
-          <NewsFeedList basePath="/news" />
+          <NewsFeedList basePath={basePath} />
         </div>
       </section>
     </PublicLayout>
