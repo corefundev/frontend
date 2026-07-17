@@ -27,6 +27,9 @@ services:
     environment:
       WEB_DOMAIN: "${WEB_DOMAIN:?ERROR: set WEB_DOMAIN in .env}"
       CSP_CONNECT_SRC: ${CSP_CONNECT_SRC:-*}
+      # MIGR-1 #424: новый домен + режим постраничного 301 легаси-хоста
+      NEW_DOMAIN: ${NEW_DOMAIN:-}
+      LEGACY_REDIRECT: ${LEGACY_REDIRECT:-0}
     ports:
       - "80:80"
       - "443:443"
