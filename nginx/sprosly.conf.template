@@ -10,6 +10,18 @@
 # Рендерится entrypoint'ом ТОЛЬКО когда сертификат существует.
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Канонизация разделов: у нового бренда «Новости»/«База знаний» живут
+# ТОЛЬКО на поддоменах; apex-пути /news|/help — 301 с переносом хвоста
+# (/news/slug → news.…/slug, /help/a/slug → help.…/a/slug). Пустой
+# default выключает редирект для остальных хостов/путей. envsubst
+# подставляет только ${NEW_DOMAIN} — nginx-переменные и capture-группы
+# не трогает.
+map $host$uri $migr_canonical {
+    ~^${NEW_DOMAIN}/news(?<rest_news>/.*)?$   https://news.${NEW_DOMAIN}$rest_news;
+    ~^${NEW_DOMAIN}/help(?<rest_help>/.*)?$   https://help.${NEW_DOMAIN}$rest_help;
+    default                                   "";
+}
+
 server {
     listen 80;
     listen [::]:80;
@@ -59,6 +71,10 @@ server {
     ssl_stapling        on;
     ssl_stapling_verify on;
     ssl_trusted_certificate /etc/letsencrypt/live/${NEW_DOMAIN}/chain.pem;
+
+    if ($migr_canonical) {
+        return 301 $migr_canonical$is_args$args;
+    }
 
     # CSP идентичен app.conf.template (Turnstile + API); единый источник
     # правды на оба шаблона — при правке менять ОБА (пин-тест в CI).
