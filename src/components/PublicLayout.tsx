@@ -6,11 +6,31 @@
 // footer + bottom row с копирайтом и навигацией.
 
 import { Link } from 'react-router-dom'
+
+import { mainUrl, sectionUrl, isExternal } from '../shared/hostRouting'
 import { ReactNode } from 'react'
 import { useAuthStore } from '../features/auth/store'
 
 interface Props {
   children: ReactNode
+}
+
+
+// MIGR-1 (#424): ссылка, живущая и на сервис-поддомене (абсолютной), и на
+// основном домене (роутерной). Секции news/help всегда получают
+// КАНОНИЧЕСКИЙ адрес (поддомен на новом бренде).
+function HostLink({ to, className, children, ...rest }: {
+  to: string
+  className?: string
+  children: React.ReactNode
+} & Record<string, unknown>) {
+  const url = to === '/news' ? sectionUrl('news')
+    : to === '/help' ? sectionUrl('help')
+    : mainUrl(to)
+  if (isExternal(url)) {
+    return <a href={url} className={className} {...rest}>{children}</a>
+  }
+  return <Link to={url} className={className} {...rest}>{children}</Link>
 }
 
 export default function PublicLayout({ children }: Props) {
@@ -37,56 +57,56 @@ export function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-ink/10">
       <div className="mx-auto max-w-7xl px-5 lg:px-8 h-16 flex items-center justify-between text-sm leading-5 text-[#020817]">
-        <Link to="/" className="flex items-center gap-2.5">
+        <HostLink to="/" className="flex items-center gap-2.5">
           <div className="h-8 w-8 rounded bg-brand-500 grid place-items-center text-white font-bold text-sm">
             S
           </div>
           <span className="font-semibold">SKU Forecasting</span>
-        </Link>
+        </HostLink>
 
         <nav className="hidden md:flex items-center gap-1">
-          <Link
+          <HostLink
             to="/#benefits"
             className="px-3 py-2 rounded hover:bg-[#f1f5f9] transition-colors"
           >
             Возможности
-          </Link>
-          <Link
+          </HostLink>
+          <HostLink
             to="/#audience"
             className="px-3 py-2 rounded hover:bg-[#f1f5f9] transition-colors"
           >
             Для кого
-          </Link>
-          <Link
+          </HostLink>
+          <HostLink
             to="/plans"
             className="px-3 py-2 rounded hover:bg-[#f1f5f9] transition-colors"
           >
             Тарифы
-          </Link>
+          </HostLink>
         </nav>
 
         <div className="flex items-center gap-2">
           {isAuthed ? (
-            <Link
+            <HostLink
               to="/app"
               className="inline-flex items-center px-4 py-2 rounded text-sm font-medium bg-[#0f172a] text-[#f8fafc] hover:bg-[#020817] transition-colors"
             >
               В кабинет →
-            </Link>
+            </HostLink>
           ) : (
             <>
-              <Link
+              <HostLink
                 to="/login"
                 className="hidden sm:inline-flex px-3 py-2 rounded text-sm hover:bg-[#f1f5f9] transition-colors"
               >
                 Войти
-              </Link>
-              <Link
+              </HostLink>
+              <HostLink
                 to="/signup"
                 className="inline-flex items-center px-4 py-2 rounded text-sm font-medium bg-[#0f172a] text-[#f8fafc] hover:bg-[#020817] transition-colors"
               >
                 Регистрация
-              </Link>
+              </HostLink>
             </>
           )}
         </div>
@@ -114,12 +134,12 @@ function PublicFooter() {
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-20">
           {/* ── бренд ── */}
           <div className="max-w-sm shrink-0">
-            <Link to="/" className="flex items-center gap-2.5">
+            <HostLink to="/" className="flex items-center gap-2.5">
               <div className="h-8 w-8 rounded bg-brand-500 grid place-items-center text-white font-bold text-sm">
                 S
               </div>
               <span className="font-semibold text-[#020817]">SKU Forecasting</span>
-            </Link>
+            </HostLink>
             <p className="mt-4 text-sm text-[#64748B] leading-relaxed">
               Прогноз спроса по каждому SKU на вашей истории продаж —
               c честной метрикой качества и без ручной настройки.
@@ -183,8 +203,8 @@ function PublicFooter() {
             © {new Date().getFullYear()} SKU Forecasting. Все права защищены.
           </p>
           <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <Link to="/terms"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Пользовательское соглашение</Link>
-            <Link to="/privacy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Политика конфиденциальности</Link>
+            <HostLink to="/terms"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Пользовательское соглашение</HostLink>
+            <HostLink to="/privacy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Политика конфиденциальности</HostLink>
           </nav>
         </div>
       </div>
@@ -228,12 +248,12 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
             </li>
           ) : (
             <li key={l.label}>
-              <Link
+              <HostLink
                 to={l.href!}
                 className="text-sm text-[#64748B] hover:text-[#020817] transition-colors"
               >
                 {l.label}
-              </Link>
+              </HostLink>
             </li>
           ),
         )}
