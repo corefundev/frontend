@@ -5,6 +5,7 @@ import { useAuthStore } from './features/auth/store'
 import { tryRefreshToken } from './shared/api/client'
 import AppLayout from './components/AppLayout'
 import AdminGuard from './components/AdminGuard'
+import { MAIN_ORIGIN, SECTION_HOST } from './shared/hostRouting'
 import PjaxLoader from './components/PjaxLoader'
 import LoginPage from './pages/LoginPage'
 import AdminLoginPage from './pages/AdminLoginPage'
@@ -127,14 +128,6 @@ function SuspenseFallback() {
 // help.* раздел рендерится ОТ КОРНЯ (basePath=''), любой чужой путь
 // уезжает full-reload'ом на основной домен (пути кабинета/лендинга на
 // поддомене не существуют). На основном домене поведение прежнее.
-const HOSTNAME = typeof window !== 'undefined' ? window.location.hostname : ''
-const SECTION_HOST: 'news' | 'help' | null =
-  HOSTNAME.startsWith('news.') ? 'news'
-  : HOSTNAME.startsWith('help.') ? 'help'
-  : null
-const MAIN_ORIGIN = SECTION_HOST
-  ? `${window.location.protocol}//${HOSTNAME.replace(/^(news|help)\./, '')}`
-  : ''
 
 function ToMainDomain() {
   useEffect(() => {
