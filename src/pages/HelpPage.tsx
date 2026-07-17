@@ -2,7 +2,7 @@
 import PublicLayout from '../components/PublicLayout'
 import { HelpCategoriesGrid, HelpSearchBox } from '../features/help/HelpComponents'
 
-export default function HelpPage() {
+export default function HelpPage({ basePath = '/help' }: { basePath?: string } = {}) {
   return (
     <PublicLayout>
       <section className="py-12 lg:py-16">
@@ -11,8 +11,8 @@ export default function HelpPage() {
           <p className="text-ink-muted mt-2 mb-6">
             Инструкции по загрузке данных, обучению модели и работе с прогнозами.
           </p>
-          <div className="mb-8"><HelpSearchBox basePath="/help" /></div>
-          <HelpCategoriesGrid basePath="/help" />
+          <div className="mb-8"><HelpSearchBox basePath={basePath} /></div>
+          <HelpCategoriesGrid basePath={basePath} />
         </div>
       </section>
     </PublicLayout>
