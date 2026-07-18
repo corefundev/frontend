@@ -36,22 +36,8 @@ function AccountSectionPlaceholder() {
   )
 }
 
-// «Данные» group (epic #320) — placeholder pages until the real sections ship
-// (Подготовка данных = DP-5 after the DP-2/3/4 backend; Обогащение = later).
-function DataSectionPlaceholder({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="max-w-3xl">
-      <div className="eyebrow">Данные</div>
-      <h1 className="display-em text-brand-700 text-3xl sm:text-4xl mt-2 leading-[1.05]">{title}</h1>
-      <section className="card p-8 mt-6">
-        <p className="text-ink-muted leading-relaxed">{body}</p>
-        <p className="mt-3 text-xs text-ink-subtle">Раздел в разработке.</p>
-      </section>
-    </div>
-  )
-}
-const UploadsPage       = lazy(() => import('./pages/client/UploadsPage'))
-const DataPreparePage   = lazy(() => import('./pages/client/DataPreparePage'))
+const DataPage          = lazy(() => import('./pages/client/DataPage'))
+const DatasetPage       = lazy(() => import('./pages/client/DatasetPage'))
 const PlansPage         = lazy(() => import('./pages/PlansPage'))
 const OnboardingPage    = lazy(() => import('./pages/OnboardingPage'))
 const SignupPage        = lazy(() => import('./pages/SignupPage'))
@@ -322,32 +308,27 @@ export default function App() {
             </Suspense>
           }
         />
+        {/* DS-2 (#467): раздел «Данные» — датасеты + история подготовок.
+            Старые /uploads и /data/prepare слиты сюда (редиректы ниже). */}
         <Route
-          path="uploads"
+          path="data"
           element={
             <Suspense fallback={<SuspenseFallback />}>
-              <UploadsPage />
-            </Suspense>
-          }
-        />
-        {/* «Данные» group (epic #320): prepare (DP-5 #32) + enrich (placeholder). */}
-        <Route
-          path="data/prepare"
-          element={
-            <Suspense fallback={<SuspenseFallback />}>
-              <DataPreparePage />
+              <DataPage />
             </Suspense>
           }
         />
         <Route
-          path="data/enrich"
+          path="data/:datasetId"
           element={
-            <DataSectionPlaceholder
-              title="Обогащение данных"
-              body="Скоро: обогащение ваших данных дополнительными и производными признаками для более точного прогноза. Состав раздела обсудим отдельно."
-            />
+            <Suspense fallback={<SuspenseFallback />}>
+              <DatasetPage />
+            </Suspense>
           }
         />
+        <Route path="uploads"      element={<Navigate to="/app/data" replace />} />
+        <Route path="data/prepare" element={<Navigate to="/app/data" replace />} />
+        <Route path="data/enrich"  element={<Navigate to="/app/data" replace />} />
         <Route
           path="training"
           element={
@@ -526,7 +507,7 @@ export default function App() {
       <Route path="/app/admin/notifications" element={<Navigate to="/admin/notifications" replace />} />
 
       {/* Старые ссылки вида /uploads, /forecasts и т.п. редиректим на /app/* */}
-      <Route path="/uploads"        element={<Navigate to="/app/uploads"        replace />} />
+      <Route path="/uploads"        element={<Navigate to="/app/data"           replace />} />
       <Route path="/training"       element={<Navigate to="/app/training"       replace />} />
       <Route path="/forecasts"      element={<Navigate to="/app/forecasts"      replace />} />
       <Route path="/scenarios"      element={<Navigate to="/app/scenarios"      replace />} />
