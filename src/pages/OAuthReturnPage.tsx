@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
+import { appUrl } from '../shared/hostRouting'
 import { useAuthStore } from '../features/auth/store'
 
 export default function OAuthReturnPage() {
@@ -67,6 +68,8 @@ export default function OAuthReturnPage() {
     // Existing user → straight in.
     if (!newUser) {
       toast.success(`Добро пожаловать, ${clientId}`)
+      const appRoot = appUrl('/app')
+      if (appRoot !== '/app') { window.location.replace(appRoot); return }
       nav('/app', { replace: true })
     }
     // New user → stay on this page to show api_key, then continue.
@@ -80,7 +83,11 @@ export default function OAuthReturnPage() {
     <ApiKeyReveal
       clientId={clientId}
       apiKey={apiKey}
-      onContinue={() => nav('/app/data', { replace: true })}
+      onContinue={() => {
+        const t = appUrl('/app/data')
+        if (t !== '/app/data') window.location.replace(t)
+        else nav('/app/data', { replace: true })
+      }}
     />
   )
 }

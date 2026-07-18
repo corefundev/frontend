@@ -1,11 +1,11 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useState } from 'react'
 
 import { useAuthStore } from './features/auth/store'
 import { tryRefreshToken } from './shared/api/client'
 import AppLayout from './components/AppLayout'
 import AdminGuard from './components/AdminGuard'
-import { MAIN_ORIGIN, SECTION_HOST } from './shared/hostRouting'
+import { IS_APP_HOST, MAIN_ORIGIN, SECTION_HOST, appUrl, mainUrl } from './shared/hostRouting'
 import PjaxLoader from './components/PjaxLoader'
 import LoginPage from './pages/LoginPage'
 import AdminLoginPage from './pages/AdminLoginPage'
@@ -97,7 +97,16 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
   }, [expiresAt, logout])
 
   if (restoring) return <SuspenseFallback />
-  if (!isAuthed) return <Navigate to="/login" replace />
+  if (!isAuthed) {
+    // APP-1 (#495): на app-хосте своей /login нет — логин живёт на
+    // апексе; после входа вернёмся через ?next= (валидируется там).
+    if (IS_APP_HOST) {
+      window.location.replace(mainUrl(
+        '/login?next=' + encodeURIComponent(window.location.href)))
+      return <SuspenseFallback />
+    }
+    return <Navigate to="/login" replace />
+  }
   return children
 }
 
@@ -154,14 +163,43 @@ function SectionHostApp({ section }: { section: 'news' | 'help' }) {
   )
 }
 
+// ── APP-1 (#495): рабочая зона на app.<домен> ────────────────────────────
+// Кабинет (/app/*) живёт ТОЛЬКО на app-хосте, публичные страницы — только
+// на апексе. Первый рендер чужой зоны уводится full-reload'ом на её хост
+// (тот же паттерн, что ToMainDomain у news/help): localStorage не шарится
+// между origin'ами, поэтому переход обязан быть настоящей навигацией —
+// на app-хосте сессию восстановит тихий refresh по куке (AUTH-2).
+function HostZoneGuard() {
+  const location = useLocation()
+  useEffect(() => {
+    const path = location.pathname + location.search
+    if (IS_APP_HOST) {
+      if (location.pathname === '/' ) return          // '/' → <Navigate /app>
+      if (!location.pathname.startsWith('/app')) {
+        window.location.replace(mainUrl(path))
+      }
+      return
+    }
+    if (location.pathname.startsWith('/app')) {
+      const target = appUrl(path)
+      if (target !== path) window.location.replace(target)
+    }
+  }, [location])
+  return null
+}
+
 export default function App() {
   if (SECTION_HOST) return <SectionHostApp section={SECTION_HOST} />
   return (
     <>
+      <HostZoneGuard />
       {/* GitHub-style pjax progress bar — fixed-top, brand-500.
           Listens to route changes + react-query in-flight state. */}
       <PjaxLoader />
       <Routes>
+        {IS_APP_HOST && (
+          <Route path="/" element={<Navigate to="/app" replace />} />
+        )}
         <Route path="/login" element={<LoginPage />} />
       <Route path="/login/admin" element={<AdminLoginPage />} />
       <Route
