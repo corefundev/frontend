@@ -144,15 +144,12 @@ export default function DashboardPage() {
               Первый прогноз за пять минут.
             </h2>
             <p className="text-paper-ink/80 mt-4 max-w-md mx-auto leading-relaxed">
-              Пройдите короткий онбординг — мы проведём вас через загрузку
-              файла и покажем первый прогноз на ваших данных.
+              Создайте датасет и загрузите историю продаж — мы подготовим
+              данные и покажем первый прогноз на них.
             </p>
             <div className="mt-6 flex items-center justify-center gap-3">
-              <Link to="/welcome" className="btn-gold">
-                Начать онбординг →
-              </Link>
-              <Link to="/app/data" className="btn-ghost text-paper-ink">
-                Я сам, к загрузкам
+              <Link to="/app/data" className="btn-gold">
+                Загрузить данные →
               </Link>
             </div>
           </div>

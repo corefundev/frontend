@@ -10,7 +10,7 @@
 //
 // Behavior:
 //   • Always: setAuth(token, client_id) — user is logged in.
-//   • new_user=1 → show ApiKeyReveal one-time card → /welcome (onboarding)
+//   • new_user=1 → show ApiKeyReveal one-time card → раздел «Данные»
 //   • new_user=0 → straight to /
 //
 // We do NOT trust the URL — but JWT is HMAC-signed, so a tampered
@@ -70,7 +70,7 @@ export default function OAuthReturnPage() {
       nav('/app', { replace: true })
     }
     // New user → stay on this page to show api_key, then continue.
-    // (ApiKeyReveal calls onContinue → /welcome)
+    // (ApiKeyReveal calls onContinue → раздел «Данные»)
   }, [token, clientId, newUser, setAuth, nav])
 
   if (!token || !clientId) return null
@@ -80,7 +80,7 @@ export default function OAuthReturnPage() {
     <ApiKeyReveal
       clientId={clientId}
       apiKey={apiKey}
-      onContinue={() => nav('/welcome', { replace: true })}
+      onContinue={() => nav('/app/data', { replace: true })}
     />
   )
 }

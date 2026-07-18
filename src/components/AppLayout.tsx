@@ -86,11 +86,11 @@ export default function AppLayout() {
       <aside className="w-64 bg-surface-raised text-ink border-r border-surface-border flex flex-col relative">
         {/* Editorial ambient decoration — thin gold vertical rule */}
         <div className="px-6 py-6 flex items-center gap-3">
-          <div className="h-9 w-9 rounded-md bg-brand-500 flex items-center justify-center text-[11px] font-semibold tracking-wider">
-            SKU
+          <div className="h-9 w-9 rounded-md bg-brand-500 flex items-center justify-center text-sm font-bold text-white">
+            S
           </div>
           <div className="leading-tight">
-            <div className="font-semibold text-lg text-ink">Forecasting</div>
+            <div className="font-semibold text-lg text-ink">Sprosly</div>
             {usage && (
               <div className="eyebrow !text-ink-subtle !tracking-[0.16em]">
                 {usage.model_display_name}
