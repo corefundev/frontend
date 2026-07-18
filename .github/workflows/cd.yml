@@ -193,7 +193,7 @@ jobs:
           echo "  deploy complete @ ${TAG}"
           EOF
 
-      - name: Smoke — skusystem.ru origin returns 200
+      - name: Smoke — origin serves sprosly.com 200 + legacy 301
         env:
           HOST: ${{ secrets.FRONTEND_HOST }}
         run: |
@@ -203,18 +203,25 @@ jobs:
           # protection) — using the CF endpoint here would mark every
           # deploy red even though the site is up. Origin probe tests
           # what WE deployed; CF availability is a separate concern.
+          #
+          # MIGR-1 #424 Phase 2: the SPA now lives on sprosly.com (expect
+          # 200); skusystem.ru is a page-wise 301 host (expect 301 —
+          # a 200 there would mean LEGACY_REDIRECT got dropped).
           for i in $(seq 1 24); do
-              code=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
-                     --resolve "skusystem.ru:443:${HOST}" \
-                     https://skusystem.ru/ 2>/dev/null || echo 000)
-              if [ "$code" = "200" ]; then
-                  echo "smoke ok ($code) after ${i} attempts"
+              app=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
+                    --resolve "sprosly.com:443:${HOST}" \
+                    https://sprosly.com/ 2>/dev/null || echo 000)
+              legacy=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
+                       --resolve "skusystem.ru:443:${HOST}" \
+                       https://skusystem.ru/ 2>/dev/null || echo 000)
+              if [ "$app" = "200" ] && [ "$legacy" = "301" ]; then
+                  echo "smoke ok (app=$app legacy=$legacy) after ${i} attempts"
                   exit 0
               fi
-              echo "  attempt $i: $code"
+              echo "  attempt $i: app=$app legacy=$legacy"
               sleep 5
           done
-          echo "::error::smoke failed — origin (${HOST}) never returned 200"
+          echo "::error::smoke failed — origin (${HOST}): app must be 200, legacy 301"
           exit 1
 
   # Telegram notification — fires regardless of deploy outcome (always()
