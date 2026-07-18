@@ -1,4 +1,4 @@
-# Continuous deployment: push to main → build → deploy to skusystem.ru.
+# Continuous deployment: push to main → build → deploy to the sprosly.com frontend VPS.
 #
 # Pipeline:
 #   1. build  — builds the static SPA into a docker image, pushes to GHCR
@@ -9,14 +9,14 @@
 #               nginx serves dist/ from inside the container.
 #
 # Frontend has a single environment (prod) — no staging mirror like
-# the backend has. The skusystem.ru landing is mostly static, low risk
+# the backend has. The sprosly.com landing is mostly static, low risk
 # of regression compared to the backend's data path.
 #
 # Required GH secrets:
-#   FRONTEND_HOST              — skusystem.ru
+#   FRONTEND_HOST              — frontend VPS (raw IP)
 #   FRONTEND_USER              — root (per memory; could be `deploy` later)
 #   FRONTEND_SSH_PRIVATE_KEY   — matching ~/.ssh/authorized_keys on VPS
-#   FRONTEND_SSH_KNOWN_HOSTS   — `ssh-keyscan skusystem.ru` output
+#   FRONTEND_SSH_KNOWN_HOSTS   — `ssh-keyscan <VPS IP>` output
 #   VITE_API_URL               — baked into dist (https://api.testcore.ru)
 #
 # Required GH environment:
@@ -119,7 +119,7 @@ jobs:
               '⏸ <b>frontend: approval needed</b>' \
               '' \
               "<i>tag:</i>     <code>${TAG}</code>" \
-              "<i>cluster:</i> <code>skusystem.ru</code>" \
+              "<i>cluster:</i> <code>sprosly.com</code>" \
               "<a href=\"${RUN_URL}\">Approve in GitHub</a>")
           curl -fsS -X POST \
               -H 'Content-Type: application/json' \
@@ -128,7 +128,7 @@ jobs:
               "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"
 
   deploy:
-    name: Deploy → skusystem.ru
+    name: Deploy → sprosly.com
     needs: [build, notify-approval-needed]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -252,7 +252,7 @@ jobs:
                   '🚀 <b>frontend deploy ok</b>' \
                   '' \
                   "<i>tag:</i>     <code>${TAG}</code>" \
-                  "<i>cluster:</i> <code>skusystem.ru</code>" \
+                  "<i>cluster:</i> <code>sprosly.com</code>" \
                   "<a href=\"${RUN_URL}\">CD run</a>")
           else
               MSG=$(printf '%s\n' \
