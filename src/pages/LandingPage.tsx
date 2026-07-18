@@ -127,7 +127,7 @@ function Benefits() {
             Возможности
           </p>
           <h2 className="text-3xl md:text-4xl font-bold text-ink leading-tight">
-            Чем полезен SKU Forecasting
+            Чем полезен Sprosly
           </h2>
         </div>
         <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
