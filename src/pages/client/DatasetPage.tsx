@@ -248,7 +248,9 @@ export default function DatasetPage() {
                   <tr key={p.upload_id}
                       className="border-b border-surface-border/60">
                     <td className="px-5 py-3.5 font-medium text-ink">{p.filename}</td>
-                    <td className="px-5 py-3.5 text-ink-subtle">—</td>
+                    <td className="px-5 py-3.5 text-ink-muted">
+                      {fmtPeriod(p.date_min, p.date_max)}
+                    </td>
                     <td className="px-5 py-3.5 text-ink-muted">{fmtInt(p.row_count)}</td>
                     <td className="px-5 py-3.5 text-ink-subtle">—</td>
                     <td className="px-5 py-3.5">
@@ -264,9 +266,8 @@ export default function DatasetPage() {
                     <td className="px-5 py-3.5 font-medium text-ink">
                       {f.filename ?? '(файл удалён)'}
                     </td>
-                    <td className="px-5 py-3.5 text-ink-subtle">
-                      {/* период файла бэк ещё не отдаёт (#467 хвост) */}
-                      —
+                    <td className="px-5 py-3.5 text-ink-muted">
+                      {fmtPeriod(f.date_min, f.date_max)}
                     </td>
                     <td className="px-5 py-3.5 text-ink-muted">{fmtInt(f.row_count)}</td>
                     <td className="px-5 py-3.5 text-ink-muted">

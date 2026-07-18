@@ -309,8 +309,7 @@ export default function DataPage() {
                       : '—'}
                   </td>
                   <td className="px-5 py-3.5 text-ink-muted">
-                    {/* период данных загрузки бэк ещё не отдаёт (#467 хвост) */}
-                    —
+                    {fmtPeriod(u.date_min, u.date_max)}
                   </td>
                   <td className="px-5 py-3.5 text-ink-muted">{fmtInt(u.row_count)}</td>
                   <td className="px-5 py-3.5">
