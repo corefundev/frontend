@@ -37,36 +37,11 @@ export interface UploadAcceptedResponse extends UploadRecord {
   scan_job_id: string | null
 }
 
-// DP-4b/DP-5 (backend #324 / frontend #32): read-only «Подготовка данных» preview. The system
-// auto-maps columns; the user only triggers prep and eyeballs the result —
-// there is no column-editing surface here.
-export interface PrepView {
-  upload_id: string
-  status: UploadStatus
-  filename: string
-  detected: {
-    format: string | null
-    encoding: string | null
-    delimiter: string | null
-  }
-  row_count: number | null
-  sku_count: number | null
-  error_message: string | null
-  // Small canonical sample of the PARSED data (present once `processed`).
-  sample: { columns: string[]; rows: Array<Array<string | number | null>> } | null
-}
-
 export interface PrepareAcceptedResponse {
   upload_id: string
   status: string
   job_id: string | null
 }
-
-export const UPLOADS_TERMINAL: UploadStatus[] = [
-  'infected',
-  'processed',
-  'processing_failed',
-]
 
 // ── Client-side pre-validation (server does it too) ──────────────────────
 export const MAX_UPLOAD_BYTES  = 50 * 1024 * 1024
@@ -156,11 +131,4 @@ export const uploadsApi = {
       )
       .then((r) => r.data),
 
-  // Read-only prep preview (status + canonical sample once processed).
-  getPrep: (clientId: string, uploadId: string) =>
-    apiClient
-      .get<PrepView>(
-        `/clients/${encodeURIComponent(clientId)}/uploads/${encodeURIComponent(uploadId)}/prep`,
-      )
-      .then((r) => r.data),
 }

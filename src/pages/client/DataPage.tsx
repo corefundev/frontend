@@ -21,6 +21,7 @@ import {
   plural,
 } from '../../features/datasets/format'
 import {
+  safeUploadError,
   uploadsApi,
   type UploadRecord,
   type UploadStatus,
@@ -41,6 +42,16 @@ const UPLOAD_BADGE: Record<UploadStatus, { label: string; cls: string }> = {
 }
 
 const MOVING_STATES: UploadStatus[] = ['uploaded', 'scanning', 'processing']
+
+// Прототип: бейдж ошибки несёт ПРИЧИНУ («Ошибка: нет колонки даты»).
+// Причина проходит санитайзер (никаких трейсбеков) и укорачивается —
+// полный текст в title.
+function uploadStatusLabel(u: UploadRecord): string {
+  if (u.status !== 'processing_failed') return UPLOAD_BADGE[u.status].label
+  const reason = safeUploadError(u.error_message)
+  const short = reason.length > 36 ? `${reason.slice(0, 35)}…` : reason
+  return `Ошибка: ${short}`
+}
 
 // ── создание датасета ────────────────────────────────────────────────────
 
@@ -303,8 +314,12 @@ export default function DataPage() {
                   </td>
                   <td className="px-5 py-3.5 text-ink-muted">{fmtInt(u.row_count)}</td>
                   <td className="px-5 py-3.5">
-                    <span className={UPLOAD_BADGE[u.status].cls}>
-                      {UPLOAD_BADGE[u.status].label}
+                    <span
+                      className={UPLOAD_BADGE[u.status].cls}
+                      title={u.status === 'processing_failed'
+                        ? safeUploadError(u.error_message) : undefined}
+                    >
+                      {uploadStatusLabel(u)}
                     </span>
                     {u.status === 'scanned_clean' && (
                       <button
