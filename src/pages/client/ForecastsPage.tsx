@@ -68,7 +68,7 @@ export default function ForecastsPage() {
           </p>
           <p className="text-ink-muted">
             Загрузите данные во вкладке{' '}
-            <a className="text-brand-700 underline" href="/app/uploads">«Загрузки»</a>,
+            <a className="text-brand-700 underline" href="/app/data">«Загрузки»</a>,
             затем запустите обучение во вкладке{' '}
             <a className="text-brand-700 underline" href="/app/training">«Обучение»</a>.
           </p>

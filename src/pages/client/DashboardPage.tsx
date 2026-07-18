@@ -88,7 +88,7 @@ export default function DashboardPage() {
                     {statusLabel(lastAny.status)}
                   </span>
                 }
-                href="/app/uploads"
+                href="/app/data"
               />
               <ActivityCard
                 eyebrow="Последнее обучение"
@@ -151,7 +151,7 @@ export default function DashboardPage() {
               <Link to="/welcome" className="btn-gold">
                 Начать онбординг →
               </Link>
-              <Link to="/app/uploads" className="btn-ghost text-paper-ink">
+              <Link to="/app/data" className="btn-ghost text-paper-ink">
                 Я сам, к загрузкам
               </Link>
             </div>
@@ -172,7 +172,7 @@ export default function DashboardPage() {
             number="01"
             title="Загрузки"
             blurb="Новый CSV с продажами"
-            href="/app/uploads"
+            href="/app/data"
             icon={<IconUpload />}
           />
           <QuickTile
@@ -282,14 +282,14 @@ function NextStepCard({
   let title    = 'Загрузить данные'
   let blurb    = 'CSV с историей продаж — точка отсчёта для всего.'
   let cta      = 'К загрузке'
-  let href     = '/uploads'
+  let href     = '/app/data'
 
   if (hasUploads && !hasProcessed) {
     chapter = '— подождите чуть-чуть'
     title   = 'Файл обрабатывается'
     blurb   = 'Проверка и разбор занимают до минуты. Следите в разделе Загрузки.'
     cta     = 'К загрузкам'
-    href    = '/uploads'
+    href    = '/app/data'
   } else if (hasProcessed && !hasTrained) {
     chapter = '— обучите модель'
     title   = 'Данные готовы'

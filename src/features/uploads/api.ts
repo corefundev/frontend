@@ -27,6 +27,8 @@ export interface UploadRecord {
   processed_key: string | null
   row_count: number | null
   sku_count: number | null     // distinct SKU count from sandbox manifest
+  // DS-2 (#467): целевой датасет (null = загрузка вне датасета)
+  dataset_id: string | null
   created_at: string
   updated_at: string
 }
@@ -102,10 +104,14 @@ export const uploadsApi = {
   upload: (
     clientId: string,
     file: File,
-    onProgress?: (pct: number) => void
+    onProgress?: (pct: number) => void,
+    datasetId?: string
   ) => {
     const fd = new FormData()
     fd.append('file', file)
+    // DS-2 (#467): нацелить загрузку на датасет — после «Подготовить»
+    // worker сам доложит файл в него.
+    if (datasetId) fd.append('dataset_id', datasetId)
     return uploadClient
       .post<UploadAcceptedResponse>(
         `/clients/${encodeURIComponent(clientId)}/uploads`,

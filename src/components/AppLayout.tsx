@@ -18,10 +18,9 @@ import type { PlanId } from '../features/plans/api'
 // above the workspace.
 const NAV = [
   { to: '',            label: 'Главная',       pageTitle: 'Панель управления',  icon: IconHome,    minPlan: 'free'     },
-  // «Данные» inline group (epic #320): upload → prepare → enrich pipeline.
-  { to: 'uploads',      label: 'Загрузки',          pageTitle: 'Загрузки данных',   icon: IconUpload,  minPlan: 'free', group: 'Данные' },
-  { to: 'data/prepare', label: 'Подготовка данных', pageTitle: 'Подготовка данных', icon: IconSlider,  minPlan: 'free', group: 'Данные' },
-  { to: 'data/enrich',  label: 'Обогащение данных', pageTitle: 'Обогащение данных', icon: IconSpark,   minPlan: 'free', group: 'Данные' },
+  // DS-2 (#467): единый раздел «Данные» — датасеты + история подготовок
+  // (бывшие «Загрузки»/«Подготовка» слиты сюда, #320-конвейер внутри).
+  { to: 'data',        label: 'Данные',        pageTitle: 'Данные',             icon: IconUpload,  minPlan: 'free'     },
   { to: 'forecasts',   label: 'Прогнозы',      pageTitle: 'Прогноз',            icon: IconChart,   minPlan: 'free'     },
   { to: 'orders',      label: 'Автозаказ',     pageTitle: 'Автозаказ',          icon: IconCart,    minPlan: 'free'     },
   { to: 'training',    label: 'Обучение',      pageTitle: 'Обучение модели',    icon: IconCog,     minPlan: 'free'     },
