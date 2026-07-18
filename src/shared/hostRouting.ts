@@ -9,7 +9,7 @@
 //     ведут на поддомены (канонические адреса);
 //   • на легаси-домене (до Фазы 2) всё остаётся относительным.
 
-export const HOSTNAME: string =
+const HOSTNAME: string =
   typeof window !== 'undefined' ? window.location.hostname : ''
 
 export const SECTION_HOST: 'news' | 'help' | null =
@@ -21,7 +21,7 @@ export const SECTION_HOST: 'news' | 'help' | null =
 export const IS_APP_HOST: boolean = HOSTNAME.startsWith('app.')
 
 /** Базовый (основной) домен: на поддомене — без префикса news./help./app. */
-export const MAIN_HOST: string = (SECTION_HOST || IS_APP_HOST)
+const MAIN_HOST: string = (SECTION_HOST || IS_APP_HOST)
   ? HOSTNAME.replace(/^(news|help|app)\./, '')
   : HOSTNAME
 
