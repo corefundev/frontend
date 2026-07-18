@@ -39,6 +39,8 @@ export interface DatasetFileRow {
   row_count: number | null
   merge_added: number | null
   merge_replaced: number | null
+  date_min: string | null
+  date_max: string | null
 }
 
 export interface DatasetVersionRow {
@@ -58,6 +60,8 @@ export interface DatasetPendingUpload {
   filename: string
   status: UploadStatus
   row_count: number | null
+  date_min: string | null
+  date_max: string | null
   created_at: string
 }
 

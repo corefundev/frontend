@@ -29,6 +29,9 @@ export interface UploadRecord {
   sku_count: number | null     // distinct SKU count from sandbox manifest
   // DS-2 (#467): целевой датасет (null = загрузка вне датасета)
   dataset_id: string | null
+  // период данных файла (из манифеста подготовки; null = ещё не обработан)
+  date_min: string | null
+  date_max: string | null
   created_at: string
   updated_at: string
 }
