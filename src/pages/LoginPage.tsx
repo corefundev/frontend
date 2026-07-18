@@ -9,6 +9,7 @@ import AuthShell from '../components/AuthShell'
 import { PasswordInput } from '../components/PasswordInput'
 import { SsoBadges, SsoDivider } from '../components/SsoBadges'
 import { errorMessage } from '../shared/api/client'
+import { appUrl } from '../shared/hostRouting'
 
 // ─────────────────────────────────────────────────────────────────────────
 //  LoginPage — AUTH-3 #447: классический вход email + пароль.
@@ -47,6 +48,15 @@ export default function LoginPage() {
     onSuccess: (resp) => {
       setAuth(resp.access_token, resp.client_id)
       toast.success(`Добро пожаловать, ${resp.client_id}`)
+      // APP-1 (#495): кабинет живёт на app-хосте. ?next= пускаем ТОЛЬКО
+      // на свой app-origin (open-redirect guard); иначе — корень кабинета.
+      const next = new URLSearchParams(window.location.search).get('next')
+      const appRoot = appUrl('/app')
+      if (appRoot !== '/app') {                       // брендовый хост
+        const target = next && next.startsWith(appUrl('/')) ? next : appRoot
+        window.location.replace(target)
+        return
+      }
       nav('/app', { replace: true })
     },
     onError: (e) => {
