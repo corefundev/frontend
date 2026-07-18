@@ -61,7 +61,7 @@ export function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
           <div className="h-8 w-8 rounded bg-brand-500 grid place-items-center text-white font-bold text-sm">
             S
           </div>
-          <span className="font-semibold">SKU Forecasting</span>
+          <span className="font-semibold">Sprosly</span>
         </HostLink>
 
         <nav className="hidden md:flex items-center gap-1">
@@ -138,7 +138,7 @@ function PublicFooter() {
               <div className="h-8 w-8 rounded bg-brand-500 grid place-items-center text-white font-bold text-sm">
                 S
               </div>
-              <span className="font-semibold text-[#020817]">SKU Forecasting</span>
+              <span className="font-semibold text-[#020817]">Sprosly</span>
             </HostLink>
             <p className="mt-4 text-sm text-[#64748B] leading-relaxed">
               Прогноз спроса по каждому SKU на вашей истории продаж —
@@ -200,7 +200,7 @@ function PublicFooter() {
         {/* ── нижняя полоса ── */}
         <div className="mt-12 pt-6 border-t border-ink/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <p className="text-sm text-[#64748B]">
-            © {new Date().getFullYear()} SKU Forecasting. Все права защищены.
+            © {new Date().getFullYear()} Sprosly. Все права защищены.
           </p>
           <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <HostLink to="/terms"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Пользовательское соглашение</HostLink>
