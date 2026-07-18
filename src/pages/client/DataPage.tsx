@@ -26,6 +26,7 @@ import {
   type UploadStatus,
 } from '../../features/uploads/api'
 import { errorMessage } from '../../shared/api/client'
+import { cabPath } from '../../shared/hostRouting'
 
 // ── история подготовок: статусы загрузок ─────────────────────────────────
 
@@ -53,7 +54,7 @@ function CreateDatasetModal({ onClose }: { onClose: () => void }) {
     onSuccess: (ds) => {
       qc.invalidateQueries({ queryKey: ['datasets', clientId] })
       onClose()
-      navigate(`/app/data/${ds.dataset_id}`)
+      navigate(cabPath(`/app/data/${ds.dataset_id}`))
     },
   })
   return (
@@ -107,15 +108,15 @@ function DatasetCard({ ds }: { ds: DatasetView }) {
   const stale = ds.model?.up_to_date === false
   const needsTraining = stale || (!ds.model && ds.current_version >= 1)
   const cta = needsTraining
-    ? { label: 'Обучить модель', cls: 'btn-primary', to: `/app/data/${ds.dataset_id}?train=1` }
-    : { label: 'Доложить данные', cls: 'btn-secondary', to: `/app/data/${ds.dataset_id}?upload=1` }
+    ? { label: 'Обучить модель', cls: 'btn-primary', to: cabPath(`/app/data/${ds.dataset_id}?train=1`) }
+    : { label: 'Доложить данные', cls: 'btn-secondary', to: cabPath(`/app/data/${ds.dataset_id}?upload=1`) }
   return (
     <div
       role="link"
       tabIndex={0}
-      onClick={() => navigate(`/app/data/${ds.dataset_id}`)}
+      onClick={() => navigate(cabPath(`/app/data/${ds.dataset_id}`))}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') navigate(`/app/data/${ds.dataset_id}`)
+        if (e.key === 'Enter') navigate(cabPath(`/app/data/${ds.dataset_id}`))
       }}
       className="card cursor-pointer p-5 text-left transition-shadow hover:shadow-floating"
     >

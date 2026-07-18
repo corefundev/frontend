@@ -20,6 +20,7 @@ import {
 } from '../../features/uploads/api'
 import { cooldownEta, errorMessage, trainingDenial } from '../../shared/api/client'
 import { datasetBadge, fmtDate, fmtDateTime, fmtInt, fmtPeriod } from '../../features/datasets/format'
+import { cabPath } from '../../shared/hostRouting'
 
 const FILE_BADGE: Partial<Record<UploadStatus | 'deleted', { label: string; cls: string }>> = {
   processed:         { label: 'Обработан',         cls: 'badge badge-success' },
@@ -144,7 +145,7 @@ export default function DatasetPage() {
     return (
       <div className="card p-6">
         <p className="text-sm text-danger">{errorMessage(error)}</p>
-        <Link to="/app/data" className="mt-3 inline-block text-sm font-medium text-brand-600 hover:underline">
+        <Link to={cabPath(cabPath('/app/data'))} className="mt-3 inline-block text-sm font-medium text-brand-600 hover:underline">
           ← К датасетам
         </Link>
       </div>
@@ -173,7 +174,7 @@ export default function DatasetPage() {
     <div>
       {/* хлебные крошки */}
       <nav className="text-sm text-ink-subtle">
-        <Link to="/app/data" className="hover:text-ink hover:underline">Датасеты</Link>
+        <Link to={cabPath(cabPath('/app/data'))} className="hover:text-ink hover:underline">Датасеты</Link>
         <span className="mx-1.5">/</span>
         <span className="font-medium text-ink">{ds.name}</span>
       </nav>

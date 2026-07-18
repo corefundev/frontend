@@ -18,6 +18,7 @@ import {
   UpgradeTrigger,
   PlanGateBadge,
 } from '../../features/plans/upsell'
+import { cabPath } from '../../shared/hostRouting'
 
 export default function ForecastsPage() {
   const clientId = useAuthStore((s) => s.clientId)!
@@ -68,9 +69,9 @@ export default function ForecastsPage() {
           </p>
           <p className="text-ink-muted">
             Загрузите данные во вкладке{' '}
-            <a className="text-brand-700 underline" href="/app/data">«Загрузки»</a>,
+            <a className="text-brand-700 underline" href={cabPath(cabPath('/app/data'))}>«Загрузки»</a>,
             затем запустите обучение во вкладке{' '}
-            <a className="text-brand-700 underline" href="/app/training">«Обучение»</a>.
+            <a className="text-brand-700 underline" href={cabPath(cabPath('/app/training'))}>«Обучение»</a>.
           </p>
         </div>
       </div>

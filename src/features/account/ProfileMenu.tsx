@@ -7,6 +7,7 @@ import { authApi } from '../auth/api'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuthStore } from '../auth/store'
+import { cabPath } from '../../shared/hostRouting'
 
 export function ProfileMenu() {
   const nav = useNavigate()
@@ -45,7 +46,7 @@ export function ProfileMenu() {
             <div className="font-mono text-sm text-ink truncate">{clientId ?? '—'}</div>
             <button
               className="mt-2 text-sm text-brand-700 hover:underline"
-              onClick={() => { setOpen(false); nav('/app/account') }}
+              onClick={() => { setOpen(false); nav(cabPath('/app/account')) }}
             >
               Все настройки аккаунта →
             </button>

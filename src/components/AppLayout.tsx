@@ -67,13 +67,18 @@ export default function AppLayout() {
   // Pick the longest matching nav entry for the current path so a nested
   // path beats the empty "Главная" entry (which would otherwise
   // prefix-match the root /app path).
-  const isAccount = location.pathname.startsWith('/app/account')
+  // APP-1 (#495) вариант B: на app-хосте кабинет живёт от корня —
+  // нормализуем путь до relative-вида ('data', 'account/profile', '').
+  const rel = location.pathname
+    .replace(/^\/app(?=\/|$)/, '')
+    .replace(/^\//, '')
+  const isAccount = rel.startsWith('account')
   const pageTitle = (() => {
     if (isAccount) {
-      const seg = location.pathname.replace(/^\/app\/account\/?/, '') || 'profile'
+      const seg = rel.replace(/^account\/?/, '') || 'profile'
       return ACCOUNT_NAV.find((n) => n.to === `account/${seg}`)?.label ?? 'Личный кабинет'
     }
-    const path = location.pathname.replace(/^\/app\/?/, '')
+    const path = rel
     const matches = NAV.filter((n) => n.to !== '' && path.startsWith(n.to))
     matches.sort((a, b) => b.to.length - a.to.length)
     if (matches.length > 0) return matches[0].pageTitle

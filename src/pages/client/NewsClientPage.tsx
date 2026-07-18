@@ -4,6 +4,7 @@ import { Route, Routes, useParams } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 
 import { NewsFeedList, NewsPostView } from '../../features/news/NewsComponents'
+import { cabPath } from '../../shared/hostRouting'
 
 function FeedView() {
   return <div className="max-w-3xl"><NewsFeedList basePath="/app/news" /></div>
@@ -13,7 +14,7 @@ function PostView() {
   const { slug = '' } = useParams()
   return (
     <div className="max-w-3xl space-y-4">
-      <Link to="/app/news" className="text-sm text-ink-muted hover:text-ink">← Все новости</Link>
+      <Link to={cabPath(cabPath('/app/news'))} className="text-sm text-ink-muted hover:text-ink">← Все новости</Link>
       <NewsPostView slug={slug} markRead />
     </div>
   )

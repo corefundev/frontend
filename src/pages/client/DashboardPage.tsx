@@ -10,6 +10,7 @@ import { useUsage } from '../../features/plans/useUsage'
 import { uploadsApi } from '../../features/uploads/api'
 import { clientsApi } from '../../features/clients/api'
 import { UpgradeTrigger } from '../../features/plans/upsell'
+import { cabPath } from '../../shared/hostRouting'
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Dashboard — the "front page" of the newspaper.
@@ -88,7 +89,7 @@ export default function DashboardPage() {
                     {statusLabel(lastAny.status)}
                   </span>
                 }
-                href="/app/data"
+                href={cabPath(cabPath('/app/data'))}
               />
               <ActivityCard
                 eyebrow="Последнее обучение"
@@ -107,7 +108,7 @@ export default function DashboardPage() {
                     {client?.status === 'ready' ? 'готова' : (client?.status ?? '—')}
                   </span>
                 }
-                href="/app/training"
+                href={cabPath(cabPath('/app/training'))}
               />
             </div>
 
@@ -148,7 +149,7 @@ export default function DashboardPage() {
               данные и покажем первый прогноз на них.
             </p>
             <div className="mt-6 flex items-center justify-center gap-3">
-              <Link to="/app/data" className="btn-gold">
+              <Link to={cabPath(cabPath('/app/data'))} className="btn-gold">
                 Загрузить данные →
               </Link>
             </div>
@@ -169,14 +170,14 @@ export default function DashboardPage() {
             number="01"
             title="Загрузки"
             blurb="Новый CSV с продажами"
-            href="/app/data"
+            href={cabPath(cabPath('/app/data'))}
             icon={<IconUpload />}
           />
           <QuickTile
             number="02"
             title="Прогнозы"
             blurb="Посмотреть, что продастся"
-            href="/app/forecasts"
+            href={cabPath(cabPath('/app/forecasts'))}
             icon={<IconChart />}
             highlight={hasTrained}
           />
@@ -184,14 +185,14 @@ export default function DashboardPage() {
             number="03"
             title="Обучение"
             blurb="Перетренировать модель"
-            href="/app/training"
+            href={cabPath(cabPath('/app/training'))}
             icon={<IconCog />}
           />
           <QuickTile
             number="04"
             title="Настройки"
             blurb="Конструктор под бизнес"
-            href="/app/settings"
+            href={cabPath(cabPath('/app/settings'))}
             icon={<IconSlider />}
             planNote={isFree ? 'доступно на Start' : undefined}
           />
@@ -279,14 +280,14 @@ function NextStepCard({
   let title    = 'Загрузить данные'
   let blurb    = 'CSV с историей продаж — точка отсчёта для всего.'
   let cta      = 'К загрузке'
-  let href     = '/app/data'
+  let href     = cabPath('/app/data')
 
   if (hasUploads && !hasProcessed) {
     chapter = '— подождите чуть-чуть'
     title   = 'Файл обрабатывается'
     blurb   = 'Проверка и разбор занимают до минуты. Следите в разделе Загрузки.'
     cta     = 'К загрузкам'
-    href    = '/app/data'
+    href    = cabPath('/app/data')
   } else if (hasProcessed && !hasTrained) {
     chapter = '— обучите модель'
     title   = 'Данные готовы'

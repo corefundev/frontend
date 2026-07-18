@@ -11,6 +11,9 @@
 map $request_uri $migr_target {
     ~^/news(?<rest_news>.*)$   https://news.${NEW_DOMAIN}$rest_news;
     ~^/help(?<rest_help>.*)$   https://help.${NEW_DOMAIN}$rest_help;
+    # APP-1 (#495) вариант B: кабинет — на app-хост, без /app-префикса
+    # (одним прыжком вместо цепочки через апекс).
+    ~^/app(?<rest_app>/.*)?$   https://app.${NEW_DOMAIN}$rest_app;
     default                    https://${NEW_DOMAIN}$request_uri;
 }
 

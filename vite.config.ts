@@ -12,7 +12,7 @@ export default defineConfig({
     strictPort: true,
     // MIGR-1 (#424): локальная проверка host-routing'а поддоменов
     // (chrome --host-resolver-rules → dev-сервер). Только dev.
-    allowedHosts: ['sprosly.com', 'news.sprosly.com', 'help.sprosly.com'],
+    allowedHosts: ['app.localhost', 'sprosly.com', 'news.sprosly.com', 'help.sprosly.com'],
     // Dev proxy: requests to /api in the browser are forwarded to the backend.
     // In production this isn't used — the frontend talks to VITE_API_URL directly.
     proxy: {
