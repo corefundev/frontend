@@ -26,6 +26,9 @@
 name: CD — Build & deploy frontend
 
 on:
+  # MIGR-1 #424: manual rebuilds (e.g. a VITE_API_URL secret flip) touch no
+  # tracked paths — the push paths-filter never fires. Dispatch covers them.
+  workflow_dispatch:
   push:
     branches: ["main"]
     paths:
