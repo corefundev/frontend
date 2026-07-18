@@ -9,8 +9,9 @@ import {
   HelpTeaserList,
 } from '../../features/help/HelpComponents'
 import { helpPublicApi } from '../../features/help/publicApi'
+import { cabPath } from '../../shared/hostRouting'
 
-const BASE = '/app/help'
+const BASE = cabPath('/app/help')
 
 function IndexView() {
   return (

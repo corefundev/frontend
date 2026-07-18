@@ -25,9 +25,14 @@ export const MAIN_HOST: string = (SECTION_HOST || IS_APP_HOST)
   ? HOSTNAME.replace(/^(news|help|app)\./, '')
   : HOSTNAME
 
+const PORT_SUFFIX: string =
+  typeof window !== 'undefined' && window.location.port
+    ? `:${window.location.port}`
+    : ''
+
 export const MAIN_ORIGIN: string =
   typeof window !== 'undefined'
-    ? `${window.location.protocol}//${MAIN_HOST}`
+    ? `${window.location.protocol}//${MAIN_HOST}${PORT_SUFFIX}`
     : ''
 
 /** Хост нового бренда (поддомены существуют)? Легаси-домен их не имеет. */
@@ -40,15 +45,30 @@ export function mainUrl(path: string): string {
   return (SECTION_HOST || IS_APP_HOST) ? `${MAIN_ORIGIN}${path}` : path
 }
 
-/** APP-1 (#495): адрес рабочей зоны. На новом бренде кабинет живёт на
- *  app.<домен> (пути /app/* сохраняются); на легаси/dev-хостах app-хоста
- *  нет — путь остаётся относительным. */
+/** APP-1 (#495), вариант B владельца: на app-хосте кабинет живёт ОТ КОРНЯ
+ *  (app.<домен>/data, /orders, …) — префикс /app существует только на
+ *  легаси/dev-хостах. */
+function stripAppPrefix(path: string): string {
+  if (path === '/app') return '/'
+  return path.startsWith('/app/') ? path.slice(4) : path
+}
+
+/** Канонический вид «апексного» пути кабинета для ТЕКУЩЕГО хоста:
+ *  cabPath('/app/data') → '/data' на app-хосте, '/app/data' на прочих.
+ *  Все внутренние ссылки кабинета обязаны ходить через этот хелпер. */
+export function cabPath(path: string): string {
+  return IS_APP_HOST ? stripAppPrefix(path) : path
+}
+
+/** Абсолютный адрес рабочей зоны для «апексного» пути кабинета.
+ *  На брендовых хостах — https://app.<домен>/<без-префикса>; на
+ *  легаси/dev-хостах app-хоста нет — путь остаётся относительным. */
 export function appUrl(path: string): string {
-  if (IS_APP_HOST) return path
+  if (IS_APP_HOST) return stripAppPrefix(path)
   if (ON_BRANDED_HOST) {
     const proto = typeof window !== 'undefined'
       ? window.location.protocol : 'https:'
-    return `${proto}//app.${MAIN_HOST}${path}`
+    return `${proto}//app.${MAIN_HOST}${PORT_SUFFIX}${stripAppPrefix(path)}`
   }
   return path
 }

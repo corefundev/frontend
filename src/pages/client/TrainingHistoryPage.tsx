@@ -11,6 +11,7 @@ import {
   safeFormat,
 } from '../../features/training/format'
 import { uploadsApi } from '../../features/uploads/api'
+import { cabPath } from '../../shared/hostRouting'
 
 export default function TrainingHistoryPage() {
   const clientId = useAuthStore((s) => s.clientId)!
@@ -52,7 +53,7 @@ export default function TrainingHistoryPage() {
             Сохраняется дольше, чем оперативный кеш RQ.
           </p>
         </div>
-        <Link to="/app/training" className="btn-ghost text-sm whitespace-nowrap">
+        <Link to={cabPath(cabPath('/app/training'))} className="btn-ghost text-sm whitespace-nowrap">
           ← К обучению
         </Link>
       </header>
@@ -67,7 +68,7 @@ export default function TrainingHistoryPage() {
           <p className="text-sm text-ink-muted">
             Пока нет ни одной обученной модели.
           </p>
-          <Link to="/app/training" className="btn-primary text-sm mt-4 inline-block">
+          <Link to={cabPath(cabPath('/app/training'))} className="btn-primary text-sm mt-4 inline-block">
             Запустить первое обучение
           </Link>
         </section>

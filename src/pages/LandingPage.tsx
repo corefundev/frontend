@@ -7,6 +7,7 @@
 import { Link } from 'react-router-dom'
 import PublicLayout from '../components/PublicLayout'
 import { useAuthStore } from '../features/auth/store'
+import { cabPath } from '../shared/hostRouting'
 
 export default function LandingPage() {
   const isAuthed = useAuthStore((s) => s.isAuthenticated())
@@ -41,7 +42,7 @@ function Hero({ isAuthed }: { isAuthed: boolean }) {
           <div className="mt-8 flex flex-wrap items-center gap-3">
             {isAuthed ? (
               <Link
-                to="/app"
+                to={cabPath(cabPath('/app'))}
                 className="inline-flex items-center px-6 py-3 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors"
               >
                 Открыть кабинет →
@@ -283,7 +284,7 @@ function FinalCta({ isAuthed }: { isAuthed: boolean }) {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           {isAuthed ? (
             <Link
-              to="/app"
+              to={cabPath(cabPath('/app'))}
               className="inline-flex items-center px-6 py-3 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors"
             >
               Открыть кабинет →

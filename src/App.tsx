@@ -5,7 +5,7 @@ import { useAuthStore } from './features/auth/store'
 import { tryRefreshToken } from './shared/api/client'
 import AppLayout from './components/AppLayout'
 import AdminGuard from './components/AdminGuard'
-import { IS_APP_HOST, MAIN_ORIGIN, SECTION_HOST, appUrl, mainUrl } from './shared/hostRouting'
+import { IS_APP_HOST, MAIN_ORIGIN, SECTION_HOST, appUrl, cabPath, mainUrl } from './shared/hostRouting'
 import PjaxLoader from './components/PjaxLoader'
 import LoginPage from './pages/LoginPage'
 import AdminLoginPage from './pages/AdminLoginPage'
@@ -169,18 +169,29 @@ function SectionHostApp({ section }: { section: 'news' | 'help' }) {
 // (тот же паттерн, что ToMainDomain у news/help): localStorage не шарится
 // между origin'ами, поэтому переход обязан быть настоящей навигацией —
 // на app-хосте сессию восстановит тихий refresh по куке (AUTH-2).
+const APEX_ONLY_PREFIXES = [
+  '/login', '/signup', '/plans', '/terms', '/privacy', '/pdn-policy',
+  '/oauth', '/auth', '/forgot-password',
+]
+
 function HostZoneGuard() {
   const location = useLocation()
   useEffect(() => {
     const path = location.pathname + location.search
     if (IS_APP_HOST) {
-      if (location.pathname === '/' ) return          // '/' → <Navigate /app>
-      if (!location.pathname.startsWith('/app')) {
+      // Вариант B: кабинет от корня. Публичные страницы живут только на
+      // апексе; /app/* здесь не существует — канонизируем в корень.
+      if (location.pathname === '/app' || location.pathname.startsWith('/app/')) {
+        window.location.replace(cabPath(path))
+        return
+      }
+      if (APEX_ONLY_PREFIXES.some((p) => location.pathname === p
+          || location.pathname.startsWith(p + '/'))) {
         window.location.replace(mainUrl(path))
       }
       return
     }
-    if (location.pathname.startsWith('/app')) {
+    if (location.pathname === '/app' || location.pathname.startsWith('/app/')) {
       const target = appUrl(path)
       if (target !== path) window.location.replace(target)
     }
@@ -197,9 +208,6 @@ export default function App() {
           Listens to route changes + react-query in-flight state. */}
       <PjaxLoader />
       <Routes>
-        {IS_APP_HOST && (
-          <Route path="/" element={<Navigate to="/app" replace />} />
-        )}
         <Route path="/login" element={<LoginPage />} />
       <Route path="/login/admin" element={<AdminLoginPage />} />
       <Route
@@ -252,7 +260,7 @@ export default function App() {
       />
       {/* Онбординг-визард снят (решение владельца, #491) — старые ссылки
           ведут в раздел «Данные». */}
-      <Route path="/welcome" element={<Navigate to="/app/data" replace />} />
+      <Route path="/welcome" element={<Navigate to={cabPath('/app/data')} replace />} />
 
       {/* Public legal — admin-editable via /admin/legal (LEG-1 #427: + terms) */}
       <Route
@@ -317,12 +325,12 @@ export default function App() {
 
       {/* Public landing — / показывает лендинг и неавторизованным, и
           авторизованным (для последних шапка ведёт в /app). */}
-      <Route path="/" element={<LandingPage />} />
+      {!IS_APP_HOST && <Route path="/" element={<LandingPage />} />}
 
       {/* Authenticated app под /app/* — перенесён с / на /app, чтобы
           корень мог быть публичным. */}
       <Route
-        path="/app"
+        path={IS_APP_HOST ? '/' : '/app'}
         element={
           <ProtectedRoute>
             <AppLayout />
@@ -355,9 +363,9 @@ export default function App() {
             </Suspense>
           }
         />
-        <Route path="uploads"      element={<Navigate to="/app/data" replace />} />
-        <Route path="data/prepare" element={<Navigate to="/app/data" replace />} />
-        <Route path="data/enrich"  element={<Navigate to="/app/data" replace />} />
+        <Route path="uploads"      element={<Navigate to={cabPath('/app/data')} replace />} />
+        <Route path="data/prepare" element={<Navigate to={cabPath('/app/data')} replace />} />
+        <Route path="data/enrich"  element={<Navigate to={cabPath('/app/data')} replace />} />
         <Route
           path="training"
           element={

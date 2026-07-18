@@ -7,7 +7,7 @@
 
 import { Link } from 'react-router-dom'
 
-import { mainUrl, sectionUrl, isExternal } from '../shared/hostRouting'
+import { appUrl, isExternal, mainUrl, sectionUrl } from '../shared/hostRouting'
 import { ReactNode } from 'react'
 import { useAuthStore } from '../features/auth/store'
 
@@ -26,6 +26,9 @@ function HostLink({ to, className, children, ...rest }: {
 } & Record<string, unknown>) {
   const url = to === '/news' ? sectionUrl('news')
     : to === '/help' ? sectionUrl('help')
+    // APP-1 (#495): кабинет живёт на app-хосте — кнопка «В кабинет»
+    // ведёт сразу на его origin (без двойного прыжка через guard).
+    : to === '/app' || to.startsWith('/app/') ? appUrl(to)
     : mainUrl(to)
   if (isExternal(url)) {
     return <a href={url} className={className} {...rest}>{children}</a>

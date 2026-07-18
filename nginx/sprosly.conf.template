@@ -19,9 +19,10 @@
 map $host$uri $migr_canonical {
     ~^${NEW_DOMAIN}/news(?<rest_news>/.*)?$   https://news.${NEW_DOMAIN}$rest_news;
     ~^${NEW_DOMAIN}/help(?<rest_help>/.*)?$   https://help.${NEW_DOMAIN}$rest_help;
-    # APP-1 (#495): кабинет живёт на app.<домен>; apex-пути /app/* уезжают
-    # с СОХРАНЕНИЕМ префикса (маршруты кабинета остаются /app/*).
-    ~^${NEW_DOMAIN}(?<rest_app>/app(/.*)?)$   https://app.${NEW_DOMAIN}$rest_app;
+    # APP-1 (#495) вариант B: кабинет живёт на app.<домен> ОТ КОРНЯ —
+    # /app-префикс срезается и на апексе, и на самом app-хосте.
+    ~^${NEW_DOMAIN}/app(?<rest_app>/.*)?$       https://app.${NEW_DOMAIN}$rest_app;
+    ~^app\.${NEW_DOMAIN}/app(?<rest_app2>/.*)?$ https://app.${NEW_DOMAIN}$rest_app2;
     default                                   "";
 }
 

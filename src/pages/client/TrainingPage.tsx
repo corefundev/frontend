@@ -12,6 +12,7 @@ import { safeFormat, formatDuration } from '../../features/training/format'
 import { uploadsApi, type UploadRecord } from '../../features/uploads/api'
 import { useUsage } from '../../features/plans/useUsage'
 import { cooldownEta, errorMessage, trainingDenial } from '../../shared/api/client'
+import { cabPath } from '../../shared/hostRouting'
 
 const STATUS_LABEL: Record<JobStatus, string> = {
   queued:   'В очереди',
@@ -374,7 +375,7 @@ export default function TrainingPage() {
       {runs.length > 0 && (
         <div className="text-right">
           <Link
-            to="/app/training/history"
+            to={cabPath(cabPath('/app/training/history'))}
             className="text-sm text-ink-muted hover:text-ink underline-offset-4 hover:underline"
           >
             Открыть полную историю обучений →
@@ -410,7 +411,7 @@ function FinishedCard({
             . Модель активна, прогноз обновлён.
           </div>
         </div>
-        <Link to="/app/forecasts" className="btn-primary text-sm whitespace-nowrap">
+        <Link to={cabPath(cabPath('/app/forecasts'))} className="btn-primary text-sm whitespace-nowrap">
           Открыть прогноз →
         </Link>
         <button

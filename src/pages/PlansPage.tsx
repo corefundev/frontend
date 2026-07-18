@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom'
 import { plansApi, type PlanSpec } from '../features/plans/api'
 import { useAuthStore } from '../features/auth/store'
 import PublicLayout from '../components/PublicLayout'
+import { cabPath } from '../shared/hostRouting'
 
 interface PlanCopy {
   tag:      string
@@ -181,7 +182,7 @@ function PlanCards({ plans, isAuthed }: { plans: PlanSpec[]; isAuthed: boolean }
                   </a>
                 ) : (
                   <Link
-                    to={isAuthed ? '/app/upgrade' : '/signup'}
+                    to={isAuthed ? cabPath('/app/upgrade') : '/signup'}
                     className={[
                       'inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg font-medium transition-colors',
                       featured
