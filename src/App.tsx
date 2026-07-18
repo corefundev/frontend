@@ -39,7 +39,6 @@ function AccountSectionPlaceholder() {
 const DataPage          = lazy(() => import('./pages/client/DataPage'))
 const DatasetPage       = lazy(() => import('./pages/client/DatasetPage'))
 const PlansPage         = lazy(() => import('./pages/PlansPage'))
-const OnboardingPage    = lazy(() => import('./pages/OnboardingPage'))
 const SignupPage        = lazy(() => import('./pages/SignupPage'))
 const SignupVerifyPage  = lazy(() => import('./pages/SignupVerifyPage'))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
@@ -213,17 +212,9 @@ export default function App() {
           </Suspense>
         }
       />
-      {/* Onboarding: полноэкранный wizard, требует auth но не AppLayout */}
-      <Route
-        path="/welcome"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<SuspenseFallback />}>
-              <OnboardingPage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
+      {/* Онбординг-визард снят (решение владельца, #491) — старые ссылки
+          ведут в раздел «Данные». */}
+      <Route path="/welcome" element={<Navigate to="/app/data" replace />} />
 
       {/* Public legal — admin-editable via /admin/legal (LEG-1 #427: + terms) */}
       <Route
