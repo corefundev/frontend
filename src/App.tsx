@@ -321,8 +321,10 @@ function HostZoneGuard() {
       return
     }
     if (location.pathname === '/login/admin') {
-      const target = adminUrl('/login')
-      if (target !== '/login/admin') window.location.replace(target)
+      // #551: канон — корень admin-хоста (периметр сам решает: консоль
+      // или проверка CF); на легаси/dev путь остаётся относительным.
+      const target = adminUrl('/')
+      if (target !== '/') window.location.replace(target)
     }
   }, [location])
   return null
