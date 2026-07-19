@@ -15,6 +15,8 @@ export interface PlanSpec {
   training_cooldown_hours: number | null
   config_allowed_keys: string[] | null    // null = everything; [] = nothing
   price_label: string
+  // #542-redesign: лимит датасетов приходит из /plans (plans.py all_specs_as_dicts)
+  datasets_limit: number
 }
 
 export interface ClientUsage {
