@@ -7,6 +7,7 @@ import AppLayout from './components/AppLayout'
 import AdminGuard from './components/AdminGuard'
 import { IS_ADMIN_HOST, IS_APP_HOST, MAIN_ORIGIN, SECTION_HOST, adminUrl, appUrl, cabPath, mainUrl } from './shared/hostRouting'
 import PjaxLoader from './components/PjaxLoader'
+import CookieNotice from './components/CookieNotice'
 import LoginPage from './pages/LoginPage'
 import AdminLoginPage from './pages/AdminLoginPage'
 import LandingPage from './pages/LandingPage'
@@ -137,6 +138,9 @@ function SectionHostApp({ section }: { section: 'news' | 'help' }) {
   return (
     <>
       <PjaxLoader />
+      {/* COOK-1 (#497): cookie-баннер и на сервис-поддоменах — они часть
+          публичного контура (ссылка «Подробнее» уводит на апекс). */}
+      <CookieNotice />
       <Routes>
         {section === 'news' ? (
           <>
@@ -332,6 +336,9 @@ export default function App() {
       {/* GitHub-style pjax progress bar — fixed-top, brand-500.
           Listens to route changes + react-query in-flight state. */}
       <PjaxLoader />
+      {/* COOK-1 (#497): информационный cookie-баннер публичного контура.
+          Сам компонент на app-/admin-хостах рендерит null. */}
+      <CookieNotice />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
       <Route path="/login/admin" element={<AdminLoginPage />} />
