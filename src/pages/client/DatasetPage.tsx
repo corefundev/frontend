@@ -334,6 +334,20 @@ export default function DatasetPage() {
                     </span>
                   </p>
                 )}
+                {/* MA-2 #520: не прячем разброс за средним по объёму */}
+                {ds.model.wmape_median != null && ds.model.wmape_p90 != null && (
+                  <p className="text-xs text-ink-subtle">
+                    По товарам: типичная ошибка{' '}
+                    {Math.round(ds.model.wmape_median * 100)}%, у худших 10% —{' '}
+                    от {Math.round(ds.model.wmape_p90 * 100)}%
+                  </p>
+                )}
+                {ds.model.eval_coverage != null && ds.model.eval_coverage < 0.97 && (
+                  <p className="text-xs text-ink-subtle">
+                    Оценка покрыла {Math.round(ds.model.eval_coverage * 100)}%
+                    товаро-дней окна
+                  </p>
+                )}
               </div>
             ) : (
               <p className="mt-3 text-sm text-ink-muted">
