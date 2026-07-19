@@ -18,7 +18,7 @@ import { apiClient } from '../shared/api/client'
 import { useAuthStore } from '../features/auth/store'
 import { clientsApi } from '../features/clients/api'
 import AdminCommandPalette from './AdminCommandPalette'
-import { admApexPath, admPath } from '../shared/hostRouting'
+import { IS_ADMIN_HOST, admApexPath, admPath } from '../shared/hostRouting'
 import { authApi } from '../features/auth/api'
 
 const NAV_GROUPS: {
@@ -100,7 +100,7 @@ function SessionCountdown() {
   const s = Math.floor((left % 60000) / 1000)
   return (
     <span className="text-xs text-ink-subtle whitespace-nowrap"
-          title="Оставшееся время админ-сессии (30 мин, ADM-7 H2)">
+          title="Оставшееся время legacy-сессии (30 мин; за периметром CF Access счётчика нет — сессию держит Cloudflare)">
       сессия{' '}
       <b className={`font-mono tabular-nums font-semibold ${
         m < 5 ? 'text-red-500' : 'text-ink-muted'}`}>
@@ -363,9 +363,15 @@ export default function AdminLayout() {
           <span className="font-mono text-xs text-ink-subtle">{clientId ?? '—'}</span>
           <button type="button" className="btn-ghost text-xs"
                   onClick={async () => {
-                    // #126: ДОЖДАТЬСЯ отзыва на сервере до очистки store —
-                    // fire-and-forget гонялся с интерсептором и уходил без
-                    // Authorization (отзыв не происходил, сессия жила).
+                    // ADM-ACCESS (#551): на периметре выходим ЧЕРЕЗ Cloudflare
+                    // (гасится сессия Access — иначе перезаход был бы без кода).
+                    // На легаси/dev — прежний путь: дождаться отзыва jti (#126),
+                    // затем локальная очистка.
+                    if (IS_ADMIN_HOST) {
+                      window.location.href =
+                        'https://sprosly.cloudflareaccess.com/cdn-cgi/access/logout'
+                      return
+                    }
                     try { await authApi.logout() } catch { /* revoke best-effort */ }
                     logout()
                     nav(admPath('/login/admin'), { replace: true })

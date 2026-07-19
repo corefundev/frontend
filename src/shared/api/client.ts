@@ -23,6 +23,10 @@ import { useAuthStore } from '../../features/auth/store'
 import { IS_ADMIN_HOST } from '../hostRouting'
 
 function resolveBaseUrl(): string {
+  // ADM-ACCESS (#551): консоль ходит в API ТОЛЬКО same-origin через
+  // nginx-proxy /api — так Cf-Access-Jwt-Assertion периметра доезжает
+  // до серверной валидации, а CSP admin-хоста сжимается до 'self'.
+  if (IS_ADMIN_HOST) return '/api'
   const raw = import.meta.env.VITE_API_URL
   if (!raw) {
     // In prod, refuse to silently fall back — an unconfigured API URL
@@ -120,7 +124,11 @@ async function handle401(error: AxiosError) {
       }
     }
     useAuthStore.getState().logout()
-    if (!window.location.pathname.startsWith('/login')) {
+    if (IS_ADMIN_HOST) {
+      // #551: 401 на периметре = истёкшая CF-сессия; перезагрузка
+      // отдаёт управление interstitial'у CF, своей /login тут нет.
+      window.location.reload()
+    } else if (!window.location.pathname.startsWith('/login')) {
       window.location.href = '/login'
     }
   }
