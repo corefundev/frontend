@@ -205,8 +205,8 @@ function Audience() {
 function PlansTeaser() {
   const plans = [
     { name: 'Free',     skus: 30,   horizon: '7 дней',  badge: 'Старт',    featured: false },
-    { name: 'Start',    skus: 1500, horizon: '30 дней', badge: 'Бизнес',   featured: true  },
-    { name: 'Business', skus: '∞',  horizon: '90 дней', badge: 'Корпорат', featured: false },
+    { name: 'Start',    skus: 1500, horizon: '14 дней', badge: 'Бизнес',   featured: true  },
+    { name: 'Business', skus: '∞',  horizon: '28 дней', badge: 'Корпорат', featured: false },
   ]
   return (
     <section className="py-16 lg:py-24">
