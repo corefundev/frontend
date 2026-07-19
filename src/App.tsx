@@ -245,6 +245,11 @@ function AdminPrefixStrip() {
 }
 
 function AdminHostApp() {
+  // #551: периметр-режим не использует legacy-сессии — выкидываем
+  // возможный протухший токен старой формы, чтобы он не мешал никогда.
+  useEffect(() => {
+    try { window.localStorage.removeItem('sku-auth') } catch { /* noop */ }
+  }, [])
   return (
     <>
       <PjaxLoader />

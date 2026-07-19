@@ -61,7 +61,10 @@ export const uploadClient = axios.create({
 // ── Request interceptor: attach bearer token ──────────────────────────────
 function attachAuth(config: InternalAxiosRequestConfig) {
   const token = useAuthStore.getState().token
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  // ADM-ACCESS (#551): на периметре Bearer НЕ прикладываем — допуск несёт
+  // Cf-Access-Jwt-Assertion; протухший legacy-токен из localStorage иначе
+  // давал 401 раньше проверки CF-подписи → вечный reload-цикл консоли.
+  if (token && !IS_ADMIN_HOST) config.headers.Authorization = `Bearer ${token}`
   return config
 }
 apiClient.interceptors.request.use(attachAuth)
