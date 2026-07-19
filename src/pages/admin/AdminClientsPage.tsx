@@ -8,6 +8,7 @@ import { apiClient } from '../../shared/api/client'
 import AdminSelect from '../../components/AdminSelect'
 import AdminClientNewModal from './AdminClientNewModal'
 import AdminQueryError from './AdminQueryError'
+import { admPath } from '../../shared/hostRouting'
 
 const PLAN_ORDER: PlanId[] = ['free', 'start', 'business']
 
@@ -129,7 +130,7 @@ export default function AdminClientsPage() {
                   return (
                     <tr key={c.client_id}
                         className="hover:bg-surface-muted/50 cursor-pointer"
-                        onClick={() => nav(`/admin/clients/${encodeURIComponent(c.client_id)}`)}>
+                        onClick={() => nav(admPath(`/admin/clients/${encodeURIComponent(c.client_id)}`))}>
                       <Td>
                         <div className="font-mono text-brand-700">{c.client_id}</div>
                         {c.suspended_at && <span className="badge-danger">заблокирован</span>}

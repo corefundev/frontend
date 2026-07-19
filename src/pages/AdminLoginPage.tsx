@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { authApi } from '../features/auth/api'
 import { useAuthStore } from '../features/auth/store'
 import { errorMessage } from '../shared/api/client'
+import { admPath } from '../shared/hostRouting'
 
 // ─────────────────────────────────────────────────────────────────────────
 //  AdminLoginPage — classic Client ID + API key flow.
@@ -27,7 +28,7 @@ export default function AdminLoginPage() {
     onSuccess: (data) => {
       setAuth(data.access_token, clientId.trim())
       toast.success('Вход выполнен')
-      nav('/admin', { replace: true })
+      nav(admPath('/admin'), { replace: true })
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось войти')),
   })

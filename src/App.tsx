@@ -5,7 +5,7 @@ import { useAuthStore } from './features/auth/store'
 import { tryRefreshToken } from './shared/api/client'
 import AppLayout from './components/AppLayout'
 import AdminGuard from './components/AdminGuard'
-import { IS_APP_HOST, MAIN_ORIGIN, SECTION_HOST, appUrl, cabPath, mainUrl } from './shared/hostRouting'
+import { IS_ADMIN_HOST, IS_APP_HOST, MAIN_ORIGIN, SECTION_HOST, adminUrl, appUrl, cabPath, mainUrl } from './shared/hostRouting'
 import PjaxLoader from './components/PjaxLoader'
 import LoginPage from './pages/LoginPage'
 import AdminLoginPage from './pages/AdminLoginPage'
@@ -163,6 +163,110 @@ function SectionHostApp({ section }: { section: 'news' | 'help' }) {
   )
 }
 
+// ── ADM-HOST (#122): админ-консоль на admin.<домен> ──────────────────────
+// Тот же вариант B, что и у кабинета: на admin-хосте консоль живёт ОТ
+// КОРНЯ, /admin/* каноникализируется в корень, всё постороннее уезжает
+// full-reload'ом на основной домен. На апексе маршруты /admin/* остаются
+// для легаси/dev-хостов (на брендовом апексе HostZoneGuard редиректит).
+const ADMIN_CONSOLE_ROUTES = (
+  <>
+    <Route index element={
+      <Suspense fallback={<SuspenseFallback />}><AdminHomePage /></Suspense>
+    } />
+    <Route path="clients" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminClientsPage /></Suspense>
+    } />
+    <Route path="clients/new" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminClientsPage /></Suspense>
+    } />
+    <Route path="clients/:clientId" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminClientCardPage /></Suspense>
+    } />
+    <Route path="plans" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminPlansPage /></Suspense>
+    } />
+    <Route path="training" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminTrainingPage /></Suspense>
+    } />
+    <Route path="notifications" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminNotificationsPage /></Suspense>
+    } />
+    <Route path="news" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminNewsPage /></Suspense>
+    } />
+    <Route path="news/new" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminNewsEditorPage /></Suspense>
+    } />
+    <Route path="news/:postId" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminNewsEditorPage /></Suspense>
+    } />
+    <Route path="help" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminHelpPage /></Suspense>
+    } />
+    <Route path="help/new" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminHelpEditorPage /></Suspense>
+    } />
+    <Route path="help/:articleId" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminHelpEditorPage /></Suspense>
+    } />
+    <Route path="legal" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminLegalPage /></Suspense>
+    } />
+    <Route path="legal/:docId" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminLegalPage /></Suspense>
+    } />
+    <Route path="system" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminSystemPage /></Suspense>
+    } />
+    <Route path="audit" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminAuditPage /></Suspense>
+    } />
+    <Route path="security" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminSecurityPage /></Suspense>
+    } />
+    <Route path="data" element={
+      <Suspense fallback={<SuspenseFallback />}><AdminDataPage /></Suspense>
+    } />
+  </>
+)
+
+function AdminPrefixStrip() {
+  const location = useLocation()
+  const stripped = location.pathname === '/admin'
+    ? '/' : location.pathname.replace(/^\/admin/, '')
+  return <Navigate to={{ pathname: stripped, search: location.search }} replace />
+}
+
+function AdminHostApp() {
+  return (
+    <>
+      <PjaxLoader />
+      <Routes>
+        <Route path="/login" element={<AdminLoginPage />} />
+        {/* /login/admin — апексный адрес; на admin-хосте канон = /login */}
+        <Route path="/login/admin" element={<Navigate to="/login" replace />} />
+        <Route path="/admin" element={<AdminPrefixStrip />} />
+        <Route path="/admin/*" element={<AdminPrefixStrip />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <AdminGuard>
+                <Suspense fallback={<SuspenseFallback />}>
+                  <AdminLayout />
+                </Suspense>
+              </AdminGuard>
+            </ProtectedRoute>
+          }
+        >
+          {ADMIN_CONSOLE_ROUTES}
+        </Route>
+        <Route path="*" element={<ToMainDomain />} />
+      </Routes>
+    </>
+  )
+}
+
 // ── APP-1 (#495): рабочая зона на app.<домен> ────────────────────────────
 // Кабинет (/app/*) живёт ТОЛЬКО на app-хосте, публичные страницы — только
 // на апексе. Первый рендер чужой зоны уводится full-reload'ом на её хост
@@ -185,6 +289,11 @@ function HostZoneGuard() {
         window.location.replace(cabPath(path))
         return
       }
+      if (location.pathname === '/admin'
+          || location.pathname.startsWith('/admin/')) {
+        window.location.replace(adminUrl(path))
+        return
+      }
       if (APEX_ONLY_PREFIXES.some((p) => location.pathname === p
           || location.pathname.startsWith(p + '/'))) {
         window.location.replace(mainUrl(path))
@@ -194,6 +303,16 @@ function HostZoneGuard() {
     if (location.pathname === '/app' || location.pathname.startsWith('/app/')) {
       const target = appUrl(path)
       if (target !== path) window.location.replace(target)
+      return
+    }
+    if (location.pathname === '/admin' || location.pathname.startsWith('/admin/')) {
+      const target = adminUrl(path)
+      if (target !== path) window.location.replace(target)
+      return
+    }
+    if (location.pathname === '/login/admin') {
+      const target = adminUrl('/login')
+      if (target !== '/login/admin') window.location.replace(target)
     }
   }, [location])
   return null
@@ -201,6 +320,7 @@ function HostZoneGuard() {
 
 export default function App() {
   if (SECTION_HOST) return <SectionHostApp section={SECTION_HOST} />
+  if (IS_ADMIN_HOST) return <AdminHostApp />
   return (
     <>
       <HostZoneGuard />
@@ -479,63 +599,8 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={
-          <Suspense fallback={<SuspenseFallback />}><AdminHomePage /></Suspense>
-        } />
-        <Route path="clients" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminClientsPage /></Suspense>
-        } />
-        <Route path="clients/new" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminClientsPage /></Suspense>
-        } />
-        <Route path="clients/:clientId" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminClientCardPage /></Suspense>
-        } />
-        <Route path="plans" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminPlansPage /></Suspense>
-        } />
-        <Route path="training" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminTrainingPage /></Suspense>
-        } />
-        <Route path="notifications" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminNotificationsPage /></Suspense>
-        } />
-        <Route path="news" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminNewsPage /></Suspense>
-        } />
-        <Route path="news/new" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminNewsEditorPage /></Suspense>
-        } />
-        <Route path="news/:postId" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminNewsEditorPage /></Suspense>
-        } />
-        <Route path="help" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminHelpPage /></Suspense>
-        } />
-        <Route path="help/new" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminHelpEditorPage /></Suspense>
-        } />
-        <Route path="help/:articleId" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminHelpEditorPage /></Suspense>
-        } />
-        <Route path="legal" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminLegalPage /></Suspense>
-        } />
-        <Route path="legal/:docId" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminLegalPage /></Suspense>
-        } />
-        <Route path="system" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminSystemPage /></Suspense>
-        } />
-        <Route path="audit" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminAuditPage /></Suspense>
-        } />
-        <Route path="security" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminSecurityPage /></Suspense>
-        } />
-        <Route path="data" element={
-          <Suspense fallback={<SuspenseFallback />}><AdminDataPage /></Suspense>
-        } />
+        {ADMIN_CONSOLE_ROUTES}
+
       </Route>
 
       {/* /app/admin/* → выделенная консоль (ADM-0) */}

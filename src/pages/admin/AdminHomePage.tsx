@@ -14,6 +14,7 @@ import { apiClient } from '../../shared/api/client'
 import { clientsApi } from '../../features/clients/api'
 import { adminNotificationsApi } from '../../features/notifications/api'
 import AdminQueryError from './AdminQueryError'
+import { admPath } from '../../shared/hostRouting'
 
 const STALE_DAYS = 45
 const WINDOW_DAYS = 7
@@ -246,12 +247,12 @@ export default function AdminHomePage() {
 
       {/* ── KPI-ряд (прототип) ── */}
       <div className="grid grid-cols-4 gap-3">
-        <Kpi label="Клиенты" value={String(clients.length)} to="/admin/clients"
+        <Kpi label="Клиенты" value={String(clients.length)} to={admPath('/admin/clients')}
              foot={`${Object.entries(byPlan).map(([p, n]) => `${p}: ${n}`).join(' · ') || '—'} · заблок.: ${suspended}`} />
-        <Kpi label={`Обучений за ${WINDOW_DAYS} дней`} value={String(week.finished)} to="/admin/training"
+        <Kpi label={`Обучений за ${WINDOW_DAYS} дней`} value={String(week.finished)} to={admPath('/admin/training')}
              foot={`gate-блоков: ${week.blocked} · ошибок: ${week.failed}`}
              spark={perDay.some((n) => n > 0) ? { points: perDay, tone: 'brand' } : undefined} />
-        <Kpi label="Точность (WMAPE, медиана)" to="/admin/training"
+        <Kpi label="Точность (WMAPE, медиана)" to={admPath('/admin/training')}
              value={wmapeMedian != null ? wmapeMedian.toFixed(2) : '—'}
              foot={monthDelta != null
                ? <span className={monthDelta <= 0 ? 'text-success font-semibold' : 'text-danger font-semibold'}>
@@ -259,7 +260,7 @@ export default function AdminHomePage() {
                  </span>
                : wmapeMedian != null ? `по ${wmapeN} обучениям` : 'нет завершённых обучений'}
              spark={wmapeSeries.length >= 2 ? { points: wmapeSeries, tone: 'ok' } : undefined} />
-        <Kpi label="Свежесть бэкапа" to="/admin/system"
+        <Kpi label="Свежесть бэкапа" to={admPath('/admin/system')}
              value={backup ? fmtAge(backup.age_sec).split(' ')[0] : '—'}
              unit={backup ? fmtAge(backup.age_sec).split(' ')[1] : undefined}
              foot={backupFoot}
@@ -329,7 +330,7 @@ export default function AdminHomePage() {
                 {lastRuns.map((r) => (
                   <tr key={r.run_id} className="border-b border-surface-border last:border-b-0 hover:bg-surface-muted/60">
                     <td className="px-4 py-2">
-                      <Link to={`/admin/clients/${encodeURIComponent(r.client_id)}`}
+                      <Link to={admPath(`/admin/clients/${encodeURIComponent(r.client_id)}`)}
                             className="font-mono text-xs text-brand-700">{r.client_id}</Link>
                     </td>
                     <td className="px-2 py-2">
