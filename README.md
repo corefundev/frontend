@@ -1,6 +1,6 @@
 # SKU Forecasting — Frontend
 
-Web-клиент платформы прогнозирования спроса. React 18 + Vite + TypeScript + Tailwind, общается с backend (`api.testcore.ru`) через REST.
+Web-клиент платформы прогнозирования спроса. React 18 + Vite + TypeScript + Tailwind, общается с backend (`api.sprosly.com`) через REST.
 
 ## Стек
 
