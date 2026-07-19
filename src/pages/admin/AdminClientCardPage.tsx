@@ -20,6 +20,7 @@ import AdminQueryError from './AdminQueryError'
 import QualityTrendSection from './QualityTrendSection'
 import { SkeletonRows, StateRow } from './adminTable'
 import { THEAD_CLS } from './adminTableUtils'
+import { admPath } from '../../shared/hostRouting'
 
 interface Overview {
   client: ClientRecord & { deleted_at?: string | null; pii_retention_days?: number }
@@ -175,7 +176,7 @@ export default function AdminClientCardPage() {
   if (isError) {
     return (
       <div className="max-w-5xl space-y-4">
-        <Link to="/admin/clients" className="text-sm text-ink-muted hover:text-ink">← Клиенты</Link>
+        <Link to={admPath('/admin/clients')} className="text-sm text-ink-muted hover:text-ink">← Клиенты</Link>
         <AdminQueryError what="карточку клиента" onRetry={() => void refetch()} />
       </div>
     )
@@ -201,7 +202,7 @@ export default function AdminClientCardPage() {
 
   return (
     <div className="space-y-4 max-w-5xl">
-      <Link to="/admin/clients" className="text-sm text-ink-muted hover:text-ink">← Клиенты</Link>
+      <Link to={admPath('/admin/clients')} className="text-sm text-ink-muted hover:text-ink">← Клиенты</Link>
 
       <div className="card-paper overflow-hidden">
         {/* ── Шапка-hub (прототип): факты слева, действия справа ── */}

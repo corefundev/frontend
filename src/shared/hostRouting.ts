@@ -20,9 +20,12 @@ export const SECTION_HOST: 'news' | 'help' | null =
 /** APP-1 (#495): рабочая зона живёт на app.<домен>. */
 export const IS_APP_HOST: boolean = HOSTNAME.startsWith('app.')
 
-/** Базовый (основной) домен: на поддомене — без префикса news./help./app. */
-const MAIN_HOST: string = (SECTION_HOST || IS_APP_HOST)
-  ? HOSTNAME.replace(/^(news|help|app)\./, '')
+/** ADM-HOST (#122): админ-консоль живёт на admin.<домен>. */
+export const IS_ADMIN_HOST: boolean = HOSTNAME.startsWith('admin.')
+
+/** Базовый (основной) домен: на поддомене — без префикса news./help./app./admin. */
+const MAIN_HOST: string = (SECTION_HOST || IS_APP_HOST || IS_ADMIN_HOST)
+  ? HOSTNAME.replace(/^(news|help|app|admin)\./, '')
   : HOSTNAME
 
 const PORT_SUFFIX: string =
@@ -42,7 +45,8 @@ const ON_BRANDED_HOST: boolean =
 /** Ссылка на страницу ОСНОВНОГО домена: относительная на нём самом,
  *  абсолютная — с сервис-поддоменов и app-хоста. */
 export function mainUrl(path: string): string {
-  return (SECTION_HOST || IS_APP_HOST) ? `${MAIN_ORIGIN}${path}` : path
+  return (SECTION_HOST || IS_APP_HOST || IS_ADMIN_HOST)
+    ? `${MAIN_ORIGIN}${path}` : path
 }
 
 /** APP-1 (#495), вариант B владельца: на app-хосте кабинет живёт ОТ КОРНЯ
@@ -71,6 +75,41 @@ export function appUrl(path: string): string {
     return `${proto}//app.${MAIN_HOST}${PORT_SUFFIX}${stripAppPrefix(path)}`
   }
   return path
+}
+
+/** ADM-HOST (#122), тот же вариант B: на admin-хосте консоль живёт ОТ
+ *  КОРНЯ (admin.<домен>/clients, /audit, …) — префикс /admin существует
+ *  только на легаси/dev-хостах. */
+function stripAdminPrefix(path: string): string {
+  if (path === '/admin') return '/'
+  return path.startsWith('/admin/') ? path.slice(6) : path
+}
+
+/** Канонический вид «апексного» пути консоли для ТЕКУЩЕГО хоста:
+ *  admPath('/admin/clients') → '/clients' на admin-хосте, '/admin/clients'
+ *  на прочих. Все роутерные ссылки консоли обязаны ходить через него. */
+export function admPath(path: string): string {
+  return IS_ADMIN_HOST ? stripAdminPrefix(path) : path
+}
+
+/** Абсолютный адрес консоли для «апексного» пути /admin/*.
+ *  На брендовых хостах — https://admin.<домен>/<без-префикса>; на
+ *  легаси/dev-хостах admin-хоста нет — путь остаётся относительным. */
+export function adminUrl(path: string): string {
+  if (IS_ADMIN_HOST) return stripAdminPrefix(path)
+  if (ON_BRANDED_HOST) {
+    const proto = typeof window !== 'undefined'
+      ? window.location.protocol : 'https:'
+    return `${proto}//admin.${MAIN_HOST}${PORT_SUFFIX}${stripAdminPrefix(path)}`
+  }
+  return path
+}
+
+/** Апексная форма ТЕКУЩЕГО пути консоли — для матчинга по '/admin/*'-
+ *  ключам (TITLES, active-группы): на admin-хосте приклеивает префикс. */
+export function admApexPath(pathname: string): string {
+  if (!IS_ADMIN_HOST) return pathname
+  return pathname === '/' ? '/admin' : `/admin${pathname}`
 }
 
 /** Канонический адрес раздела: поддомен на новом бренде, путь на легаси. */

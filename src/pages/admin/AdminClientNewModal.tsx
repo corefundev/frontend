@@ -12,6 +12,7 @@ import { plansApi, type PlanId } from '../../features/plans/api'
 import { errorMessage } from '../../shared/api/client'
 import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
+import { admPath } from '../../shared/hostRouting'
 
 export default function AdminClientNewModal({ open, onClose }: {
   open: boolean
@@ -69,7 +70,7 @@ export default function AdminClientNewModal({ open, onClose }: {
                 Скопировать
               </button>
               <button type="button" className="btn-primary text-sm"
-                      onClick={() => { const id = issued.clientId; close(); nav(`/admin/clients/${encodeURIComponent(id)}`) }}>
+                      onClick={() => { const id = issued.clientId; close(); nav(admPath(`/admin/clients/${encodeURIComponent(id)}`)) }}>
                 Открыть карточку
               </button>
               <button type="button" className="btn-ghost text-sm ml-auto" onClick={close}>

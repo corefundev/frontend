@@ -13,6 +13,7 @@ import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 import { SkeletonRows, StateRow } from './adminTable'
 import { THEAD_CLS } from './adminTableUtils'
+import { admPath } from '../../shared/hostRouting'
 
 function StatusChip({ status, live }: { status: NewsStatus; live: boolean }) {
   if (status === 'draft') return <span className="badge-neutral">черновик</span>
@@ -55,7 +56,7 @@ export default function AdminNewsPage() {
                  onChange={(e) => setPinnedOnly(e.target.checked)} />
           только закреплённые
         </label>
-        <Link to="/admin/news/new" className="btn-primary text-xs ml-auto">
+        <Link to={admPath('/admin/news/new')} className="btn-primary text-xs ml-auto">
           Новый пост
         </Link>
       </div>
@@ -82,7 +83,7 @@ export default function AdminNewsPage() {
               ) : data.posts.map((p) => (
                 <tr key={p.id} className="hover:bg-surface-muted/60">
                   <td className="px-4 py-2">
-                    <Link to={`/admin/news/${encodeURIComponent(p.id)}`}
+                    <Link to={admPath(`/admin/news/${encodeURIComponent(p.id)}`)}
                           className="font-medium hover:underline">
                       {p.pinned && <span title="закреплён" className="mr-1">📌</span>}
                       {p.title}

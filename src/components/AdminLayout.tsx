@@ -18,6 +18,7 @@ import { apiClient } from '../shared/api/client'
 import { useAuthStore } from '../features/auth/store'
 import { clientsApi } from '../features/clients/api'
 import AdminCommandPalette from './AdminCommandPalette'
+import { admApexPath, admPath } from '../shared/hostRouting'
 
 const NAV_GROUPS: {
   header: string | null
@@ -199,29 +200,29 @@ function StatusStrip() {
     <div className="flex items-center gap-1 flex-1 overflow-x-auto min-w-0"
          aria-label="Живой статус системы">
       {s.firing == null
-        ? <StatusItem tone="unknown" label="Алерты" value="?" title="Состояние алертов недоступно" to="/admin/system" />
+        ? <StatusItem tone="unknown" label="Алерты" value="?" title="Состояние алертов недоступно" to={admPath('/admin/system')} />
         : s.firing > 0
-          ? <StatusItem tone="danger" label="Алерты" value={String(s.firing)} title={`Firing-алертов: ${s.firing}`} to="/admin/system" />
-          : <StatusItem tone="ok" label="Алерты" value="0" title="Firing-алертов нет" to="/admin/system" />}
+          ? <StatusItem tone="danger" label="Алерты" value={String(s.firing)} title={`Firing-алертов: ${s.firing}`} to={admPath('/admin/system')} />
+          : <StatusItem tone="ok" label="Алерты" value="0" title="Firing-алертов нет" to={admPath('/admin/system')} />}
       {s.stuck == null
-        ? <StatusItem tone="unknown" label="Обучения" value="?" title="Лента обучений недоступна" to="/admin/training" />
+        ? <StatusItem tone="unknown" label="Обучения" value="?" title="Лента обучений недоступна" to={admPath('/admin/training')} />
         : s.stuck > 0
-          ? <StatusItem tone="warn" label="Обучения" value={`${s.stuck} зависла?`} title="Зависшие тренировки — Reconcile на «Обучении»" to="/admin/training" />
-          : <StatusItem tone="ok" label="Обучения" value={String(s.running ?? 0)} title="Тренировок в работе" to="/admin/training" />}
+          ? <StatusItem tone="warn" label="Обучения" value={`${s.stuck} зависла?`} title="Зависшие тренировки — Reconcile на «Обучении»" to={admPath('/admin/training')} />
+          : <StatusItem tone="ok" label="Обучения" value={String(s.running ?? 0)} title="Тренировок в работе" to={admPath('/admin/training')} />}
       {s.backup == null || !s.backup
-        ? <StatusItem tone="unknown" label="Бэкап" value="?" title="Свежесть бэкапа недоступна" to="/admin/system" />
+        ? <StatusItem tone="unknown" label="Бэкап" value="?" title="Свежесть бэкапа недоступна" to={admPath('/admin/system')} />
         : s.backup.stale
-          ? <StatusItem tone="danger" label="Бэкап" value={fmtAge(s.backup.age_sec)} title="Бэкап отстаёт от каденса" to="/admin/system" />
-          : <StatusItem tone="ok" label="Бэкап" value={`${fmtAge(s.backup.age_sec)} назад`} title="Последний успешный бэкап" to="/admin/system" />}
+          ? <StatusItem tone="danger" label="Бэкап" value={fmtAge(s.backup.age_sec)} title="Бэкап отстаёт от каденса" to={admPath('/admin/system')} />
+          : <StatusItem tone="ok" label="Бэкап" value={`${fmtAge(s.backup.age_sec)} назад`} title="Последний успешный бэкап" to={admPath('/admin/system')} />}
       {s.chain == null
-        ? <StatusItem tone="unknown" label="Audit-цепочка" value="?" title="Статус цепочки недоступен" to="/admin/audit" />
+        ? <StatusItem tone="unknown" label="Audit-цепочка" value="?" title="Статус цепочки недоступен" to={admPath('/admin/audit')} />
         : !s.chain.stamped
-          ? <StatusItem tone="warn" label="Audit-цепочка" value="не проверялась" title="Автопроверка ещё не штамповалась" to="/admin/audit" />
+          ? <StatusItem tone="warn" label="Audit-цепочка" value="не проверялась" title="Автопроверка ещё не штамповалась" to={admPath('/admin/audit')} />
           : s.chain.verdict?.ok === false
-            ? <StatusItem tone="danger" label="Audit-цепочка" value="НАРУШЕНА" title="HMAC-цепочка нарушена!" to="/admin/audit" />
+            ? <StatusItem tone="danger" label="Audit-цепочка" value="НАРУШЕНА" title="HMAC-цепочка нарушена!" to={admPath('/admin/audit')} />
             : s.chain.stale
-              ? <StatusItem tone="warn" label="Audit-цепочка" value="крон молчит" title="Вердикт устарел" to="/admin/audit" />
-              : <StatusItem tone="ok" label="Audit-цепочка" value="целостна" title="HMAC-цепочка цела" to="/admin/audit" />}
+              ? <StatusItem tone="warn" label="Audit-цепочка" value="крон молчит" title="Вердикт устарел" to={admPath('/admin/audit')} />
+              : <StatusItem tone="ok" label="Audit-цепочка" value="целостна" title="HMAC-цепочка цела" to={admPath('/admin/audit')} />}
     </div>
   )
 }
@@ -303,7 +304,10 @@ export default function AdminLayout() {
   const clientId = useAuthStore((s) => s.clientId)
   const logout   = useAuthStore((s) => s.logout)
   const nav = useNavigate()
-  const { pathname } = useLocation()
+  // ADM-HOST (#122): матчинг ниже ходит по апексным '/admin/*'-ключам —
+  // на admin-хосте путь приводится к апексной форме.
+  const { pathname: rawPathname } = useLocation()
+  const pathname = admApexPath(rawPathname)
   const signals = useChromeSignals()
   const [dark, themeMode, cycleTheme] = useAdminTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -400,7 +404,7 @@ export default function AdminLayout() {
               {open && group.items.map((item) => (
                 <div key={item.to}>
                   <NavLink
-                    to={item.to}
+                    to={admPath(item.to)}
                     end={item.children ? true : item.end}
                     className={({ isActive }) =>
                       `flex items-center gap-2 rounded-md px-2.5 py-[6.5px] text-[13.5px] transition-colors ${
@@ -423,7 +427,7 @@ export default function AdminLayout() {
                   {item.children?.map((ch) => (
                     <NavLink
                       key={ch.to}
-                      to={ch.to}
+                      to={admPath(ch.to)}
                       className={({ isActive }) =>
                         `flex items-center gap-1.5 rounded-md pl-7 pr-2.5 py-1 text-[12.5px] transition-colors ${
                           isActive ? 'font-semibold' : 'text-ink-subtle hover:bg-surface-muted hover:text-ink'

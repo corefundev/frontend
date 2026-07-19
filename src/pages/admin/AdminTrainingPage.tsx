@@ -14,6 +14,7 @@ import AdminConfirmDialog, { type ConfirmSpec } from '../../components/AdminConf
 import AdminQueryError from './AdminQueryError'
 import { ShowMore, SkeletonRows, StateRow, Th } from './adminTable'
 import { THEAD_CLS, useSort } from './adminTableUtils'
+import { admPath } from '../../shared/hostRouting'
 
 interface RunRow {
   run_id: string
@@ -102,7 +103,7 @@ export default function AdminTrainingPage() {
           <ul className="divide-y divide-surface-border text-sm">
             {ages.map(([cid, days]) => (
               <li key={cid} className="px-5 py-2.5 flex items-center gap-4">
-                <Link to={`/admin/clients/${encodeURIComponent(cid)}`}
+                <Link to={admPath(`/admin/clients/${encodeURIComponent(cid)}`)}
                       className="font-mono text-brand-700">{cid}</Link>
                 <span className={days > STALE_DAYS ? 'badge-danger' : 'badge-neutral'}>
                   {days} дн.
@@ -167,7 +168,7 @@ export default function AdminTrainingPage() {
                         ? new Date(r.ended_at ?? r.started_at!).toLocaleString('ru-RU') : '—'}
                     </td>
                     <td className="px-4 py-2">
-                      <Link to={`/admin/clients/${encodeURIComponent(r.client_id)}`}
+                      <Link to={admPath(`/admin/clients/${encodeURIComponent(r.client_id)}`)}
                             className="font-mono text-xs text-brand-700">{r.client_id}</Link>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">

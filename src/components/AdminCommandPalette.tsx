@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 
 import { clientsApi } from '../features/clients/api'
+import { admPath } from '../shared/hostRouting'
 
 interface Item {
   kind: 'Разделы' | 'Клиенты' | 'Действия'
@@ -129,7 +130,7 @@ export default function AdminCommandPalette({ open, onOpenChange }: {
 
   if (!open) return null
 
-  const go = (it: Item) => { onOpenChange(false); nav(it.to) }
+  const go = (it: Item) => { onOpenChange(false); nav(admPath(it.to)) }
 
   let lastKind: Item['kind'] | null = null
 

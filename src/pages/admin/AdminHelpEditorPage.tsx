@@ -15,6 +15,7 @@ import {
 import AdminConfirmDialog, { type ConfirmSpec } from '../../components/AdminConfirmDialog'
 import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
+import { admPath } from '../../shared/hostRouting'
 
 // построчный diff, тот же подход что в редакторе новостей
 function lineDiff(prev: string, next: string): { kind: '+' | '-' | ' '; text: string }[] {
@@ -105,7 +106,7 @@ export default function AdminHelpEditorPage() {
     onSuccess: (a) => {
       toast.success(isNew ? 'Черновик создан' : 'Сохранено')
       invalidate()
-      if (isNew) nav(`/admin/help/${encodeURIComponent(a.id)}`, { replace: true })
+      if (isNew) nav(admPath(`/admin/help/${encodeURIComponent(a.id)}`), { replace: true })
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось сохранить')),
   })
@@ -146,7 +147,7 @@ export default function AdminHelpEditorPage() {
   if (!isNew && isError) {
     return (
       <div className="max-w-5xl space-y-4">
-        <Link to="/admin/help" className="text-sm text-ink-muted hover:text-ink">← База знаний</Link>
+        <Link to={admPath('/admin/help')} className="text-sm text-ink-muted hover:text-ink">← База знаний</Link>
         <AdminQueryError what="статью" onRetry={() => void refetch()} />
       </div>
     )
@@ -155,7 +156,7 @@ export default function AdminHelpEditorPage() {
   return (
     <div className="space-y-4 max-w-5xl">
       <div className="flex items-center gap-3">
-        <Link to="/admin/help" className="text-sm text-ink-muted hover:text-ink">← База знаний</Link>
+        <Link to={admPath('/admin/help')} className="text-sm text-ink-muted hover:text-ink">← База знаний</Link>
         {article && (
           <span className={article.status === 'published' ? 'badge-success' : 'badge-neutral'}>
             {article.status === 'published' ? 'опубликована'

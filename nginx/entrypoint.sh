@@ -6,7 +6,7 @@
 # только ${WEB_DOMAIN} (app.conf либо ACME-bootstrap до первого серта).
 #
 # MIGR-1 (#424), NEW_DOMAIN задан:
-#   • есть серт NEW_DOMAIN  → sprosly.conf (apex+www+news+help);
+#   • есть серт NEW_DOMAIN  → sprosly.conf (apex+www+news+help+app+admin);
 #   • нет серта             → его хосты добавляются в ACME-bootstrap:80,
 #     чтобы certbot мог пройти http-01 (сквозь CF-proxy);
 #   • LEGACY_REDIRECT=1     → app.conf легаси-домена заменяется
@@ -47,7 +47,7 @@ render_all() {
         if has_cert "${NEW_DOMAIN}"; then
             envsubst "$VARS" < "$TPL/sprosly.conf.template" > "$OUT/sprosly.conf"
         else
-            bootstrap_hosts="${bootstrap_hosts} ${NEW_DOMAIN} www.${NEW_DOMAIN} news.${NEW_DOMAIN} help.${NEW_DOMAIN}"
+            bootstrap_hosts="${bootstrap_hosts} ${NEW_DOMAIN} www.${NEW_DOMAIN} news.${NEW_DOMAIN} help.${NEW_DOMAIN} app.${NEW_DOMAIN} admin.${NEW_DOMAIN}"
             rm -f "$OUT/sprosly.conf"
         fi
     else

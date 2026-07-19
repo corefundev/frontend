@@ -15,6 +15,7 @@ import AdminSelect from '../../components/AdminSelect'
 import AdminQueryError from './AdminQueryError'
 import { SkeletonRows, StateRow } from './adminTable'
 import { THEAD_CLS } from './adminTableUtils'
+import { admPath } from '../../shared/hostRouting'
 
 const EMPTY_CAT: HelpCategoryPayload = {
   slug: '', title: '', description: '', icon: '', sort_order: 0,
@@ -152,7 +153,7 @@ export default function AdminHelpPage() {
                                    { value: 'draft', label: 'черновики' },
                                    { value: 'published', label: 'опубликованные' },
                                    { value: 'archived', label: 'архив' }]} />
-            <Link to="/admin/help/new" className="btn-primary text-xs ml-auto">
+            <Link to={admPath('/admin/help/new')} className="btn-primary text-xs ml-auto">
               Новая статья
             </Link>
           </div>
@@ -176,7 +177,7 @@ export default function AdminHelpPage() {
                 ) : arts.articles.map((a) => (
                   <tr key={a.id} className="hover:bg-surface-muted/60">
                     <td className="px-4 py-2">
-                      <Link to={`/admin/help/${encodeURIComponent(a.id)}`}
+                      <Link to={admPath(`/admin/help/${encodeURIComponent(a.id)}`)}
                             className="font-medium hover:underline">{a.title}</Link>
                       <div className="font-mono text-[11px] text-ink-subtle">/{a.slug}</div>
                     </td>
@@ -242,7 +243,7 @@ function ContentAnalyticsSection() {
               ) : rows.map((r) => (
                 <tr key={r.id} className="hover:bg-surface-muted/60">
                   <td className="px-4 py-2">
-                    <Link to={`/admin/help/${encodeURIComponent(r.id)}`}
+                    <Link to={admPath(`/admin/help/${encodeURIComponent(r.id)}`)}
                           className="hover:underline">{r.title}</Link>
                     {r.status !== 'published' && (
                       <span className="badge-neutral ml-2">{r.status === 'draft' ? 'черновик' : 'архив'}</span>
