@@ -320,8 +320,10 @@ function HostZoneGuard() {
       return
     }
     if (location.pathname === '/login/admin') {
-      const target = adminUrl('/login')
-      if (target !== '/login/admin') window.location.replace(target)
+      // корень admin-хоста: живая админ-сессия → сразу консоль,
+      // без сессии он сам отправит на форму /login.
+      const target = adminUrl('/')
+      if (target !== '/') window.location.replace(target)
     }
   }, [location])
   return null

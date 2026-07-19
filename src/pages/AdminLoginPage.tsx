@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { authApi } from '../features/auth/api'
@@ -20,6 +20,9 @@ import { admPath } from '../shared/hostRouting'
 export default function AdminLoginPage() {
   const nav = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
+  const isAdmin = useAuthStore((s) => s.isAdmin())
+  // живая админ-сессия — форма не нужна: сразу в консоль
+  if (isAdmin) return <Navigate to={admPath('/admin')} replace />
   const [clientId, setClientId] = useState('')
   const [secret,   setSecret]   = useState('')
 
