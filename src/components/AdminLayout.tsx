@@ -18,7 +18,8 @@ import { apiClient } from '../shared/api/client'
 import { useAuthStore } from '../features/auth/store'
 import { clientsApi } from '../features/clients/api'
 import AdminCommandPalette from './AdminCommandPalette'
-import { admApexPath, admPath } from '../shared/hostRouting'
+import { admApexPath, admPath, mainUrl } from '../shared/hostRouting'
+import { authApi } from '../features/auth/api'
 
 const NAV_GROUPS: {
   header: string | null
@@ -361,7 +362,16 @@ export default function AdminLayout() {
           </button>
           <span className="font-mono text-xs text-ink-subtle">{clientId ?? '—'}</span>
           <button type="button" className="btn-ghost text-xs"
-                  onClick={() => { logout(); nav('/login/admin') }}>
+                  onClick={() => {
+                    // #124: сначала отзыв сессии на сервере (jti +
+                    // remember-me семья + кука), потом локальная очистка —
+                    // иначе форма логина тут же видит живую сессию.
+                    void authApi.logout().catch(() => undefined)
+                    logout()
+                    const apex = mainUrl('/login')
+                    if (apex !== '/login') window.location.replace(apex)
+                    else nav('/login/admin')
+                  }}>
             Выйти
           </button>
         </div>

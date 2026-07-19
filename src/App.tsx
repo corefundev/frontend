@@ -98,9 +98,11 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 
   if (restoring) return <SuspenseFallback />
   if (!isAuthed) {
-    // APP-1 (#495): на app-хосте своей /login нет — логин живёт на
-    // апексе; после входа вернёмся через ?next= (валидируется там).
-    if (IS_APP_HOST) {
+    // APP-1 (#495) / ADM-HOST (#124): на app- и admin-хостах своей
+    // /login нет — парольный логин живёт на апексе; после входа вернёмся
+    // через ?next= (валидируется там), сессию поддомену отдаёт тихий
+    // refresh по httpOnly-куке (AUTH-2).
+    if (IS_APP_HOST || IS_ADMIN_HOST) {
       window.location.replace(mainUrl(
         '/login?next=' + encodeURIComponent(window.location.href)))
       return <SuspenseFallback />
@@ -230,6 +232,14 @@ const ADMIN_CONSOLE_ROUTES = (
   </>
 )
 
+function ToApexLogin() {
+  useEffect(() => {
+    window.location.replace(mainUrl(
+      '/login?next=' + encodeURIComponent(adminUrl('/'))))
+  }, [])
+  return <SuspenseFallback />
+}
+
 function AdminPrefixStrip() {
   const location = useLocation()
   const stripped = location.pathname === '/admin'
@@ -242,9 +252,10 @@ function AdminHostApp() {
     <>
       <PjaxLoader />
       <Routes>
-        <Route path="/login" element={<AdminLoginPage />} />
-        {/* /login/admin — апексный адрес; на admin-хосте канон = /login */}
-        <Route path="/login/admin" element={<Navigate to="/login" replace />} />
+        {/* #124: api-key формы на admin-хосте НЕТ (решение AUTH-1) — люди
+            входят паролем на апексе, поддомен добирает сессию refresh-кукой. */}
+        <Route path="/login" element={<ToApexLogin />} />
+        <Route path="/login/admin" element={<ToApexLogin />} />
         <Route path="/admin" element={<AdminPrefixStrip />} />
         <Route path="/admin/*" element={<AdminPrefixStrip />} />
         <Route

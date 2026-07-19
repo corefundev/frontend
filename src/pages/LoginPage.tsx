@@ -9,7 +9,7 @@ import AuthShell from '../components/AuthShell'
 import { PasswordInput } from '../components/PasswordInput'
 import { SsoBadges, SsoDivider } from '../components/SsoBadges'
 import { errorMessage } from '../shared/api/client'
-import { appUrl } from '../shared/hostRouting'
+import { adminUrl, appUrl } from '../shared/hostRouting'
 
 // ─────────────────────────────────────────────────────────────────────────
 //  LoginPage — AUTH-3 #447: классический вход email + пароль.
@@ -53,7 +53,11 @@ export default function LoginPage() {
       const next = new URLSearchParams(window.location.search).get('next')
       const appRoot = appUrl('/app')
       if (appRoot !== '/app') {                       // брендовый хост
-        const target = next && next.startsWith(appUrl('/')) ? next : appRoot
+        // open-redirect guard: только свои origin'ы — кабинет и (#124)
+        // админ-хост; сессию поддомену передаёт refresh-кука, не URL.
+        const ok = next != null
+          && (next.startsWith(appUrl('/')) || next.startsWith(adminUrl('/')))
+        const target = ok ? next : appRoot
         window.location.replace(target)
         return
       }
