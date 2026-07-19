@@ -54,7 +54,13 @@ export function ProfileMenu() {
 
           <button
             className="w-full text-left px-4 py-3 text-sm text-ink-muted hover:text-ink hover:bg-surface-sunken transition-colors"
-            onClick={() => { void authApi.logout().catch(() => undefined); logout(); nav('/login') }}
+            onClick={async () => {
+              // #126: как в консоли — сначала отзыв на сервере (иначе
+              // гонка с интерсептором теряет Authorization), потом очистка.
+              try { await authApi.logout() } catch { /* revoke best-effort */ }
+              logout()
+              nav('/login')
+            }}
           >
             Выйти
           </button>
