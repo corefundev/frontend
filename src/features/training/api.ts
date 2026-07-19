@@ -74,6 +74,10 @@ export interface TrainingRun {
   // MA-1 #519: доля клеток окна оценки, попавших в скоринг. Непусто —
   // ран оценён по методике v2 (июль 2026, покрытие 100% дней окна).
   eval_coverage: number | null
+  // MA-2 #520: распределение per-SKU WMAPE — медиана и 90-й перцентиль;
+  // объёмный headline не должен маскировать хвост слабых товаров.
+  wmape_median:  number | null
+  wmape_p90:     number | null
   smape:         number | null
   model_path:    string | null
   mlflow_run_id: string | null
