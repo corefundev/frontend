@@ -383,14 +383,22 @@ function PlanCompare({
                 aria-hidden
                 className={`pointer-events-none absolute inset-y-0 ${TINT_POS} rounded-b-2xl bg-brand-500/[0.04]`}
               />
-              {groups.map((g) => (
+              {groups.map((g, gi) => (
                 <details key={g.title} open className="group">
                   <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 text-base font-bold text-ink">
                     {g.title}
                     <Chevron />
                   </summary>
-                  {g.rows.map((r) => (
-                    <div key={r.t} className={`${GRID} border-b border-ink/5`}>
+                  {g.rows.map((r, ri) => (
+                    <div
+                      key={r.t}
+                      className={[
+                        GRID,
+                        // последняя строка последней группы — без нижней линии
+                        gi === groups.length - 1 && ri === g.rows.length - 1
+                          ? '' : 'border-b border-ink/5',
+                      ].join(' ')}
+                    >
                       <div className="px-4 py-3.5">
                         <div className="text-sm font-medium text-ink">{r.t}</div>
                         {r.d && <div className="mt-0.5 text-xs text-ink-faint leading-relaxed">{r.d}</div>}
