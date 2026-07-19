@@ -249,23 +249,19 @@ function AdminHostApp() {
     <>
       <PjaxLoader />
       <Routes>
-        {/* #126: у консоли СВОЙ вход (Client ID + админ-ключ) — он не
-            связан с клиентскими аккаунтами и refresh-кукой. Форма живёт
-            прямо на admin-хосте. */}
-        <Route path="/login" element={<AdminLoginPage />} />
-        <Route path="/login/admin" element={<Navigate to="/login" replace />} />
+        {/* ADM-ACCESS (#551): допуск = периметр CF Access (email+2FA);
+            сервер валидирует подпись CF-JWT на каждом same-origin
+            /api-запросе. Форма/гарды/роли на admin-хосте упразднены. */}
+        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="/login/admin" element={<Navigate to="/" replace />} />
         <Route path="/admin" element={<AdminPrefixStrip />} />
         <Route path="/admin/*" element={<AdminPrefixStrip />} />
         <Route
           path="/"
           element={
-            <ProtectedRoute>
-              <AdminGuard>
-                <Suspense fallback={<SuspenseFallback />}>
-                  <AdminLayout />
-                </Suspense>
-              </AdminGuard>
-            </ProtectedRoute>
+            <Suspense fallback={<SuspenseFallback />}>
+              <AdminLayout />
+            </Suspense>
           }
         >
           {ADMIN_CONSOLE_ROUTES}

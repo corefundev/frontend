@@ -70,7 +70,7 @@ server {
     listen 443 ssl;
     listen [::]:443 ssl;
     http2 on;
-    server_name ${NEW_DOMAIN} news.${NEW_DOMAIN} help.${NEW_DOMAIN} app.${NEW_DOMAIN} admin.${NEW_DOMAIN};
+    server_name ${NEW_DOMAIN} news.${NEW_DOMAIN} help.${NEW_DOMAIN} app.${NEW_DOMAIN};
 
     ssl_certificate     /etc/letsencrypt/live/${NEW_DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${NEW_DOMAIN}/privkey.pem;
@@ -114,6 +114,80 @@ server {
         add_header X-Frame-Options           "DENY"    always;
         add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy        "geolocation=(), microphone=(), camera=()" always;
+        add_header Content-Security-Policy   $sec_csp always;
+    }
+
+    location = /nginx-healthz {
+        access_log off;
+        return 200 "ok\n";
+        default_type text/plain;
+    }
+
+    gzip              on;
+    gzip_types        text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length   256;
+    gzip_proxied      any;
+    gzip_vary         on;
+}
+
+# ── ADM-ACCESS (#551): admin-хост за периметром CF Access ────────────────────
+# Отдельный блок: (а) same-origin /api → backend, чтобы Cf-Access-Jwt-Assertion
+# доезжал до серверной валидации; (б) CSP жёстче общего — connect-src ТОЛЬКО
+# 'self' (консоль ходит только в /api), Turnstile консоли не нужен.
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name admin.${NEW_DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${NEW_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${NEW_DOMAIN}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:WEB_TLS_ADM:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+    ssl_stapling        on;
+    ssl_stapling_verify on;
+    ssl_trusted_certificate /etc/letsencrypt/live/${NEW_DOMAIN}/chain.pem;
+
+    set $sec_csp "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
+
+    server_tokens off;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # same-origin API: /api/... → https://api.${NEW_DOMAIN}/...
+    # Заголовки запроса (включая Cf-Access-Jwt-Assertion от CF Access)
+    # проксируются как есть. Тела до 100 MiB — админ-загрузки датасетов.
+    location /api/ {
+        proxy_pass https://api.${NEW_DOMAIN}/;
+        proxy_ssl_server_name on;
+        proxy_ssl_name api.${NEW_DOMAIN};
+        proxy_set_header Host api.${NEW_DOMAIN};
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 120s;
+        client_max_body_size 100m;
+    }
+
+    location /assets/ {
+        try_files $uri =404;
+        access_log off;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options    "nosniff" always;
+        add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header X-Robots-Tag "noindex, nofollow" always;
+        add_header Cache-Control "no-store" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options    "nosniff" always;
+        add_header X-Frame-Options           "DENY"    always;
+        add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
         add_header Content-Security-Policy   $sec_csp always;
     }
 
