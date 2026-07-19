@@ -359,7 +359,9 @@ function PlanCompare({
           Полное сравнение тарифов
         </h2>
 
-        <div className="overflow-x-auto -mx-5 px-5 lg:mx-0 lg:px-0">
+        {/* overflow-скролл ломает position:sticky (шапка перестаёт липнуть) —
+            поэтому он только на узких экранах, где таблице нужен свайп. */}
+        <div className="overflow-x-auto lg:overflow-visible -mx-5 px-5 lg:mx-0 lg:px-0">
           <div className="relative min-w-[760px]">
             {/* sticky-шапка: A1 = блок переключателя; Start подкрашен */}
             <div className={`${GRID} sticky ${STICKY_TOP} z-10 border-b border-ink/10 bg-white`}>
