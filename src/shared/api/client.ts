@@ -20,6 +20,7 @@
 
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '../../features/auth/store'
+import { IS_ADMIN_HOST } from '../hostRouting'
 
 function resolveBaseUrl(): string {
   const raw = import.meta.env.VITE_API_URL
@@ -70,6 +71,11 @@ uploadClient.interceptors.request.use(attachAuth)
 let refreshInFlight: Promise<string | null> | null = null
 
 export function tryRefreshToken(): Promise<string | null> {
+  // ADM-HOST (#128): консоль аутентифицируется ТОЛЬКО формой с админ-
+  // ключом. Клиентская remember-me-кука на admin-хосте не опрашивается
+  // вовсе — иначе она молча подменяет админ-сессию клиентской (владелец
+  // выкидывался из консоли при живой клиентской сессии в том же браузере).
+  if (IS_ADMIN_HOST) return Promise.resolve(null)
   if (!refreshInFlight) {
     refreshInFlight = axios
       .post<{ access_token: string; client_id: string }>(
