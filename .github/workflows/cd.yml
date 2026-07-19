@@ -17,7 +17,7 @@
 #   FRONTEND_USER              — root (per memory; could be `deploy` later)
 #   FRONTEND_SSH_PRIVATE_KEY   — matching ~/.ssh/authorized_keys on VPS
 #   FRONTEND_SSH_KNOWN_HOSTS   — `ssh-keyscan <VPS IP>` output
-#   VITE_API_URL               — baked into dist (https://api.testcore.ru)
+#   VITE_API_URL               — baked into dist (https://api.sprosly.com)
 #
 # Required GH environment:
 #   "production"  — recommended to set required reviewers in
