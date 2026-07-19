@@ -29,6 +29,12 @@ export function QualityCard({ clientId }: { clientId: string }) {
     : null
   const vsNaive = run.mase_seasonal            // <1 = лучше наивного
   const accuracyPct = run.wmape != null ? Math.max(0, (1 - run.wmape) * 100) : null
+  // MA-2 #520: разброс по товарам. Медиана = «типичный товар»; p90 —
+  // граница: у 90% товаров ошибка НЕ выше p90, т.е. точность выше 1−p90.
+  const medianPct = run.wmape_median != null
+    ? Math.max(0, (1 - run.wmape_median) * 100) : null
+  const p90Pct = run.wmape_p90 != null
+    ? Math.max(0, (1 - run.wmape_p90) * 100) : null
 
   return (
     <div className="card-paper p-5">
@@ -62,6 +68,18 @@ export function QualityCard({ clientId }: { clientId: string }) {
           </dd>
         </div>
       </dl>
+      {medianPct != null && p90Pct != null && (
+        <div className="mt-4">
+          <dt className="text-xs text-ink-muted">Разброс по товарам</dt>
+          <dd className="mt-0.5 text-sm">
+            типичный товар (медиана) — <span className="font-semibold">{medianPct.toFixed(0)}%</span>
+            {' · '}у 90% товаров — выше <span className="font-semibold">{p90Pct.toFixed(0)}%</span>
+          </dd>
+          <dd className="text-[11px] text-ink-faint">
+            слабые товары не прячутся за средним — смотрите прогнозы по SKU
+          </dd>
+        </div>
+      )}
       {run.gate_passed === false && (
         <p className="mt-3 text-xs text-ink-muted">
           Последняя модель прошла с предупреждением контроля качества —
