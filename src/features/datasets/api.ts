@@ -13,6 +13,10 @@ export interface DatasetModel {
   wmape_order_14: number | null
   baseline_wmape: number | null
   improvement_vs_naive: number | null
+  // MA-2 #520: распределение по товарам (медиана/худшие 10%) + охват оценки
+  wmape_median: number | null
+  wmape_p90: number | null
+  eval_coverage: number | null
   up_to_date: boolean | null
 }
 
