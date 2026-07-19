@@ -48,7 +48,9 @@ const PLANS: PlanCardSpec[] = [
     modelName: 'Aether',
     price:     '2 900 ₽',
     priceNote: 'в месяц',
-    bullets:   ['до 1 500 SKU', 'горизонт 90 дней', '15 обучений в месяц'],
+    // #542: горизонты Free 7 / Start 14 / Business 28; месячных лимитов
+    // обучений НЕ существует (модель тарифов) — «15 в месяц» был ложью.
+    bullets:   ['до 1 500 SKU', 'горизонт 14 дней', 'обучения без месячных лимитов'],
     visualClass: 'card',
     badge: { text: 'популярный', class: 'badge-info' },
   },
@@ -58,7 +60,7 @@ const PLANS: PlanCardSpec[] = [
     modelName: 'Chronos',
     price:     'по запросу',
     priceNote: 'индивидуально',
-    bullets:   ['без ограничений по SKU', 'горизонт 90 дней', 'без cooldown, supports'],
+    bullets:   ['без ограничений по SKU', 'горизонт 28 дней', 'без cooldown, приоритетная поддержка'],
     visualClass: 'card-paper',
     badge: { text: 'premium', class: 'badge-gold' },
   },
