@@ -385,7 +385,7 @@ function PlanCompare({
               />
               {groups.map((g) => (
                 <details key={g.title} open className="group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between border-b border-ink/10 px-4 py-4 text-sm font-bold text-ink">
+                  <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 text-base font-bold text-ink">
                     {g.title}
                     <Chevron />
                   </summary>
