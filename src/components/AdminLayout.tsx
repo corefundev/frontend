@@ -75,6 +75,24 @@ const TITLES: Record<string, string> = {
   '/admin/system':        'Система',
 }
 
+function HeaderClock() {
+  // Правка владельца 2026-07-20: в правом блоке шапки — живое время
+  // (вместо legacy client_id, который на периметре пуст). Минутной
+  // точности достаточно; tabular-nums, чтобы не дёргалась ширина.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 15_000)
+    return () => clearInterval(t)
+  }, [])
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  return (
+    <span className="font-mono text-xs tabular-nums text-ink-subtle" title="Локальное время">
+      {hh}:{mm}
+    </span>
+  )
+}
+
 function SessionCountdown() {
   // H2 made visible: admin JWTs live 30 minutes — show the clock instead
   // of surprising the operator with a mid-action 401.
@@ -302,7 +320,6 @@ function UpdatedAgo() {
 }
 
 export default function AdminLayout() {
-  const clientId = useAuthStore((s) => s.clientId)
   const logout   = useAuthStore((s) => s.logout)
   const nav = useNavigate()
   // ADM-HOST (#122): матчинг ниже ходит по апексным '/admin/*'-ключам —
@@ -353,6 +370,7 @@ export default function AdminLayout() {
         </button>
         <div className="flex-1 basis-0 min-w-0 flex items-center justify-end gap-2.5">
           <SessionCountdown />
+          <HeaderClock />
           <button type="button"
                   className="h-[30px] w-[30px] rounded-md ring-1 ring-surface-border flex items-center justify-center text-ink-muted hover:bg-surface-muted transition-colors"
                   title={`Тема: ${themeMode === 'system' ? 'системная' : themeMode === 'dark' ? 'тёмная' : 'светлая'} (клик — переключить)`}
@@ -360,7 +378,6 @@ export default function AdminLayout() {
                   onClick={cycleTheme}>
             <ThemeIcon mode={themeMode} dark={dark} />
           </button>
-          <span className="font-mono text-xs text-ink-subtle">{clientId ?? '—'}</span>
           <button type="button" className="btn-ghost text-xs"
                   onClick={async () => {
                     // ADM-ACCESS (#551): на периметре выходим ЧЕРЕЗ Cloudflare
