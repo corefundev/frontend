@@ -4,6 +4,7 @@
 // (та же неделя назад) — единственный бейзлайн, который клиент может
 // проверить сам; никакого overclaiming, «хуже наивного» показываем прямо.
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import { trainingApi } from './api'
@@ -65,6 +66,17 @@ export function QualityCard({ clientId }: { clientId: string }) {
         <p className="mt-3 text-xs text-ink-muted">
           Последняя модель прошла с предупреждением контроля качества —
           показатели могут быть скромнее обычного.
+        </p>
+      )}
+      {run.eval_coverage != null && (
+        <p className="mt-3 text-[11px] text-ink-faint">
+          Методика оценки v2 (июль 2026): покрытие 100% дней окна.{' '}
+          <Link
+            to="/help/a/metodika-ocenki-tochnosti"
+            className="underline underline-offset-2 hover:text-ink"
+          >
+            Как мы считаем точность
+          </Link>
         </p>
       )}
     </div>

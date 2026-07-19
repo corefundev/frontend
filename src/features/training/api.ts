@@ -71,6 +71,9 @@ export interface TrainingRun {
   // <1 means «точнее наивного прогноза». #227: gate verdict of the run.
   mase_seasonal: number | null
   gate_passed:   boolean | null
+  // MA-1 #519: доля клеток окна оценки, попавших в скоринг. Непусто —
+  // ран оценён по методике v2 (июль 2026, покрытие 100% дней окна).
+  eval_coverage: number | null
   smape:         number | null
   model_path:    string | null
   mlflow_run_id: string | null
