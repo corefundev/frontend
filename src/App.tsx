@@ -8,6 +8,7 @@ import AdminGuard from './components/AdminGuard'
 import { IS_ADMIN_HOST, IS_APP_HOST, MAIN_ORIGIN, SECTION_HOST, adminUrl, appUrl, cabPath, mainUrl } from './shared/hostRouting'
 import PjaxLoader from './components/PjaxLoader'
 import CookieNotice from './components/CookieNotice'
+import SupportWidget from './components/SupportWidget'
 import LoginPage from './pages/LoginPage'
 import AdminLoginPage from './pages/AdminLoginPage'
 import LandingPage from './pages/LandingPage'
@@ -342,6 +343,8 @@ export default function App() {
       {/* COOK-1 (#497): информационный cookie-баннер публичного контура.
           Сам компонент на app-/admin-хостах рендерит null. */}
       <CookieNotice />
+      {/* SUP-3 (#506): ассистент — апекс (анонимы, только документация). */}
+      <SupportWidget surface="public" />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
       <Route path="/login/admin" element={<AdminLoginPage />} />
@@ -468,7 +471,7 @@ export default function App() {
         path={IS_APP_HOST ? '/' : '/app'}
         element={
           <ProtectedRoute>
-            <AppLayout />
+            <><AppLayout /><SupportWidget surface="cabinet" /></>
           </ProtectedRoute>
         }
       >
