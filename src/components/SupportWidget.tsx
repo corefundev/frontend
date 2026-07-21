@@ -96,7 +96,12 @@ function Panel({ surface, onClose }: { surface: 'public' | 'cabinet'; onClose: (
     <div className="fixed bottom-24 right-5 z-40 flex h-[520px] w-[360px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.18)]">
       <div className="flex items-center justify-between border-b border-ink/10 bg-surface/60 px-4 py-3">
         <div>
-          <div className="text-sm font-bold text-ink">Ассистент Sprosly</div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-bold text-ink">Ассистент Sprosly</span>
+            <span className="rounded-full bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-brand-600">
+              beta
+            </span>
+          </div>
           <div className="text-[11px] text-ink-faint">
             {health === null ? 'подключение…'
               : health.status === 'ok' ? 'отвечает по документации'
