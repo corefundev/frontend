@@ -85,7 +85,7 @@ export default function AdminSupportPage() {
         <button
           type="button"
           onClick={askReingest}
-          disabled={reingestMut.isPending}
+          disabled={reingestMut.isPending || offline}
           className="btn-primary whitespace-nowrap"
         >
           {reingestMut.isPending ? 'Обновляем…' : 'Обновить знания'}
