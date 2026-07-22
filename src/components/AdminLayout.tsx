@@ -39,6 +39,7 @@ const NAV_GROUPS: {
     { to: '/admin/notifications', label: 'Уведомления', end: false },
     { to: '/admin/news', label: 'Новости', end: false },
     { to: '/admin/help', label: 'База знаний', end: false },
+    { to: '/admin/support', label: 'Ассистент', end: false },
   ] },
   { header: 'Контроль', collapsible: true, items: [
     { to: '/admin/audit', label: 'Аудит', end: false },
@@ -65,6 +66,7 @@ const TITLES: Record<string, string> = {
   '/admin/news': 'Новости',
   '/admin/help': 'База знаний',
   '/admin/help/new': 'Новая статья',
+  '/admin/support': 'Ассистент',
   '/admin/audit':         'Аудит',
   '/admin/security':      'Безопасность',
   '/admin/legal':         'Privacy',
