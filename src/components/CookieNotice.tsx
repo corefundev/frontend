@@ -9,34 +9,74 @@
 // Показывается ТОЛЬКО на публичном контуре: апекс + сервис-поддомены
 // news./help. На app-/admin-хостах не рендерится вовсе (туда попадают
 // только после входа через публичный контур, где баннер уже был виден).
-// Факт прочтения — localStorage `cookie-notice-ack` (ISO-дата); ключ
-// стоит — баннер больше не показываем.
+//
+// Факт прочтения (#569): first-party кука `cookie-notice-ack` с
+// Domain=.<MAIN_HOST> — общая для апекса и ВСЕХ поддоменов (localStorage
+// per-origin: прочтение на апексе не было видно на help./news., баннер
+// выскакивал на каждом поддомене заново). localStorage остаётся как
+// fallback (кука заблокирована) и как путь миграции: старым прочтениям
+// из LS кука дозаписывается при следующем визите (backfill).
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { IS_ADMIN_HOST, IS_APP_HOST, isExternal, mainUrl } from '../shared/hostRouting'
+import {
+  IS_ADMIN_HOST, IS_APP_HOST, MAIN_HOST, isExternal, mainUrl,
+} from '../shared/hostRouting'
 
 const ACK_KEY = 'cookie-notice-ack'
+
+function hasAckCookie(): boolean {
+  return document.cookie.split('; ').some((c) => c.startsWith(`${ACK_KEY}=`))
+}
 
 function isAcked(): boolean {
   if (typeof window === 'undefined') return true
   try {
-    return window.localStorage.getItem(ACK_KEY) !== null
+    return hasAckCookie() || window.localStorage.getItem(ACK_KEY) !== null
   } catch {
-    // localStorage недоступен (приватный режим и т.п.) — запомнить
+    // Хранилища недоступны (приватный режим и т.п.) — запомнить
     // прочтение не сможем; не мозолим глаза баннером на каждой странице.
     return true
   }
 }
 
+function persistAck(): void {
+  const iso = new Date().toISOString()
+  // Domain только для настоящих доменов: на localhost атрибут невалиден.
+  const domain = MAIN_HOST.includes('.') ? `; Domain=.${MAIN_HOST}` : ''
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie =
+    `${ACK_KEY}=${encodeURIComponent(iso)}; Path=/; Max-Age=31536000; SameSite=Lax${domain}${secure}`
+  try {
+    window.localStorage.setItem(ACK_KEY, iso)
+  } catch {
+    // LS недоступен — куки достаточно.
+  }
+}
+
 export default function CookieNotice() {
   const [acked, setAcked] = useState(isAcked)
+
+  // Миграция: прочтение записано до #569 (только LS) — дозаписываем общую
+  // куку, чтобы поддомены больше не показывали баннер повторно.
+  useEffect(() => {
+    if (acked && !IS_APP_HOST && !IS_ADMIN_HOST) {
+      try {
+        if (!hasAckCookie() && window.localStorage.getItem(ACK_KEY) !== null) {
+          persistAck()
+        }
+      } catch {
+        // Хранилища недоступны — мигрировать нечего.
+      }
+    }
+  }, [acked])
+
   if (IS_APP_HOST || IS_ADMIN_HOST || acked) return null
 
   function dismiss() {
     try {
-      window.localStorage.setItem(ACK_KEY, new Date().toISOString())
+      persistAck()
     } catch {
       // Не смогли записать — скрываем хотя бы до перезагрузки страницы.
     }

@@ -24,7 +24,7 @@ export const IS_APP_HOST: boolean = HOSTNAME.startsWith('app.')
 export const IS_ADMIN_HOST: boolean = HOSTNAME.startsWith('admin.')
 
 /** Базовый (основной) домен: на поддомене — без префикса news./help./app./admin. */
-const MAIN_HOST: string = (SECTION_HOST || IS_APP_HOST || IS_ADMIN_HOST)
+export const MAIN_HOST: string = (SECTION_HOST || IS_APP_HOST || IS_ADMIN_HOST)
   ? HOSTNAME.replace(/^(news|help|app|admin)\./, '')
   : HOSTNAME
 
