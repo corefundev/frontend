@@ -30,14 +30,20 @@ export default function LegalDocPage({ docId }: { docId: string }) {
           {data && (
             <article>
               <SimpleMarkdown text={data.content} className="text-ink" />
-              <hr className="my-8 border-ink/10" />
-              <p className="text-xs text-ink-subtle">
-                Версия документа: {data.version}. Последнее обновление:{' '}
-                {new Date(data.updated_at).toLocaleString('ru-RU', {
-                  dateStyle: 'long',
-                  timeStyle: 'short',
-                })}
-              </p>
+              {/* #573: у Реквизитов версия/дата — шум; у юр-документов
+                  (оферта, политики) версия юридически значима — остаётся. */}
+              {docId !== 'requisites' && (
+                <>
+                  <hr className="my-8 border-ink/10" />
+                  <p className="text-xs text-ink-subtle">
+                    Версия документа: {data.version}. Последнее обновление:{' '}
+                    {new Date(data.updated_at).toLocaleString('ru-RU', {
+                      dateStyle: 'long',
+                      timeStyle: 'short',
+                    })}
+                  </p>
+                </>
+              )}
             </article>
           )}
         </div>
