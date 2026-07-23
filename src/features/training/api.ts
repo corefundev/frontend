@@ -62,6 +62,10 @@ export interface TrainingRun {
   started_at:    string | null
   ended_at:      string | null
   elapsed_sec:   number | null
+  // #574: партиция рана по датасету (датасет = модель) — прайор ETA
+  // строится по ранам ТОГО ЖЕ датасета, не по всем подряд
+  dataset_id:      string | null
+  dataset_version: number | null
   n_skus:        number | null
   n_features:    number | null
   n_rows:        number | null

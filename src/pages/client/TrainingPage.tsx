@@ -355,6 +355,9 @@ export default function TrainingPage() {
                 ended={jobStatus.ended}
                 progress={jobStatus.progress}
                 pastRuns={runs}
+                activeDatasetId={
+                  runs.find((r) => r.job_id === jobId)?.dataset_id ?? null
+                }
               />
             </>
           )}
@@ -442,12 +445,14 @@ function TimingRow({
   ended,
   progress,
   pastRuns,
+  activeDatasetId,
 }: {
   jobId:    string | null
   started:  string
   ended:    string
   progress: JobProgress | null
   pastRuns: TrainingRun[]
+  activeDatasetId: string | null
 }) {
   // Tick "now" every 30s so the ETA stays accurate without
   // re-rendering the whole page.
@@ -457,17 +462,28 @@ function TimingRow({
     return () => clearInterval(id)
   }, [])
 
-  // Average elapsed across past finished runs — our prior on how
-  // long this client's trainings usually take. Falls back to a
-  // sane default if there's no history yet (first training).
-  const avgPastSec = useMemo(() => {
+  // #574: прайор длительности. Датасет = модель — время обучения
+  // определяется датасетом, поэтому прайор строим по завершённым ранам
+  // ТОГО ЖЕ dataset_id (медиана — устойчива к выбросам), и только при
+  // пустой истории датасета падаем на медиану всех ранов клиента.
+  // Прежний вариант (mean по ВСЕМ датасетам) давал ×2-ошибку: история
+  // 15…58 мин разных датасетов усреднялась в ~31 мин для 15-минутного.
+  const priorPastSec = useMemo(() => {
     const finished = pastRuns.filter(
       (r) => r.status === 'finished' && typeof r.elapsed_sec === 'number',
     )
     if (finished.length === 0) return null
-    const sum = finished.reduce<number>((s, r) => s + (r.elapsed_sec ?? 0), 0)
-    return sum / finished.length
-  }, [pastRuns])
+    const median = (xs: number[]) => {
+      const s = [...xs].sort((a, b) => a - b)
+      const m = Math.floor(s.length / 2)
+      return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+    }
+    const same = activeDatasetId
+      ? finished.filter((r) => r.dataset_id === activeDatasetId)
+      : []
+    const pool = same.length > 0 ? same : finished
+    return median(pool.map((r) => r.elapsed_sec as number))
+  }, [pastRuns, activeDatasetId])
 
   // Estimated remaining seconds.
   //
@@ -544,16 +560,13 @@ function TimingRow({
       lastStepRef.current = step
       baseTimestampRef.current = Date.now()
 
+      // #574: прайор своего датасета — лучший предиктор (та же кухня,
+      // те же данные); линейная экстраполяция по шагам — только когда
+      // истории нет. Прежний max(avg, linear) был пессимизмом по
+      // построению: счётчик завышался и «внезапно» обнулялся.
       const linearTotal =
         step > 0 && total > 0 ? elapsedSec * (total / step) : null
-      let expectedTotal: number | null = null
-      if (avgPastSec != null && linearTotal != null) {
-        expectedTotal = Math.max(avgPastSec, linearTotal)
-      } else if (avgPastSec != null) {
-        expectedTotal = avgPastSec
-      } else if (linearTotal != null) {
-        expectedTotal = linearTotal
-      }
+      const expectedTotal: number | null = priorPastSec ?? linearTotal
       baseRemainingRef.current =
         expectedTotal != null ? Math.max(0, expectedTotal - elapsedSec) : null
 
@@ -587,13 +600,18 @@ function TimingRow({
 
   const etaText = (() => {
     if (remainingSec == null) return '—'
+    // #574: оценка исчерпана, а ран жив — честное «завершается», а не
+    // замороженное «< 1 мин» на неопределённый срок
+    if (remainingSec <= 0) return 'завершается…'
     if (remainingSec < 60) return 'осталось < 1 мин'
     const min = Math.round(remainingSec / 60)
     return `осталось ~${min} мин`
   })()
 
   const etaArrival = (() => {
-    if (remainingSec == null) return null
+    // #574: при исчерпанной оценке время прибытия не показываем —
+    // «≈ 14:32» рядом с «завершается…» выглядело бы враньём
+    if (remainingSec == null || remainingSec <= 0) return null
     const arrival = new Date(Date.now() + remainingSec * 1000)
     return format(arrival, 'HH:mm', { locale: ru })
   })()
