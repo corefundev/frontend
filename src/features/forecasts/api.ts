@@ -129,4 +129,34 @@ export const forecastsApi = {
     apiClient
       .get<ForecastsResponse>(`/clients/${clientId}/forecasts`)
       .then((r) => r.data),
+
+  // XP-1 (#469): GET /clients/{id}/explanation/{sku} — реальные вклады
+  // факторов (TreeSHAP по direct-головам, группы «недавний спрос»/«цена»/…)
+  // + дифф с прошлой моделью. Business-гейт: остальным бэк отвечает 403.
+  getExplanation: (clientId: string, sku: string) =>
+    apiClient
+      .get<ExplanationResponse>(
+        `/clients/${clientId}/explanation/${encodeURIComponent(sku)}`)
+      .then((r) => r.data),
+}
+
+// ── XP-1 (#469) ──────────────────────────────────────────────────────────
+export interface ExplanationFactor {
+  group: string
+  direction: 'up' | 'down' | 'flat'
+  share: number            // доля |вклада|, 0..1
+}
+export interface ExplanationChange {
+  pct: number              // изменение суммы прогноза к прошлой модели, %
+  main_group: string | null
+  direction: 'up' | 'down'
+}
+export interface ExplanationResponse {
+  sku: string
+  factors: ExplanationFactor[]
+  prediction_sum: number
+  heads: number
+  run_id: string | null
+  generated_at: string | null
+  change: ExplanationChange | null
 }

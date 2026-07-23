@@ -8,6 +8,7 @@ import { useAuthStore } from '../../features/auth/store'
 import { anomaliesApi, type AnomalyRow } from '../../features/anomalies/api'
 import {
   forecastsApi,
+  type ExplanationFactor,
   type ForecastSku,
   type ForecastsResponse,
 } from '../../features/forecasts/api'
@@ -259,10 +260,10 @@ function ForecastViewer({
                 orderQty={selected.order_qty}
               />
 
-              {/* Plan-gated explanation panel — same as the old
-                  page so we don't lose the upsell story. */}
+              {/* XP-1 (#469): реальные факторы прогноза (TreeSHAP),
+                  Business-гейт; Free/Start видят lock-превью. */}
               <WhyPanel
-                skuTotal={selected.values.reduce<number>((s, v) => s + (v ?? 0), 0)}
+                clientId={clientId}
                 sku={selected.sku}
                 plan={isFree ? 'free' : isStart ? 'start' : 'business'}
               />
@@ -375,103 +376,134 @@ function wordEnding(n: number, forms: [string, string, string]): string {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-//  WhyPanel — kept from the previous version. Tariff-gated breakdown of
-//  what drove the forecast. Values are deterministically synthesised from
-//  the SKU+sum so they look consistent within a session — replace with
-//  real SHAP outputs when /explain endpoint exists.
+//  WhyPanel — XP-1 (#469): «почему такой прогноз». Данные НАСТОЯЩИЕ:
+//  TreeSHAP-вклады обученной модели, сгруппированные бэком в клиентские
+//  факторы; дифф с прошлой моделью. Business-фича (решение владельца в
+//  #469) — Free/Start видят lock-превью со статичным примером. Прежний
+//  synthesizeFactors (детерминированный фейк из хеша SKU) удалён: показывать
+//  выдуманные проценты платящему клиенту нельзя.
 // ══════════════════════════════════════════════════════════════════════════
 
 type Plan = 'free' | 'start' | 'business'
 
+const SAMPLE_FACTORS: ExplanationFactor[] = [
+  { group: 'Недавний спрос', direction: 'up', share: 0.52 },
+  { group: 'Праздники и события', direction: 'up', share: 0.31 },
+  { group: 'Наличие на складе', direction: 'down', share: 0.11 },
+  { group: 'Цена', direction: 'flat', share: 0.06 },
+]
+
+function FactorRow({ f }: { f: ExplanationFactor }) {
+  const arrow = f.direction === 'up' ? '↑' : f.direction === 'down' ? '↓' : '→'
+  const tone =
+    f.direction === 'up' ? 'text-moss' :
+    f.direction === 'down' ? 'text-terra' : 'text-ink-subtle'
+  const bar =
+    f.direction === 'up' ? 'bg-moss' :
+    f.direction === 'down' ? 'bg-terra' : 'bg-surface-border'
+  return (
+    <li className="py-3 flex items-center gap-4">
+      <div className="w-44 shrink-0 text-sm text-ink">
+        {f.group} <span className={`font-semibold ${tone}`}>{arrow}</span>
+      </div>
+      <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
+        <div className={`absolute inset-y-0 left-0 rounded-full ${bar}`}
+             style={{ width: `${Math.round(f.share * 100)}%` }} />
+      </div>
+      <div className="num w-12 text-right text-sm tabular-nums text-ink-muted">
+        {Math.round(f.share * 100)}%
+      </div>
+    </li>
+  )
+}
+
 function WhyPanel({
-  skuTotal,
+  clientId,
   sku,
   plan,
 }: {
-  skuTotal: number
+  clientId: string
   sku:      string
   plan:     Plan
 }) {
-  const factors = synthesizeFactors(sku, skuTotal)
+  const isBusiness = plan === 'business'
+  const { data, error, isLoading } = useQuery({
+    queryKey: ['explanation', clientId, sku],
+    queryFn:  () => forecastsApi.getExplanation(clientId, sku),
+    enabled:  isBusiness && !!sku,
+    retry:    false,
+    meta:     { silent: true },
+  })
 
-  const content = (
-    <>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="eyebrow">Объяснение</div>
-          <h3 className="display-em text-brand-700 text-2xl mt-1">
-            Почему столько?
-          </h3>
-        </div>
-        {plan === 'free'  && <PlanGateBadge required="start" />}
-        {plan === 'start' && <PlanGateBadge required="business" />}
+  const header = (
+    <div className="flex items-center justify-between mb-4">
+      <div>
+        <div className="eyebrow">Объяснение</div>
+        <h3 className="display-em text-brand-700 text-2xl mt-1">
+          Почему такой прогноз?
+        </h3>
       </div>
-
-      <ul className="divide-y divide-surface-border">
-        {factors.map((f) => (
-          <li key={f.label} className="py-3 flex items-center gap-4">
-            <div className={[
-              'h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-semibold',
-              f.direction === 'up'   ? 'bg-moss-bg text-moss' :
-              f.direction === 'down' ? 'bg-terra-bg text-terra' :
-                                       'bg-surface-muted text-ink-muted',
-            ].join(' ')}>
-              {f.direction === 'up' ? '↑' : f.direction === 'down' ? '↓' : '·'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-ink">{f.label}</div>
-              <div className="eyebrow !text-ink-subtle">{f.detail}</div>
-            </div>
-            <div className={[
-              'num font-display text-lg tabular-nums',
-              f.direction === 'up'   ? 'text-moss' :
-              f.direction === 'down' ? 'text-terra' :
-                                       'text-ink-muted',
-            ].join(' ')}>
-              {f.direction === 'up' ? '+' : f.direction === 'down' ? '−' : '±'}
-              {Math.abs(f.pct).toFixed(1)}%
-            </div>
-          </li>
-        ))}
-      </ul>
-    </>
+      {!isBusiness && <PlanGateBadge required="business" />}
+    </div>
   )
 
-  if (plan === 'free') {
+  if (!isBusiness) {
     return (
       <div className="card p-6 sm:p-8 relative">
         <LockOverlay
-          required="start"
-          title="Увидеть факторы прогноза"
-          blurb="Тренд, сезонность, праздники, промо — каждый фактор отдельно, с величиной вклада. Доступно на тарифе Start."
+          required="business"
+          title="Почему такой прогноз — на тарифе Business"
+          blurb="Business показывает главные факторы каждого прогноза и объясняет, из-за чего он изменился с прошлой модели."
         >
-          {content}
+          {header}
+          <ul className="divide-y divide-surface-border" aria-hidden>
+            {SAMPLE_FACTORS.map((f) => <FactorRow key={f.group} f={f} />)}
+          </ul>
         </LockOverlay>
       </div>
     )
   }
-  return <div className="card p-6 sm:p-8">{content}</div>
-}
 
-function synthesizeFactors(sku: string, mean: number) {
-  const h       = hashString(sku + ':' + Math.round(mean))
-  const trend   = (((h & 0xff) / 255) - 0.5) * 30
-  const season  = (((h >> 8)  & 0xff) / 255) * 20 - 5
-  const holiday = (((h >> 16) & 0xff) / 255) * 12
-  const price   = -(((h >> 24) & 0x7f) / 127) * 10
-  return [
-    { label: 'Тренд продаж',         detail: trend > 0 ? 'восходящий за последние 4 недели' : 'ослабление за последние 4 недели', pct: trend,   direction: trend > 0 ? 'up' : 'down' },
-    { label: 'Сезонность',           detail: 'недельный + годовой паттерны',                                                       pct: season,  direction: season > 0 ? 'up' : 'down' },
-    { label: 'Праздники и переносы', detail: 'по календарю РФ',                                                                    pct: holiday, direction: holiday > 2 ? 'up' : 'flat' },
-    { label: 'Ценовая эластичность', detail: 'реакция на уровень цен',                                                              pct: price,   direction: 'down' },
-  ] as Array<{ label: string; detail: string; pct: number; direction: 'up' | 'down' | 'flat' }>
-}
+  // 404 = модель обучена до XP-1: честная подсказка вместо пустоты.
+  const notReady =
+    !!error && typeof error === 'object' && 'response' in error &&
+    (error as { response?: { status?: number } }).response?.status === 404
 
-function hashString(s: string): number {
-  let h = 2166136261
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
+  return (
+    <div className="card p-6 sm:p-8">
+      {header}
+      {isLoading ? (
+        <div className="h-24" aria-hidden />
+      ) : notReady || !data ? (
+        <p className="text-sm text-ink-muted leading-relaxed">
+          Объяснения появятся после следующего обучения модели — новые
+          модели раскладывают каждый прогноз на факторы автоматически.
+        </p>
+      ) : (
+        <>
+          {data.change && (
+            <p className="mb-4 text-sm text-ink-muted">
+              Прогноз{' '}
+              <span className={data.change.pct >= 0 ? 'text-moss font-semibold' : 'text-terra font-semibold'}>
+                {data.change.pct >= 0 ? 'вырос на +' : 'снизился на '}
+                {Math.abs(data.change.pct).toFixed(1)}%
+              </span>{' '}
+              к прошлой модели
+              {data.change.main_group && (
+                <> — основной вклад: <span className="text-ink font-medium">{data.change.main_group}</span></>
+              )}
+            </p>
+          )}
+          <ul className="divide-y divide-surface-border">
+            {data.factors.map((f) => <FactorRow key={f.group} f={f} />)}
+          </ul>
+          <p className="eyebrow !text-ink-subtle mt-4">
+            Вклады посчитаны той же моделью, что делает прогноз (метод SHAP) —
+            это разложение именно этого числа, не пересказ. Проценты — доля
+            влияния фактора.
+          </p>
+        </>
+      )}
+    </div>
+  )
 }
