@@ -28,7 +28,15 @@ const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | u
 export default function LoginPage() {
   const nav = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
+  const isAuthed = useAuthStore((s) => s.isAuthenticated())
   const [params] = useSearchParams()
+
+  // #579: авторизованному пользователю /login не показываем — редирект в
+  // кабинет. Форма входа при живой сессии выглядела как «требуют логин,
+  // но хедер пускает мимо» (репро владельца после регистрации).
+  useEffect(() => {
+    if (isAuthed) window.location.replace(appUrl('/app'))
+  }, [isAuthed])
 
   const confirmed = params.get('confirmed') === '1'
   const afterReset = params.get('reset') === '1'

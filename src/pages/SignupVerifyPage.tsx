@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import toast from 'react-hot-toast'
 
 import { authApi } from '../features/auth/api'
+import { useAuthStore } from '../features/auth/store'
 import AuthShell from '../components/AuthShell'
 import { OtpInput } from '../components/OtpInput'
 import { errorMessage } from '../shared/api/client'
@@ -90,6 +91,11 @@ export default function SignupVerifyPage() {
     mutationFn: () => authApi.signupVerify({ email, code }),
     onSuccess: () => {
       // Аккаунт создан с паролем; api-key-окна и авто-сессии нет — на вход.
+      // #579: в браузере могла жить сессия ДРУГОГО аккаунта — хедер
+      // показывал «В кабинет» мимо логина и вёл в чужой кабинет.
+      // Регистрация нового пользователя обязана её погасить.
+      void authApi.logout().catch(() => undefined)
+      useAuthStore.getState().logout()
       toast.success('Почта подтверждена')
       nav(`/login?email=${encodeURIComponent(email)}&confirmed=1`, { replace: true })
     },
