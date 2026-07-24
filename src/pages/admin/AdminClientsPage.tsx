@@ -49,6 +49,7 @@ export default function AdminClientsPage() {
           !(c.email ?? '').toLowerCase().includes(q)) return false
       if (planFilter !== 'all' && c.plan !== planFilter) return false
       if (statusFilter === 'suspended') return !!c.suspended_at
+      if (statusFilter === 'closed') return c.status === 'purged' || !!c.deleted_at
       if (statusFilter !== 'all' && c.status !== statusFilter) return false
       return true
     })
@@ -86,7 +87,8 @@ export default function AdminClientsPage() {
                                { value: 'training', label: 'training' },
                                { value: 'registered', label: 'registered' },
                                { value: 'error', label: 'error' },
-                               { value: 'suspended', label: 'заблокированные' }]} />
+                               { value: 'suspended', label: 'заблокированные' },
+                               { value: 'closed', label: 'закрытые/стёртые' }]} />
         <AdminSelect className="w-48" ariaLabel="Сортировка" value={sortBy}
                      onChange={(v) => setSortBy(v as typeof sortBy)}
                      options={[{ value: 'client_id', label: 'Сортировка: ID' },
@@ -129,11 +131,16 @@ export default function AdminClientsPage() {
                   const login = activity?.[c.client_id]
                   return (
                     <tr key={c.client_id}
-                        className="hover:bg-surface-muted/50 cursor-pointer"
+                        className={`hover:bg-surface-muted/50 cursor-pointer ${
+                          c.status === 'purged' || c.deleted_at ? 'opacity-55' : ''}`}
                         onClick={() => nav(admPath(`/admin/clients/${encodeURIComponent(c.client_id)}`))}>
                       <Td>
                         <div className="font-mono text-brand-700">{c.client_id}</div>
-                        {c.suspended_at && <span className="badge-danger">заблокирован</span>}
+                        {c.status === 'purged'
+                          ? <span className="badge-neutral">данные стёрты</span>
+                          : c.deleted_at
+                            ? <span className="badge-warn">закрыт</span>
+                            : c.suspended_at && <span className="badge-danger">заблокирован</span>}
                       </Td>
                       <Td>{spec?.display_name ?? c.plan}</Td>
                       <Td className="text-xs text-ink-muted">

@@ -13,6 +13,7 @@ export interface ClientRecord {
   last_wmape: number | null
   last_mase: number | null
   status: 'registered' | 'training' | 'ready' | 'error' | 'purged'
+  deleted_at?: string | null   // закрытие аккаунта (152-ФЗ soft-delete)
   model_version: number
   horizon: number
   notes: string | null

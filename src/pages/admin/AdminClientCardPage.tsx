@@ -214,9 +214,16 @@ export default function AdminClientCardPage() {
             <div className="flex items-center gap-2.5 flex-wrap">
               <span className="font-mono text-[22px] font-semibold tracking-tight">{c.client_id}</span>
               <span className="badge-info">{c.plan}</span>
-              {c.suspended_at
-                ? <span className="badge-danger">заблокирован</span>
-                : <span className="badge-success">активен</span>}
+              {/* honest lifecycle: purged/закрыт видны сразу, «активен»
+                  только для живого аккаунта (репро владельца: purged-карточка
+                  светилась зелёным «активен») */}
+              {c.status === 'purged'
+                ? <span className="badge-neutral">данные стёрты</span>
+                : c.deleted_at
+                  ? <span className="badge-warn">закрыт</span>
+                  : c.suspended_at
+                    ? <span className="badge-danger">заблокирован</span>
+                    : <span className="badge-success">активен</span>}
             </div>
             <div className="flex gap-6 mt-3 flex-wrap">
               <MetaItem k="Создан" v={new Date(c.created_at).toLocaleDateString('ru-RU')} />
@@ -303,7 +310,9 @@ export default function AdminClientCardPage() {
           <div className="p-5 space-y-5">
             <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
               <div className="flex justify-between gap-4"><span className="text-ink-muted">Email</span><span>{c.email ?? '—'}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-ink-muted">Статус обучения</span><TrainingStatusValue status={c.status} runs={data.training_runs} /></div>
+              <div className="flex justify-between gap-4"><span className="text-ink-muted">Статус обучения</span>{c.status === 'purged' || c.deleted_at
+                ? <span className="text-ink-muted">—</span>
+                : <TrainingStatusValue status={c.status} runs={data.training_runs} />}</div>
               <div className="flex justify-between gap-4"><span className="text-ink-muted">Горизонт</span><span>{c.horizon} дн.</span></div>
               <div className="flex justify-between gap-4"><span className="text-ink-muted">SKU (обучено)</span><span>{c.trained_sku_count ?? '—'}</span></div>
             </div>
