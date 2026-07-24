@@ -200,6 +200,10 @@ export default function AdminClientCardPage() {
   const modelAgeDays = champion?.ended_at
     ? Math.round((Date.now() - new Date(champion.ended_at).getTime()) / 86400000)
     : null
+  // #579: закрытый/стёртый аккаунт — операционные действия не показываем
+  // (сервер их и так отвергает 409 tombstone; ротация сминтила бы живой
+  // ключ мёртвому аккаунту)
+  const isDead = c.status === 'purged' || !!c.deleted_at
   const piiState = c.status === 'purged' ? 'данные стёрты'
     : c.deleted_at ? 'аккаунт закрыт' : 'аккаунт открыт'
 
@@ -236,6 +240,7 @@ export default function AdminClientCardPage() {
             </div>
           </div>
           <div className="ml-auto flex flex-col gap-1.5 min-w-[190px]">
+            {!isDead && <>
             <button type="button" className="btn-secondary text-xs"
                     disabled={rotateMut.isPending}
                     onClick={() => setConfirm({
@@ -272,6 +277,7 @@ export default function AdminClientCardPage() {
                     }}>
               {c.suspended_at ? 'Разблокировать' : 'Приостановить'}
             </button>
+            </>}
             <button type="button"
                     className="btn text-xs ring-1 ring-danger text-danger hover:bg-danger-bg rounded-md px-3 py-1.5 font-semibold disabled:opacity-50"
                     disabled={eraseMut.isPending || c.status === 'purged' || !c.deleted_at}
