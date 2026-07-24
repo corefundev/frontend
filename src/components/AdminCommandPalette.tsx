@@ -101,7 +101,10 @@ export default function AdminCommandPalette({ open, onOpenChange }: {
     const clientItems: Item[] = clients.map((c) => ({
       kind: 'Клиенты' as const,
       label: c.client_id,
-      hint: `${c.plan} · ${c.suspended_at ? 'заблокирован' : 'активен'}`,
+      hint: `${c.plan} · ${
+        c.status === 'purged' ? 'данные стёрты'
+        : c.deleted_at ? 'закрыт'
+        : c.suspended_at ? 'заблокирован' : 'активен'}`,
       k: 'открыть карточку',
       search: c.email ?? '',
       to: `/admin/clients/${encodeURIComponent(c.client_id)}`,
