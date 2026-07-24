@@ -481,7 +481,10 @@ function WhyPanel({
         </p>
       ) : (
         <>
-          {data.change && (
+          {/* |pct| < 0.1% = прогноз фактически не изменился (напр. дифф
+              после перегруппировки словаря) — строка «вырос на +0.0%»
+              выглядела бы бессмыслицей */}
+          {data.change && Math.abs(data.change.pct) >= 0.1 && (
             <p className="mb-4 text-sm text-ink-muted">
               Прогноз{' '}
               <span className={data.change.pct >= 0 ? 'text-moss font-semibold' : 'text-terra font-semibold'}>
