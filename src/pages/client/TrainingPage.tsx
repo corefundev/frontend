@@ -512,31 +512,38 @@ function TimingRow({
   const baseTimestampRef = useRef<number>(Date.now())
   const lastStepRef      = useRef<number>(-1)
 
-  // Hydrate from localStorage on jobId change. Doing this in an
-  // effect so refs match the active job before the first render
-  // computes the displayed value.
-  useEffect(() => {
-    if (!storageKey) {
-      baseRemainingRef.current = null
-      baseTimestampRef.current = Date.now()
-      lastStepRef.current = -1
-      return
-    }
-    try {
-      const raw = localStorage.getItem(storageKey)
-      if (!raw) return
-      const saved = JSON.parse(raw) as {
-        step: number
-        baseRemaining: number | null
-        baseTimestamp: number
+  // #574 (реградация «обновил страницу — осталось БОЛЬШЕ»): гидрация
+  // обязана произойти ДО расчёта remainingSec, а расчёт живёт в рендере.
+  // Прежний вариант читал localStorage в useEffect (ПОСЛЕ рендера) —
+  // первый рендер видел пустые refs, пересчитывал оценку от текущего
+  // elapsed (линейная проекция растёт, пока шаг долгий) и ПЕРЕЗАПИСЫВАЛ
+  // сохранённый замок. Симптом маскировался старым max(avgPast, linear),
+  // всплыл после честного прайора. Лечение: синхронная гидрация прямо в
+  // рендере, один раз на смену storageKey.
+  const hydratedKeyRef = useRef<string | null>('__unhydrated__')
+  if (hydratedKeyRef.current !== storageKey) {
+    hydratedKeyRef.current = storageKey
+    baseRemainingRef.current = null
+    baseTimestampRef.current = Date.now()
+    lastStepRef.current = -1
+    if (storageKey) {
+      try {
+        const raw = localStorage.getItem(storageKey)
+        if (raw) {
+          const saved = JSON.parse(raw) as {
+            step: number
+            baseRemaining: number | null
+            baseTimestamp: number
+          }
+          if (typeof saved.step === 'number') lastStepRef.current = saved.step
+          if (typeof saved.baseTimestamp === 'number') baseTimestampRef.current = saved.baseTimestamp
+          baseRemainingRef.current = saved.baseRemaining ?? null
+        }
+      } catch {
+        // Битая запись — просто перекалибруемся сейчас.
       }
-      if (typeof saved.step === 'number') lastStepRef.current = saved.step
-      if (typeof saved.baseTimestamp === 'number') baseTimestampRef.current = saved.baseTimestamp
-      baseRemainingRef.current = saved.baseRemaining ?? null
-    } catch {
-      // Ignore — a corrupt entry just means we recalibrate now.
     }
-  }, [storageKey])
+  }
 
   const remainingSec = (() => {
     if (!started || started === 'None') {
