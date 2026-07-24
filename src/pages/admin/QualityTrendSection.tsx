@@ -19,17 +19,6 @@ export interface TrendRun {
   mase: number | null
   gate_passed: boolean | null
   model_path: string | null
-  // #574: длительность и датасет рана — «сколько обычно учится» видно
-  // прямо в карточке (то же поле, из которого клиентский ETA строит прайор)
-  elapsed_sec?: number | null
-  dataset_id?: string | null
-}
-
-function fmtDur(sec: number): string {
-  if (sec < 90) return `${Math.round(sec)} с`
-  const m = Math.round(sec / 60)
-  if (m < 60) return `${m} мин`
-  return `${Math.floor(m / 60)} ч ${m % 60} мин`
 }
 
 const MONTHS_RU = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
@@ -84,7 +73,7 @@ function ProtoChart({ points }: { points: { v: number; at: string }[] }) {
 export default function QualityTrendSection({ runs, bare = false }: {
   runs: TrendRun[]; bare?: boolean
 }) {
-  const { chart, verdicts, championId, typicalSec } = useMemo(() => {
+  const { chart, verdicts, championId } = useMemo(() => {
     const championId = runs.find(
       (r) => r.status === 'finished' && r.model_path != null)?.run_id ?? null
     // линия — promoted-чемпионы, хронологически, последние 12 (прототип)
@@ -99,21 +88,7 @@ export default function QualityTrendSection({ runs, bare = false }: {
     const verdicts = runs
       .filter((r) => r.status === 'finished' && r.ended_at != null)
       .slice(0, 6)
-    // #574: типичная длительность — медиана elapsed по датасету чемпиона
-    // (датасет = модель; тот же прайор, что видит клиентский счётчик)
-    const championDs = runs.find((r) => r.run_id === championId)?.dataset_id
-    const durPool = runs
-      .filter((r) => r.status === 'finished'
-        && typeof r.elapsed_sec === 'number'
-        && (!championDs || r.dataset_id === championDs))
-      .map((r) => r.elapsed_sec as number)
-      .sort((a, b) => a - b)
-    const typicalSec = durPool.length
-      ? (durPool.length % 2
-          ? durPool[Math.floor(durPool.length / 2)]
-          : (durPool[durPool.length / 2 - 1] + durPool[durPool.length / 2]) / 2)
-      : null
-    return { chart, verdicts, championId, typicalSec }
+    return { chart, verdicts, championId }
   }, [runs])
 
   return (
@@ -138,9 +113,6 @@ export default function QualityTrendSection({ runs, bare = false }: {
           <div>
             <p className="m-0 mb-2 text-xs font-semibold text-ink-muted">
               История gate-вердиктов
-              {typicalSec != null && (
-                <span className="font-normal"> · обычно {fmtDur(typicalSec)}</span>
-              )}
             </p>
             <ul className="m-0 p-0 list-none rounded-lg ring-1 ring-surface-border overflow-hidden divide-y divide-surface-border">
               {verdicts.map((r) => {
@@ -159,11 +131,6 @@ export default function QualityTrendSection({ runs, bare = false }: {
                     {r.wmape != null && (
                       <span className="font-mono text-[11px] text-ink-subtle tabular-nums">
                         {r.wmape.toFixed(3)}
-                      </span>
-                    )}
-                    {typeof r.elapsed_sec === 'number' && (
-                      <span className="font-mono text-[11px] text-ink-subtle tabular-nums whitespace-nowrap">
-                        · {fmtDur(r.elapsed_sec)}
                       </span>
                     )}
                     <span className="ml-auto text-[11.5px] text-ink-subtle whitespace-nowrap">

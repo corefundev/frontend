@@ -5,7 +5,7 @@
 // справа (ротация/разлогин/приостановка/стирание), табы Обзор/Качество/
 // Данные/Аудит/Настройки. Подтверждения — модальные (AdminConfirmDialog,
 // erase-now с вводом client_id), window.confirm/prompt из карточки убраны.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -40,6 +40,7 @@ interface Overview {
     model_path: string | null
     elapsed_sec: number | null      // #574: длительность в карточке
     dataset_id: string | null
+    started_at: string | null
   }[]
 }
 
@@ -302,7 +303,7 @@ export default function AdminClientCardPage() {
           <div className="p-5 space-y-5">
             <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
               <div className="flex justify-between gap-4"><span className="text-ink-muted">Email</span><span>{c.email ?? '—'}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-ink-muted">Статус обучения</span><span>{c.status}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-ink-muted">Статус обучения</span><TrainingStatusValue status={c.status} runs={data.training_runs} /></div>
               <div className="flex justify-between gap-4"><span className="text-ink-muted">Горизонт</span><span>{c.horizon} дн.</span></div>
               <div className="flex justify-between gap-4"><span className="text-ink-muted">SKU (обучено)</span><span>{c.trained_sku_count ?? '—'}</span></div>
             </div>
@@ -564,4 +565,56 @@ export default function AdminClientCardPage() {
       <AdminConfirmDialog spec={confirm} onClose={() => setConfirm(null)} />
     </div>
   )
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+//  TrainingStatusValue — #574 (просьба владельца): ЖИВОЙ таймер прямо в
+//  «Статус обучения» Обзора. Тренировка бежит → «training · идёт 12:34»
+//  (тик каждую секунду) + «обычно ~N мин» (медиана завершённых ранов
+//  ТОГО ЖЕ датасета — тот же прайор, что у клиентского счётчика).
+//  Тренировки нет → статус + длительность последнего завершённого рана.
+// ══════════════════════════════════════════════════════════════════════════
+
+function TrainingStatusValue({ status, runs }: {
+  status: string
+  runs: Overview['training_runs']
+}) {
+  const active = runs.find((r) => r.status === 'running' || r.status === 'queued')
+  const [, tick] = useState(0)
+  useEffect(() => {
+    if (!active?.started_at) return
+    const id = setInterval(() => tick((x) => x + 1), 1000)
+    return () => clearInterval(id)
+  }, [active?.started_at])
+
+  const fmtMin = (sec: number) => {
+    const m = Math.round(sec / 60)
+    return m < 1 ? '< 1 мин' : m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч ${m % 60} мин`
+  }
+
+  if (active) {
+    const parts: string[] = [status]
+    if (active.started_at) {
+      const sec = Math.max(0, (Date.now() - new Date(active.started_at).getTime()) / 1000)
+      const mm = Math.floor(sec / 60)
+      const ss = String(Math.floor(sec % 60)).padStart(2, '0')
+      parts.push(`идёт ${mm}:${ss}`)
+    }
+    const prior = runs
+      .filter((r) => r.status === 'finished'
+        && typeof r.elapsed_sec === 'number'
+        && r.dataset_id === active.dataset_id)
+      .map((r) => r.elapsed_sec as number)
+      .sort((a, b) => a - b)
+    if (prior.length) {
+      const m = Math.floor(prior.length / 2)
+      const med = prior.length % 2 ? prior[m] : (prior[m - 1] + prior[m]) / 2
+      parts.push(`обычно ~${fmtMin(med)}`)
+    }
+    return <span className="tabular-nums">{parts.join(' · ')}</span>
+  }
+  const last = runs.find(
+    (r) => r.status === 'finished' && typeof r.elapsed_sec === 'number')
+  return <span>{last ? `${status} · последнее ${fmtMin(last.elapsed_sec as number)}` : status}</span>
 }
