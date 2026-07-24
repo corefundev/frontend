@@ -135,12 +135,14 @@ export default function AdminClientsPage() {
                           c.status === 'purged' || c.deleted_at ? 'opacity-55' : ''}`}
                         onClick={() => nav(admPath(`/admin/clients/${encodeURIComponent(c.client_id)}`))}>
                       <Td>
-                        <div className="font-mono text-brand-700">{c.client_id}</div>
-                        {c.status === 'purged'
-                          ? <span className="badge-neutral">данные стёрты</span>
-                          : c.deleted_at
-                            ? <span className="badge-warn">закрыт</span>
-                            : c.suspended_at && <span className="badge-danger">заблокирован</span>}
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-mono text-brand-700">{c.client_id}</span>
+                          {c.status === 'purged'
+                            ? <span className="badge-neutral">данные стёрты</span>
+                            : c.deleted_at
+                              ? <span className="badge-warn">закрыт</span>
+                              : c.suspended_at && <span className="badge-danger">заблокирован</span>}
+                        </div>
                       </Td>
                       <Td>{spec?.display_name ?? c.plan}</Td>
                       <Td className="text-xs text-ink-muted">
