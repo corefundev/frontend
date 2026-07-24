@@ -38,6 +38,8 @@ interface Overview {
     wmape: number | null; mase: number | null
     gate_passed: boolean | null
     model_path: string | null
+    elapsed_sec: number | null      // #574: длительность в карточке
+    dataset_id: string | null
   }[]
 }
 
