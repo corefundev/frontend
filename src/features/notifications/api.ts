@@ -72,6 +72,16 @@ export async function getNotifications(
   return data
 }
 
+export async function getNotification(
+  clientId: string,
+  id: number,
+): Promise<AppNotification> {
+  const { data } = await apiClient.get<AppNotification>(
+    `/clients/${encodeURIComponent(clientId)}/notifications/${id}`,
+  )
+  return data
+}
+
 export async function markNotificationsRead(
   clientId: string,
   ids?: number[],
