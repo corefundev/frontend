@@ -1,13 +1,12 @@
 // NC-9 (#584): Центр уведомлений — полный список.
-//
-// Контракты (утверждены владельцем 2026-07-26):
-// v2 (уточнение владельца): уведомление = сущность со своей страницей
-// («как новость») — центр это ЧИСТЫЙ СПИСОК-ССЫЛКИ на /app/notifications/{id};
-// никакого аккордеона. Прочитанность помечается на странице уведомления.
-//   • свежие сверху; непрочитанные выделены;
-//   • «Отметить все прочитанными» — явное действие;
-//   • пагинация «Показать ещё» по 50 (limit/offset API);
-//   • CONTRACT-1: ошибка бэка ≠ пустой ящик — честная плашка с retry.
+// Дизайн: прототип владельца 2026-07-26 (артефакт nc_design, «Очень
+// круто. Реализуем»): группировка по дням (Сегодня/Вчера/Ранее),
+// фильтры-чипы (Все/Непрочитанные/Системные/Анонсы — client-side, тип
+// уже в данных), иконки-кружки цветом типа, «непрочитанное» —
+// брендовая полоса слева + подложка, тип пилюлей в мета-строке.
+// Механики: строка = НАСТОЯЩАЯ ссылка на /app/notifications/{id};
+// «Отметить все прочитанными» — явное действие; «Показать ещё» по 50;
+// CONTRACT-1: сбой бэка ≠ пустой ящик.
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
@@ -19,32 +18,85 @@ import { useAuthStore } from '../../features/auth/store'
 import {
   getNotifications,
   markNotificationsRead,
-  type NotificationSeverity,
+  type AppNotification,
 } from '../../features/notifications/api'
+import { NotificationIcon } from '../../features/notifications/NotificationIcon'
+import { TYPE_LABEL } from '../../features/notifications/meta'
 
 const PAGE = 50
 
-const SEVERITY_DOT: Record<NotificationSeverity, string> = {
-  info:    'bg-brand-500',
-  success: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  error:   'bg-red-500',
+type Filter = 'all' | 'unread' | 'system' | 'announcement'
+
+const FILTERS: { id: Filter; label: string }[] = [
+  { id: 'all', label: 'Все' },
+  { id: 'unread', label: 'Непрочитанные' },
+  { id: 'system', label: 'Системные' },
+  { id: 'announcement', label: 'Анонсы' },
+]
+
+function dayGroup(iso: string): 'Сегодня' | 'Вчера' | 'Ранее' {
+  const d = new Date(iso)
+  const now = new Date()
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86_400_000)
+  if (diffDays <= 0) return 'Сегодня'
+  if (diffDays === 1) return 'Вчера'
+  return 'Ранее'
 }
 
-function fmtFull(iso: string): string {
+function metaTime(iso: string, group: string): string {
   const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('ru-RU', {
-    day: 'numeric', month: 'long', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
+  if (Number.isNaN(d.getTime())) return iso
+  if (group === 'Ранее') {
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+  }
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+}
+
+function Row({ n, group }: { n: AppNotification; group: string }) {
+  return (
+    <li className="border-b border-surface-border last:border-b-0">
+      <Link
+        to={cabPath(`/app/notifications/${n.id}`)}
+        className={`relative flex items-start gap-3.5 px-4 sm:px-5 py-3.5 transition-colors hover:bg-brand-50/60 ${
+          !n.read_at ? 'bg-brand-50/30' : ''}`}
+      >
+        {!n.read_at && (
+          <span className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r bg-brand-500" aria-hidden />
+        )}
+        <NotificationIcon n={n} />
+        <span className="min-w-0 flex-1">
+          <span className={`block text-sm ${n.read_at ? 'font-medium text-ink-muted' : 'font-semibold text-ink'}`}>
+            {n.title}
+          </span>
+          {n.body && (
+            <span className="block truncate text-[13px] text-ink-muted mt-0.5">
+              {n.body}
+            </span>
+          )}
+          <span className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-faint">
+            <span className="rounded-full border border-surface-border bg-surface px-2 py-px font-semibold">
+              {TYPE_LABEL[n.type] ?? n.type}
+            </span>
+            <span>{metaTime(n.created_at, group)}</span>
+          </span>
+        </span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+             className="mt-3 shrink-0 text-ink-faint" aria-hidden>
+          <path d="M9 6l6 6-6 6" />
+        </svg>
+      </Link>
+    </li>
+  )
 }
 
 export default function NotificationCenterPage() {
   const clientId = useAuthStore((s) => s.clientId)!
   const qc = useQueryClient()
-  // сколько страниц раскрыто «Показать ещё» (limit растёт, offset=0 —
-  // проще инвалидация и нет дыр при приходе новых уведомлений сверху)
+  // limit растёт, offset=0 — проще инвалидация, нет дыр при новых сверху
   const [pages, setPages] = useState(1)
+  const [filter, setFilter] = useState<Filter>('all')
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['notifications-center', clientId, pages],
@@ -56,7 +108,6 @@ export default function NotificationCenterPage() {
   const markRead = useMutation({
     mutationFn: (ids?: number[]) => markNotificationsRead(clientId, ids),
     onSuccess: () => {
-      // оба потребителя состояния: центр и колокольчик
       void qc.invalidateQueries({ queryKey: ['notifications-center', clientId] })
       void qc.invalidateQueries({ queryKey: ['notifications', clientId] })
     },
@@ -65,15 +116,37 @@ export default function NotificationCenterPage() {
 
   const items = useMemo(() => data?.notifications ?? [], [data])
   const unread = data?.unread ?? 0
-  // count < запрошенного лимита ⇒ дальше пусто
   const hasMore = (data?.count ?? 0) >= PAGE * pages
 
+  const visible = useMemo(() => items.filter((n) => {
+    if (filter === 'unread') return !n.read_at
+    if (filter === 'system') return n.type === 'system'
+    if (filter === 'announcement') return n.type === 'announcement'
+    return true
+  }), [items, filter])
+
+  const groups = useMemo(() => {
+    const out: { label: string; items: AppNotification[] }[] = []
+    for (const n of visible) {
+      const label = dayGroup(n.created_at)
+      const last = out[out.length - 1]
+      if (last && last.label === label) last.items.push(n)
+      else out.push({ label, items: [n] })
+    }
+    return out
+  }, [visible])
+
+  const chipCount = (f: Filter): number | null => {
+    if (f === 'all') return items.length
+    if (f === 'unread') return unread
+    return null
+  }
+
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-3xl space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          {/* reference_applayout_pagetitle: топ-бар уже говорит «Уведомления» —
-              внутренний hero редакционный, не дубль */}
+          {/* reference_applayout_pagetitle: топ-бар уже говорит «Уведомления» */}
           <div className="eyebrow">события и анонсы</div>
           <h2 className="display-em text-brand-700 text-3xl mt-1">Центр уведомлений</h2>
         </div>
@@ -84,10 +157,34 @@ export default function NotificationCenterPage() {
             disabled={markRead.isPending}
             onClick={() => markRead.mutate(undefined)}
           >
-            Отметить все прочитанными ({unread})
+            ✓&nbsp; Отметить все прочитанными
           </button>
         )}
       </header>
+
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => {
+          const count = chipCount(f.id)
+          const on = filter === f.id
+          return (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilter(f.id)}
+              aria-pressed={on}
+              className={`rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
+                on
+                  ? 'border-ink bg-ink text-surface-raised'
+                  : 'border-surface-border bg-surface-raised text-ink-muted hover:text-ink'}`}
+            >
+              {f.label}
+              {count != null && count > 0 && (
+                <span className={`ml-1 font-medium ${on ? 'opacity-70' : 'text-ink-faint'}`}>{count}</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
 
       {isLoading ? (
         <div className="h-40" aria-hidden />
@@ -99,52 +196,28 @@ export default function NotificationCenterPage() {
             Повторить
           </button>
         </div>
-      ) : items.length === 0 ? (
+      ) : visible.length === 0 ? (
         <div className="card p-10 text-center text-sm text-ink-muted">
-          Уведомлений пока нет.
+          {filter === 'all' ? 'Уведомлений пока нет.' : 'Под этот фильтр ничего не попало.'}
         </div>
       ) : (
         <>
-          <ul className="card divide-y divide-surface-border overflow-hidden">
-            {items.map((n) => (
-              <li key={n.id}>
-                <Link
-                  to={cabPath(`/app/notifications/${n.id}`)}
-                  className={`flex gap-3 items-start px-5 py-3.5 transition-colors hover:bg-surface-muted/50 ${
-                    !n.read_at ? 'bg-brand-50/40' : ''}`}
-                >
-                  <span
-                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[n.severity] ?? SEVERITY_DOT.info} ${n.read_at ? 'opacity-30' : ''}`}
-                    aria-hidden
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className={`block text-sm ${n.read_at ? 'text-ink-muted' : 'text-ink font-semibold'}`}>
-                      {n.title}
-                    </span>
-                    {n.body && (
-                      <span className="block truncate text-xs text-ink-muted mt-0.5">
-                        {n.body}
-                      </span>
-                    )}
-                    <span className="block text-[11px] text-ink-faint mt-1">
-                      {fmtFull(n.created_at)}
-                    </span>
-                  </span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                       stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                       className="mt-1 shrink-0 text-ink-faint" aria-hidden>
-                    <path d="M9 6l6 6-6 6" />
-                  </svg>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {groups.map((g, gi) => (
+            <section key={`${g.label}-${gi}`}>
+              <div className="mb-2 mt-1 px-1 text-[12px] font-bold uppercase tracking-wider text-ink-faint">
+                {g.label}
+              </div>
+              <ul className="card overflow-hidden">
+                {g.items.map((n) => <Row key={n.id} n={n} group={g.label} />)}
+              </ul>
+            </section>
+          ))}
 
           {hasMore && (
             <div className="text-center">
               <button
                 type="button"
-                className="btn-secondary"
+                className="rounded-full border border-surface-border bg-surface-raised px-5 py-2 text-[13px] font-semibold text-ink-muted hover:border-brand-500 hover:text-brand-600 transition-colors"
                 onClick={() => setPages((p) => p + 1)}
               >
                 Показать ещё

@@ -20,15 +20,8 @@ import { useAuthStore } from '../auth/store'
 import {
   getNotifications,
   type AppNotification,
-  type NotificationSeverity,
 } from './api'
-
-const SEVERITY_DOT: Record<NotificationSeverity, string> = {
-  info:    'bg-brand-500',
-  success: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  error:   'bg-red-500',
-}
+import { NotificationIcon } from './NotificationIcon'
 
 function timeAgo(iso: string): string {
   const sec = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000)
@@ -47,14 +40,12 @@ function Row({ n, onOpen }: { n: AppNotification; onOpen: (n: AppNotification) =
       <button
         type="button"
         onClick={() => onOpen(n)}
-        className="w-full text-left flex gap-3 px-4 py-3 hover:bg-surface-sunken transition-colors"
+        className={`w-full text-left flex gap-3 px-4 py-3 transition-colors hover:bg-brand-50/60 ${
+          !n.read_at ? 'bg-brand-50/30' : ''}`}
       >
-        <span
-          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[n.severity] ?? SEVERITY_DOT.info} ${n.read_at ? 'opacity-30' : ''}`}
-          aria-hidden
-        />
+        <NotificationIcon n={n} />
         <span className="min-w-0 flex-1">
-          <span className={`block truncate text-sm ${n.read_at ? 'text-ink-muted' : 'text-ink font-medium'}`}>
+          <span className={`block truncate text-[13.5px] ${n.read_at ? 'font-medium text-ink-muted' : 'font-semibold text-ink'}`}>
             {n.title}
           </span>
           {n.body && (
@@ -128,8 +119,13 @@ export function NotificationBell() {
 
       {open && (
         <div className="absolute right-0 top-11 z-50 w-96 max-w-[calc(100vw-2rem)] rounded-lg border border-surface-border bg-surface-raised shadow-lg overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-surface-border text-sm font-semibold text-ink">
-            Уведомления
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-surface-border">
+            <span className="text-sm font-semibold text-ink">Уведомления</span>
+            {unread > 0 && (
+              <span className="rounded-full bg-brand-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                {unread} новых
+              </span>
+            )}
           </div>
           {items.length === 0 ? (
             <div className="px-4 py-8 text-sm text-ink-muted text-center">
