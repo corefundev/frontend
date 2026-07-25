@@ -21,7 +21,6 @@ import {
   type AppNotification,
 } from '../../features/notifications/api'
 import { NotificationIcon } from '../../features/notifications/NotificationIcon'
-import { TYPE_LABEL } from '../../features/notifications/meta'
 
 const PAGE = 50
 
@@ -66,7 +65,7 @@ function Row({ n, group }: { n: AppNotification; group: string }) {
         )}
         <NotificationIcon n={n} />
         <span className="min-w-0 flex-1">
-          <span className={`block text-sm ${n.read_at ? 'font-medium text-ink-muted' : 'font-semibold text-ink'}`}>
+          <span className={`block text-sm pr-16 ${n.read_at ? 'font-medium text-ink-muted' : 'font-semibold text-ink'}`}>
             {n.title}
           </span>
           {n.body && (
@@ -74,18 +73,11 @@ function Row({ n, group }: { n: AppNotification; group: string }) {
               {n.body}
             </span>
           )}
-          <span className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-faint">
-            <span className="rounded-full border border-surface-border bg-surface px-2 py-px font-semibold">
-              {TYPE_LABEL[n.type] ?? n.type}
-            </span>
-            <span>{metaTime(n.created_at, group)}</span>
-          </span>
         </span>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-             className="mt-3 shrink-0 text-ink-faint" aria-hidden>
-          <path d="M9 6l6 6-6 6" />
-        </svg>
+        {/* правка владельца: дата в правом верхнем углу, без пилюли типа и шеврона */}
+        <span className="absolute right-4 sm:right-5 top-3 text-[11.5px] text-ink-faint">
+          {metaTime(n.created_at, group)}
+        </span>
       </Link>
     </li>
   )
@@ -143,7 +135,7 @@ export default function NotificationCenterPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="max-w-4xl space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           {/* reference_applayout_pagetitle: топ-бар уже говорит «Уведомления» */}
