@@ -53,6 +53,7 @@ const AdminNewsPage = lazy(() => import('./pages/admin/AdminNewsPage'))
 const AdminNewsEditorPage = lazy(() => import('./pages/admin/AdminNewsEditorPage'))
 const AdminHelpPage = lazy(() => import('./pages/admin/AdminHelpPage'))
 const AdminSupportPage = lazy(() => import('./pages/admin/AdminSupportPage'))
+const NotificationCenterPage = lazy(() => import('./pages/client/NotificationCenterPage'))
 const AdminHelpEditorPage = lazy(() => import('./pages/admin/AdminHelpEditorPage'))
 const AdminHomePage = lazy(() => import('./pages/admin/AdminHomePage'))
 const AdminPlansPage = lazy(() => import('./pages/admin/AdminPlansPage'))
@@ -545,6 +546,14 @@ export default function App() {
           element={
             <Suspense fallback={<SuspenseFallback />}>
               <NewsClientPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="notifications"
+          element={
+            <Suspense fallback={<SuspenseFallback />}>
+              <NotificationCenterPage />
             </Suspense>
           }
         />

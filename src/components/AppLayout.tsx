@@ -82,6 +82,8 @@ export default function AppLayout() {
     const matches = NAV.filter((n) => n.to !== '' && path.startsWith(n.to))
     matches.sort((a, b) => b.to.length - a.to.length)
     if (matches.length > 0) return matches[0].pageTitle
+    // NC-9 #584: центр уведомлений — не пункт nav (вход через колокольчик)
+    if (path.startsWith('notifications')) return 'Уведомления'
     return NAV[0].pageTitle  // root → "Панель управления"
   })()
 
