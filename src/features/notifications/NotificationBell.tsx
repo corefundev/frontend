@@ -103,9 +103,10 @@ export function NotificationBell() {
   // NC-9: открытие панели статус прочитанности НЕ трогает
   const toggle = () => setOpen((v) => !v)
 
+  // v2: элемент ведёт на СТРАНИЦУ уведомления («как новость»), футер — в центр
   const openCenter = (n?: AppNotification) => {
     setOpen(false)
-    nav(cabPath(n ? `/app/notifications?open=${n.id}` : '/app/notifications'))
+    nav(cabPath(n ? `/app/notifications/${n.id}` : '/app/notifications'))
   }
 
   return (

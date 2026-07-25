@@ -1,26 +1,24 @@
 // NC-9 (#584): Центр уведомлений — полный список.
 //
 // Контракты (утверждены владельцем 2026-07-26):
-//   • свежие сверху; непрочитанные выделены; раскрытие на месте
-//     (аккордеон) — раскрытие помечает прочитанным ПОШТУЧНО;
-//   • «Отметить все прочитанными» — явное действие (никаких скрытых
-//     mass-mark при открытии, как делал старый дропдаун);
+// v2 (уточнение владельца): уведомление = сущность со своей страницей
+// («как новость») — центр это ЧИСТЫЙ СПИСОК-ССЫЛКИ на /app/notifications/{id};
+// никакого аккордеона. Прочитанность помечается на странице уведомления.
+//   • свежие сверху; непрочитанные выделены;
+//   • «Отметить все прочитанными» — явное действие;
 //   • пагинация «Показать ещё» по 50 (limit/offset API);
-//   • deep-link из дропдауна: /app/notifications?open={id} раскрывает
-//     уведомление сразу;
-//   • тело — ПЛОСКИЙ ТЕКСТ (H4-контракт NC-6: никакого HTML-рендера);
 //   • CONTRACT-1: ошибка бэка ≠ пустой ящик — честная плашка с retry.
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import { errorMessage } from '../../shared/api/client'
+import { cabPath } from '../../shared/hostRouting'
 import { useAuthStore } from '../../features/auth/store'
 import {
   getNotifications,
   markNotificationsRead,
-  type AppNotification,
   type NotificationSeverity,
 } from '../../features/notifications/api'
 
@@ -44,14 +42,9 @@ function fmtFull(iso: string): string {
 export default function NotificationCenterPage() {
   const clientId = useAuthStore((s) => s.clientId)!
   const qc = useQueryClient()
-  const [params, setParams] = useSearchParams()
   // сколько страниц раскрыто «Показать ещё» (limit растёт, offset=0 —
   // проще инвалидация и нет дыр при приходе новых уведомлений сверху)
   const [pages, setPages] = useState(1)
-  const [openId, setOpenId] = useState<number | null>(() => {
-    const raw = params.get('open')
-    return raw ? Number(raw) : null
-  })
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['notifications-center', clientId, pages],
@@ -74,25 +67,6 @@ export default function NotificationCenterPage() {
   const unread = data?.unread ?? 0
   // count < запрошенного лимита ⇒ дальше пусто
   const hasMore = (data?.count ?? 0) >= PAGE * pages
-
-  // deep-link: раскрыть и пометить прочитанным пришедший ?open={id}
-  useEffect(() => {
-    if (openId == null || !items.length) return
-    const n = items.find((x) => x.id === openId)
-    if (n && !n.read_at) markRead.mutate([n.id])
-    // подчистить URL, чтобы refresh не «перечитывал» повторно
-    if (params.get('open')) {
-      params.delete('open')
-      setParams(params, { replace: true })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- одно срабатывание на загрузку списка
-  }, [items.length])
-
-  function toggle(n: AppNotification) {
-    const next = openId === n.id ? null : n.id
-    setOpenId(next)
-    if (next !== null && !n.read_at) markRead.mutate([n.id])
-  }
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -132,50 +106,38 @@ export default function NotificationCenterPage() {
       ) : (
         <>
           <ul className="card divide-y divide-surface-border overflow-hidden">
-            {items.map((n) => {
-              const opened = openId === n.id
-              return (
-                <li key={n.id}>
-                  <button
-                    type="button"
-                    onClick={() => toggle(n)}
-                    aria-expanded={opened}
-                    className={`w-full text-left px-5 py-3.5 flex gap-3 items-start transition-colors hover:bg-surface-muted/50 ${
-                      !n.read_at ? 'bg-brand-50/40' : ''}`}
-                  >
-                    <span
-                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[n.severity] ?? SEVERITY_DOT.info} ${n.read_at ? 'opacity-30' : ''}`}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className={`block text-sm ${n.read_at ? 'text-ink-muted' : 'text-ink font-semibold'}`}>
-                        {n.title}
-                      </span>
-                      {!opened && n.body && (
-                        <span className="block truncate text-xs text-ink-muted mt-0.5">
-                          {n.body}
-                        </span>
-                      )}
-                      <span className="block text-[11px] text-ink-faint mt-1">
-                        {fmtFull(n.created_at)}
-                      </span>
+            {items.map((n) => (
+              <li key={n.id}>
+                <Link
+                  to={cabPath(`/app/notifications/${n.id}`)}
+                  className={`flex gap-3 items-start px-5 py-3.5 transition-colors hover:bg-surface-muted/50 ${
+                    !n.read_at ? 'bg-brand-50/40' : ''}`}
+                >
+                  <span
+                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[n.severity] ?? SEVERITY_DOT.info} ${n.read_at ? 'opacity-30' : ''}`}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className={`block text-sm ${n.read_at ? 'text-ink-muted' : 'text-ink font-semibold'}`}>
+                      {n.title}
                     </span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                         className={`mt-1 shrink-0 text-ink-faint transition-transform ${opened ? 'rotate-180' : ''}`}
-                         aria-hidden>
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </button>
-                  {opened && n.body && (
-                    // полный текст: плоский, с переносами — H4-контракт
-                    <div className="px-5 pb-4 pl-10 text-sm text-ink whitespace-pre-wrap break-words">
-                      {n.body}
-                    </div>
-                  )}
-                </li>
-              )
-            })}
+                    {n.body && (
+                      <span className="block truncate text-xs text-ink-muted mt-0.5">
+                        {n.body}
+                      </span>
+                    )}
+                    <span className="block text-[11px] text-ink-faint mt-1">
+                      {fmtFull(n.created_at)}
+                    </span>
+                  </span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                       className="mt-1 shrink-0 text-ink-faint" aria-hidden>
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </Link>
+              </li>
+            ))}
           </ul>
 
           {hasMore && (
