@@ -63,10 +63,11 @@ export interface NotificationsResponse {
 export async function getNotifications(
   clientId: string,
   limit = 20,
+  offset = 0,
 ): Promise<NotificationsResponse> {
   const { data } = await apiClient.get<NotificationsResponse>(
     `/clients/${encodeURIComponent(clientId)}/notifications`,
-    { params: { limit } },
+    { params: { limit, offset } },
   )
   return data
 }

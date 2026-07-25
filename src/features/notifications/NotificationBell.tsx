@@ -1,18 +1,24 @@
 // src/features/notifications/NotificationBell.tsx
-// NC-2 (#242): header bell — unread badge + dropdown inbox.
+// NC-2 (#242) → NC-9 (#584): header bell — бейдж + КРАТКИЙ дропдаун.
 //
-// Polls unread state every 30s with meta:{silent:true} (PjaxLoader
-// discipline — background polls must not flash the top bar). Opening the
-// panel marks everything read (badge clears optimistically via query
-// invalidation). Pure read surface; emitters live on the backend (NC-1).
+// Контракты владельца (2026-07-26):
+//   • дропдаун = последние 7, заголовок + сниппет В ОДНУ СТРОКУ;
+//   • открытие дропдауна НЕ помечает прочитанным (прежний mass-mark
+//     обнулял бейдж, даже если пользователь ничего не читал — ложь о
+//     состоянии);
+//   • клик по элементу — «провал» в центр (/app/notifications?open=id),
+//     где прочитанность помечается поштучно;
+//   • футер «Все уведомления →».
+// Поллинг 30s с meta:{silent:true} (PjaxLoader-дисциплина).
 
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 
+import { cabPath } from '../../shared/hostRouting'
 import { useAuthStore } from '../auth/store'
 import {
   getNotifications,
-  markNotificationsRead,
   type AppNotification,
   type NotificationSeverity,
 } from './api'
@@ -35,43 +41,44 @@ function timeAgo(iso: string): string {
   return `${d} дн назад`
 }
 
-function Row({ n }: { n: AppNotification }) {
+function Row({ n, onOpen }: { n: AppNotification; onOpen: (n: AppNotification) => void }) {
   return (
-    <li className="flex gap-3 px-4 py-3 border-b border-surface-border last:border-b-0">
-      <span
-        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[n.severity] ?? SEVERITY_DOT.info} ${n.read_at ? 'opacity-30' : ''}`}
-        aria-hidden
-      />
-      <div className="min-w-0">
-        <div className={`text-sm ${n.read_at ? 'text-ink-muted' : 'text-ink font-medium'}`}>
-          {n.title}
-        </div>
-        {n.body && (
-          <div className="text-xs text-ink-muted mt-0.5 break-words">{n.body}</div>
-        )}
-        <div className="text-[11px] text-ink-faint mt-1">{timeAgo(n.created_at)}</div>
-      </div>
+    <li className="border-b border-surface-border last:border-b-0">
+      <button
+        type="button"
+        onClick={() => onOpen(n)}
+        className="w-full text-left flex gap-3 px-4 py-3 hover:bg-surface-sunken transition-colors"
+      >
+        <span
+          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[n.severity] ?? SEVERITY_DOT.info} ${n.read_at ? 'opacity-30' : ''}`}
+          aria-hidden
+        />
+        <span className="min-w-0 flex-1">
+          <span className={`block truncate text-sm ${n.read_at ? 'text-ink-muted' : 'text-ink font-medium'}`}>
+            {n.title}
+          </span>
+          {n.body && (
+            <span className="block truncate text-xs text-ink-muted mt-0.5">{n.body}</span>
+          )}
+          <span className="block text-[11px] text-ink-faint mt-1">{timeAgo(n.created_at)}</span>
+        </span>
+      </button>
     </li>
   )
 }
 
 export function NotificationBell() {
   const clientId = useAuthStore((s) => s.clientId)
-  const qc = useQueryClient()
+  const nav = useNavigate()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
   const { data } = useQuery({
     queryKey: ['notifications', clientId],
-    queryFn: () => getNotifications(clientId!),
+    queryFn: () => getNotifications(clientId!, 7),
     enabled: !!clientId,
     refetchInterval: 30_000,
     meta: { silent: true },
-  })
-
-  const markRead = useMutation({
-    mutationFn: () => markNotificationsRead(clientId!),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications', clientId] }),
   })
 
   // Close on outside click / Escape.
@@ -93,10 +100,12 @@ export function NotificationBell() {
   const unread = data?.unread ?? 0
   const items = data?.notifications ?? []
 
-  const toggle = () => {
-    const next = !open
-    setOpen(next)
-    if (next && unread > 0) markRead.mutate()
+  // NC-9: открытие панели статус прочитанности НЕ трогает
+  const toggle = () => setOpen((v) => !v)
+
+  const openCenter = (n?: AppNotification) => {
+    setOpen(false)
+    nav(cabPath(n ? `/app/notifications?open=${n.id}` : '/app/notifications'))
   }
 
   return (
@@ -127,9 +136,16 @@ export function NotificationBell() {
             </div>
           ) : (
             <ul className="max-h-96 overflow-y-auto">
-              {items.map((n) => <Row key={n.id} n={n} />)}
+              {items.map((n) => <Row key={n.id} n={n} onOpen={openCenter} />)}
             </ul>
           )}
+          <button
+            type="button"
+            onClick={() => openCenter()}
+            className="block w-full border-t border-surface-border px-4 py-2.5 text-center text-sm font-medium text-brand-700 hover:bg-surface-sunken transition-colors"
+          >
+            Все уведомления →
+          </button>
         </div>
       )}
     </div>
