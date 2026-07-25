@@ -28,25 +28,26 @@ const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | u
 export default function LoginPage() {
   const nav = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
-  const isAuthed = useAuthStore((s) => s.isAuthenticated())
   const [params] = useSearchParams()
 
-  // #579 → #585: авторизованному /login не показываем, НО локальному
-  // isAuthed верить нельзя — LS per-origin: логаут в кабинете чистит LS
-  // app-хоста, а копия токена в LS апекса живёт до exp. Слепой редирект
-  // давал вечную карусель login↔cabinet (репро владельца, 395589).
-  // Истина — refresh-кука (единственный кросс-доменный источник): жива →
-  // в кабинет; нет → чистим стухшую копию и честно показываем форму.
+  // #579 → #585 (v2): чек стухшей копии — РОВНО ОДИН РАЗ при маунте
+  // страницы, и только для сессии, существовавшей ДО входа через форму.
+  // v1 подписывался на isAuthed и срабатывал сразу после успешного
+  // логина: лишний /auth/refresh ротировал куку параллельно с редиректом
+  // в кабинет, ответ ротации терялся при unload'е → в браузере оставалась
+  // отозванная кука → reuse-detection гасил сессию → «не могу
+  // авторизоваться» (репро владельца). После входа формой навигацию
+  // делает ТОЛЬКО onSuccess; этот эффект к ней не прикасается.
+  const staleCheckRef = useRef(false)
   useEffect(() => {
-    if (!isAuthed) return
-    let alive = true
+    if (staleCheckRef.current) return
+    staleCheckRef.current = true
+    if (!useAuthStore.getState().isAuthenticated()) return
     void tryRefreshToken().then((token) => {
-      if (!alive) return
       if (token) window.location.replace(appUrl('/app'))
       else useAuthStore.getState().logout()
     })
-    return () => { alive = false }
-  }, [isAuthed])
+  }, [])
 
   const confirmed = params.get('confirmed') === '1'
   const afterReset = params.get('reset') === '1'
