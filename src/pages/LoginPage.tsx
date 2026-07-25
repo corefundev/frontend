@@ -8,7 +8,7 @@ import { useAuthStore } from '../features/auth/store'
 import AuthShell from '../components/AuthShell'
 import { PasswordInput } from '../components/PasswordInput'
 import { SsoBadges, SsoDivider } from '../components/SsoBadges'
-import { errorMessage } from '../shared/api/client'
+import { errorMessage, tryRefreshToken } from '../shared/api/client'
 import { adminUrl, appUrl } from '../shared/hostRouting'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -31,11 +31,21 @@ export default function LoginPage() {
   const isAuthed = useAuthStore((s) => s.isAuthenticated())
   const [params] = useSearchParams()
 
-  // #579: авторизованному пользователю /login не показываем — редирект в
-  // кабинет. Форма входа при живой сессии выглядела как «требуют логин,
-  // но хедер пускает мимо» (репро владельца после регистрации).
+  // #579 → #585: авторизованному /login не показываем, НО локальному
+  // isAuthed верить нельзя — LS per-origin: логаут в кабинете чистит LS
+  // app-хоста, а копия токена в LS апекса живёт до exp. Слепой редирект
+  // давал вечную карусель login↔cabinet (репро владельца, 395589).
+  // Истина — refresh-кука (единственный кросс-доменный источник): жива →
+  // в кабинет; нет → чистим стухшую копию и честно показываем форму.
   useEffect(() => {
-    if (isAuthed) window.location.replace(appUrl('/app'))
+    if (!isAuthed) return
+    let alive = true
+    void tryRefreshToken().then((token) => {
+      if (!alive) return
+      if (token) window.location.replace(appUrl('/app'))
+      else useAuthStore.getState().logout()
+    })
+    return () => { alive = false }
   }, [isAuthed])
 
   const confirmed = params.get('confirmed') === '1'
