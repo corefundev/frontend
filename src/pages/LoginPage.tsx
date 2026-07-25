@@ -25,6 +25,13 @@ import { adminUrl, appUrl } from '../shared/hostRouting'
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined
 
+// #585: гард стухшей-копии — МОДУЛЬНЫЙ (один на загрузку страницы).
+// useRef живёт в инстансе компонента: двойной маунт /login давал два
+// /auth/refresh подряд (поведенческий verify поймал) — с живой кукой это
+// лишняя ротация. Полная перезагрузка страницы сбрасывает модуль — кейс
+// «зашёл на /login заново» работает.
+let staleCheckDone = false
+
 export default function LoginPage() {
   const nav = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
@@ -38,10 +45,9 @@ export default function LoginPage() {
   // отозванная кука → reuse-detection гасил сессию → «не могу
   // авторизоваться» (репро владельца). После входа формой навигацию
   // делает ТОЛЬКО onSuccess; этот эффект к ней не прикасается.
-  const staleCheckRef = useRef(false)
   useEffect(() => {
-    if (staleCheckRef.current) return
-    staleCheckRef.current = true
+    if (staleCheckDone) return
+    staleCheckDone = true
     if (!useAuthStore.getState().isAuthenticated()) return
     void tryRefreshToken().then((token) => {
       if (token) window.location.replace(appUrl('/app'))
