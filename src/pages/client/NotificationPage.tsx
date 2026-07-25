@@ -10,18 +10,14 @@ import { Link, useParams } from 'react-router-dom'
 
 import { cabPath } from '../../shared/hostRouting'
 import { useAuthStore } from '../../features/auth/store'
+import toast from 'react-hot-toast'
+
 import {
   getNotification,
   markNotificationsRead,
-  type NotificationSeverity,
 } from '../../features/notifications/api'
-
-const SEVERITY_LABEL: Record<NotificationSeverity, { text: string; cls: string }> = {
-  info:    { text: 'Информация',      cls: 'bg-brand-50 text-brand-700' },
-  success: { text: 'Успех',           cls: 'bg-emerald-50 text-emerald-700' },
-  warning: { text: 'Предупреждение',  cls: 'bg-amber-50 text-amber-700' },
-  error:   { text: 'Ошибка',          cls: 'bg-red-50 text-red-700' },
-}
+import { NotificationIcon } from '../../features/notifications/NotificationIcon'
+import { SEVERITY_TEXT, TYPE_LABEL } from '../../features/notifications/meta'
 
 function fmtFull(iso: string): string {
   const d = new Date(iso)
@@ -97,25 +93,43 @@ export default function NotificationPage() {
           </button>
         </div>
       ) : (
-        <article className="card p-6 sm:p-8">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-              (SEVERITY_LABEL[data.severity] ?? SEVERITY_LABEL.info).cls}`}>
-              {(SEVERITY_LABEL[data.severity] ?? SEVERITY_LABEL.info).text}
-            </span>
-            <time className="text-xs text-ink-faint" dateTime={data.created_at}>
-              {fmtFull(data.created_at)}
-            </time>
+        <article className="card overflow-hidden">
+          <div className="flex items-start gap-4 px-6 sm:px-8 pt-6 sm:pt-7">
+            <NotificationIcon n={{ ...data, read_at: data.read_at ?? 'seen' }} size="lg" />
+            <div>
+              <div className={`text-[12px] font-bold ${
+                (SEVERITY_TEXT[data.severity] ?? SEVERITY_TEXT.info).cls}`}>
+                {(SEVERITY_TEXT[data.severity] ?? SEVERITY_TEXT.info).label}
+                <span className="text-ink-faint font-semibold"> · {TYPE_LABEL[data.type] ?? data.type}</span>
+              </div>
+              <time className="mt-0.5 block text-[12.5px] text-ink-faint" dateTime={data.created_at}>
+                {fmtFull(data.created_at)}
+              </time>
+            </div>
           </div>
-          <h1 className="display-em text-brand-700 text-2xl sm:text-3xl mt-3">
+          <h1 className="px-6 sm:px-8 mt-4 text-[22px] sm:text-2xl font-semibold leading-snug tracking-tight text-ink">
             {data.title}
           </h1>
           {data.body && (
             // плоский текст с переносами — H4-контракт NC-6
-            <div className="mt-5 text-[15px] leading-relaxed text-ink whitespace-pre-wrap break-words">
+            <div className="px-6 sm:px-8 mt-3.5 pb-7 max-w-[46em] text-[15px] leading-relaxed text-ink whitespace-pre-wrap break-words">
               {data.body}
             </div>
           )}
+          <div className="flex items-center gap-3 border-t border-surface-border px-6 sm:px-8 py-3.5 text-xs text-ink-faint">
+            <span>Уведомление №{data.id}</span>
+            <span className="flex-1" />
+            <button
+              type="button"
+              className="font-semibold text-brand-700 hover:text-brand-800"
+              onClick={() => {
+                void navigator.clipboard?.writeText(window.location.href)
+                toast.success('Ссылка скопирована')
+              }}
+            >
+              Скопировать ссылку
+            </button>
+          </div>
         </article>
       )}
     </div>
