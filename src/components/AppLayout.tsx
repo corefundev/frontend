@@ -1,43 +1,39 @@
-import { Fragment } from 'react'
+// Кабинет-shell. Редизайн 2026-07-26 (прототип cabinet_design, владелец:
+// «Ок, реализуем»): сайдбар УБРАН — хедер (логотип · Апгрейд · колокольчик ·
+// профиль) + ВСЕ разделы горизонтальной полосой табов под ним. Рабочая
+// область получает ширину сайдбара (~256px). Маршруты и страницы не
+// тронуты; аккаунт-разделы переезжают в меню профиля, на /app/account/*
+// рисуется вторая полоса суб-табов.
 import { useQuery } from '@tanstack/react-query'
 import { newsPublicApi } from '../features/news/publicApi'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { useAuthStore } from '../features/auth/store'
 import ConsentGate from './ConsentGate'
 import { NotificationBell } from '../features/notifications/NotificationBell'
 import { ProfileMenu } from '../features/account/ProfileMenu'
 import { useUsage } from '../features/plans/useUsage'
-import { PlanBadge } from '../features/plans/PlanBadge'
-import { QuotaMeter, LockTag } from '../features/plans/upsell'
+import { QuotaMeter } from '../features/plans/upsell'
 import type { PlanId } from '../features/plans/api'
 
-// Sidebar entries; `minPlan` controls whether the item is clickable
-// for the current user's plan. `pageTitle` (when present) shows in
-// the top header bar in place of the section's nav label — same
-// section name on the sidebar, slightly more descriptive name
-// above the workspace.
+// Горизонтальные табы; `minPlan` — кликабельность для тарифа. `pageTitle`
+// рисуется заголовком рабочей области (crumb + h1 в прототипе).
 const NAV = [
-  { to: '',            label: 'Главная',       pageTitle: 'Панель управления',  icon: IconHome,    minPlan: 'free'     },
-  // DS-2 (#467): единый раздел «Данные» — датасеты + история подготовок
-  // (бывшие «Загрузки»/«Подготовка» слиты сюда, #320-конвейер внутри).
-  { to: 'data',        label: 'Данные',        pageTitle: 'Данные',             icon: IconUpload,  minPlan: 'free'     },
-  { to: 'forecasts',   label: 'Прогнозы',      pageTitle: 'Прогноз',            icon: IconChart,   minPlan: 'free'     },
-  { to: 'orders',      label: 'Автозаказ',     pageTitle: 'Автозаказ',          icon: IconCart,    minPlan: 'free'     },
-  { to: 'training',    label: 'Обучение',      pageTitle: 'Обучение модели',    icon: IconCog,     minPlan: 'free'     },
-  { to: 'training/history', label: 'История обучений', pageTitle: 'История обучений', icon: IconHistory, minPlan: 'free' },
-  { to: 'scenarios',   label: 'Сценарии',      pageTitle: 'Сценарии',           icon: IconSplit,   minPlan: 'business' },
-  { to: 'promo',       label: 'Промо',         pageTitle: 'Промо-планировщик',  icon: IconSpark,   minPlan: 'business' },
-  { to: 'news',        label: 'Новости',       pageTitle: 'Новости',            icon: IconMegaphone, minPlan: 'free'   },
-  { to: 'help',        label: 'Помощь',        pageTitle: 'Помощь',             icon: IconLifebuoy, minPlan: 'free'    },
-  { to: 'settings',    label: 'Настройки',     pageTitle: 'Настройки модели',   icon: IconSlider,  minPlan: 'free'     },
-  { to: 'upgrade',     label: 'Апгрейд',       pageTitle: 'Тариф',              icon: IconStar,    minPlan: 'free'     },
+  { to: '',            label: 'Главная',   pageTitle: 'Панель управления', icon: IconHome,      minPlan: 'free'     },
+  { to: 'data',        label: 'Данные',    pageTitle: 'Данные',            icon: IconUpload,    minPlan: 'free'     },
+  { to: 'forecasts',   label: 'Прогнозы',  pageTitle: 'Прогноз',           icon: IconChart,     minPlan: 'free'     },
+  { to: 'orders',      label: 'Автозаказ', pageTitle: 'Автозаказ',         icon: IconCart,      minPlan: 'free'     },
+  { to: 'training',    label: 'Обучение',  pageTitle: 'Обучение модели',   icon: IconCog,       minPlan: 'free'     },
+  { to: 'training/history', label: 'История', pageTitle: 'История обучений', icon: IconHistory, minPlan: 'free'     },
+  { to: 'scenarios',   label: 'Сценарии',  pageTitle: 'Сценарии',          icon: IconSplit,     minPlan: 'business' },
+  { to: 'promo',       label: 'Промо',     pageTitle: 'Промо-планировщик', icon: IconSpark,     minPlan: 'business' },
+  { to: 'news',        label: 'Новости',   pageTitle: 'Новости',           icon: IconMegaphone, minPlan: 'free'     },
+  { to: 'help',        label: 'Помощь',    pageTitle: 'Помощь',            icon: IconLifebuoy,  minPlan: 'free'     },
+  { to: 'settings',    label: 'Настройки', pageTitle: 'Настройки модели',  icon: IconSlider,    minPlan: 'free'     },
 ] as const
 
-// AC-1 (#312): when inside /app/account the sidebar SWAPS to these — the
-// account sections replace the main app nav (standard settings pattern), with
-// a "back to app" link on top. No icons/plan-locks — account is not tier-gated.
+// AC-1 (#312) → редизайн: аккаунт-разделы больше не подменяют сайдбар —
+// вход через меню профиля; на /app/account/* вторая полоса суб-табов.
 const ACCOUNT_NAV = [
-  { to: 'account/profile',       label: 'Профиль' },
+  { to: 'account/profile',       label: 'Личная информация' },
   { to: 'account/security',      label: 'Безопасность' },
   { to: 'account/subscription',  label: 'Подписка' },
   { to: 'account/notifications', label: 'Уведомления' },
@@ -56,17 +52,10 @@ export default function AppLayout() {
     retry: 1,
   })
   const location = useLocation()
-  const clientId = useAuthStore((s) => s.clientId)
   const { data: usage } = useUsage()
 
   const userRank = usage ? PLAN_RANK[usage.plan] : 0
-  // ADM-0 (#276): админ-пункты живут в выделенной консоли /admin — клиентский
-  // сайдбар показывает только клиентские разделы.
-  const visibleNav = NAV
 
-  // Pick the longest matching nav entry for the current path so a nested
-  // path beats the empty "Главная" entry (which would otherwise
-  // prefix-match the root /app path).
   // APP-1 (#495) вариант B: на app-хосте кабинет живёт от корня —
   // нормализуем путь до relative-вида ('data', 'account/profile', '').
   const rel = location.pathname
@@ -78,165 +67,135 @@ export default function AppLayout() {
       const seg = rel.replace(/^account\/?/, '') || 'profile'
       return ACCOUNT_NAV.find((n) => n.to === `account/${seg}`)?.label ?? 'Личный кабинет'
     }
-    const path = rel
-    const matches = NAV.filter((n) => n.to !== '' && path.startsWith(n.to))
+    const matches = NAV.filter((n) => n.to !== '' && rel.startsWith(n.to))
     matches.sort((a, b) => b.to.length - a.to.length)
     if (matches.length > 0) return matches[0].pageTitle
     // NC-9 #584: центр уведомлений — не пункт nav (вход через колокольчик)
-    if (path.startsWith('notifications')) return 'Уведомления'
+    if (rel.startsWith('notifications')) return 'Уведомления'
     return NAV[0].pageTitle  // root → "Панель управления"
   })()
 
   return (
-    <div className="cabinet-v2 min-h-screen flex bg-surface">
-      {/* ── Sidebar ─────────────────────────────────────────────── */}
-      <aside className="w-64 bg-surface-raised text-ink border-r border-surface-border flex flex-col relative">
-        {/* Editorial ambient decoration — thin gold vertical rule */}
-        <div className="px-6 py-6 flex items-center gap-3">
-          <div className="h-9 w-9 rounded-md bg-brand-500 flex items-center justify-center text-sm font-bold text-white">
-            S
-          </div>
-          <div className="leading-tight">
-            <div className="font-semibold text-lg text-ink">Sprosly</div>
-            {usage && (
-              <div className="eyebrow !text-ink-subtle !tracking-[0.16em]">
-                {usage.model_display_name}
-              </div>
-            )}
-          </div>
+    <div className="cabinet-v2 min-h-screen flex flex-col bg-surface">
+      {/* ── Хедер ─────────────────────────────────────────────── */}
+      <header className="bg-surface-raised border-b border-surface-border shrink-0">
+        <div className="flex h-14 items-center gap-3 px-5">
+          <NavLink to="" end className="flex items-center gap-2.5 mr-1">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-[15px] font-bold text-white">S</span>
+            <span className="text-[15.5px] font-bold text-ink">Sprosly</span>
+          </NavLink>
+
+          <span className="flex-1" />
+
+          {usage && (
+            <div className="hidden sm:block">
+              <QuotaMeter
+                used={usage.current_sku_count ?? usage.trained_sku_count ?? 0}
+                max={usage.max_skus}
+                label="SKU"
+              />
+            </div>
+          )}
+          {/* Апгрейд — золотая кнопка хедера; Business её не видит */}
+          {usage && usage.plan !== 'business' && (
+            <NavLink
+              to="upgrade"
+              className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3.5 py-1.5 text-[13px] font-bold text-amber-700 transition-colors hover:bg-amber-100"
+            >
+              <IconStar className="h-3.5 w-3.5" />
+              Апгрейд
+            </NavLink>
+          )}
+          <NotificationBell />
+          <ProfileMenu />
         </div>
 
-        {isAccount ? (
-          <nav className="flex-1 p-3 space-y-0.5">
-            <NavLink
-              to=""
-              end
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink-muted hover:bg-surface-muted hover:text-ink transition-colors"
-            >
-              <span aria-hidden>←</span>
-              <span className="truncate">Назад в приложение</span>
-            </NavLink>
-            <div className="pt-3" />
+        {/* ── Полоса разделов: ВСЕ ссылки горизонтально ── */}
+        <nav aria-label="Разделы кабинета"
+             className="flex items-center gap-0.5 overflow-x-auto px-3">
+          {NAV.map((item) => {
+            const { to, label, icon: Icon } = item
+            const minPlan = item.minPlan as PlanId
+            const locked = PLAN_RANK[minPlan] > userRank
+            const inner = (
+              <>
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{label}</span>
+                {to === 'news' && newsUnread > 0 && (
+                  <span className="rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white tabular-nums">
+                    {newsUnread}
+                  </span>
+                )}
+                {locked && (
+                  <span className="rounded-md bg-amber-50 px-1.5 py-px text-[10px] font-extrabold text-amber-700">B</span>
+                )}
+              </>
+            )
+            if (locked) {
+              return (
+                <div
+                  key={to}
+                  role="link"
+                  aria-disabled="true"
+                  title="Доступно в тарифе Business"
+                  className="-mb-px flex cursor-not-allowed items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3 pb-2 pt-2.5 text-[13.5px] font-semibold text-ink-subtle/60"
+                >
+                  {inner}
+                </div>
+              )
+            }
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                // Strict-match, чтобы родитель («Обучение») не подсвечивался
+                // на детях («История»).
+                end
+                className={({ isActive }) => [
+                  '-mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 pb-2 pt-2.5 text-[13.5px] font-semibold transition-colors',
+                  isActive
+                    ? 'border-brand-500 text-brand-700'
+                    : 'border-transparent text-ink-muted hover:text-ink',
+                ].join(' ')}
+              >
+                {inner}
+              </NavLink>
+            )
+          })}
+        </nav>
+      </header>
+
+      {/* ── Суб-табы аккаунта (только на /app/account/*) ── */}
+      {isAccount && (
+        <div className="bg-surface-raised/60 border-b border-surface-border shrink-0">
+          <nav aria-label="Разделы аккаунта"
+               className="flex items-center gap-0.5 overflow-x-auto px-3">
             {ACCOUNT_NAV.map((s) => (
               <NavLink
                 key={s.to}
                 to={s.to}
                 className={({ isActive }) => [
-                  'block rounded-md px-3 py-2 text-sm transition-colors',
+                  '-mb-px whitespace-nowrap border-b-2 px-3 pb-2 pt-2 text-[13px] font-semibold transition-colors',
                   isActive
-                    ? 'bg-brand-50 text-brand-700 font-medium'
-                    : 'text-ink-muted hover:bg-surface-muted hover:text-ink',
+                    ? 'border-brand-500 text-brand-700'
+                    : 'border-transparent text-ink-muted hover:text-ink',
                 ].join(' ')}
               >
                 {s.label}
               </NavLink>
             ))}
           </nav>
-        ) : (
-        <nav className="flex-1 p-3 space-y-0.5">
-          {visibleNav.map((item, i) => {
-            const { to, label, icon: Icon } = item
-            const minPlan = ('minPlan' in item ? item.minPlan : 'free') as PlanId
-            const locked  = PLAN_RANK[minPlan] > userRank
-            // Inline nav group: render a small header before the first item of
-            // a group (items of one group are contiguous in NAV).
-            const group     = ('group' in item ? item.group : undefined) as string | undefined
-            const prevItem  = i > 0 ? visibleNav[i - 1] : undefined
-            const prevGroup = prevItem && 'group' in prevItem ? (prevItem.group as string) : undefined
-            const showGroupHeader = !!group && group !== prevGroup
-            // Split locked vs unlocked into two real branches so TS
-            // sees the right component (div vs NavLink) and we don't
-            // pass `to={undefined}` to NavLink at runtime. The shared
-            // child content is extracted to a fragment.
-            const inner = (
-              <>
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1 truncate">{label}</span>
-                {to === 'news' && newsUnread > 0 && (
-                  <span className="px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold tabular-nums">
-                    {newsUnread}
-                  </span>
-                )}
-                {locked && <LockTag required={minPlan} compact />}
-              </>
-            )
-            const itemEl = locked ? (
-              <div
-                role="link"
-                aria-disabled="true"
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-ink-subtle/60 cursor-not-allowed"
-                title={`Доступно в тарифе ${minPlan === 'start' ? 'Start' : 'Business'}`}
-              >
-                {inner}
-              </div>
-            ) : (
-              <NavLink
-                to={to}
-                // Strict-match every nav entry so a parent (e.g. "Обучение")
-                // doesn't also light up while the user is on a child route
-                // (e.g. "Обучение → История").
-                end
-                className={({ isActive }) => [
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm',
-                  'transition-colors',
-                  isActive
-                    ? 'bg-brand-50 text-brand-700 font-medium'
-                    : 'text-ink-muted hover:bg-surface-muted hover:text-ink',
-                ].join(' ')}
-              >
-                {inner}
-              </NavLink>
-            )
-            return (
-              <Fragment key={to}>
-                {showGroupHeader && (
-                  <div className="px-3 pt-4 pb-1 eyebrow !text-ink-subtle">{group}</div>
-                )}
-                {itemEl}
-              </Fragment>
-            )
-          })}
-        </nav>
-        )}
-
-        {/* Footer of sidebar — client identity */}
-        <div className="p-4 border-t border-surface-border">
-          <div className="eyebrow !text-ink-subtle">Клиент</div>
-          <div className="font-mono text-xs text-ink truncate">{clientId ?? '—'}</div>
         </div>
-      </aside>
+      )}
 
-      {/* ── Main column ─────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="flex items-center justify-between bg-surface-raised border-b border-surface-border px-6 h-16 shrink-0 gap-6">
-          <h1 className="text-lg font-semibold tracking-tight text-ink">{pageTitle}</h1>
+      {/* ── Рабочая область на всю ширину ── */}
+      <main className="flex-1 overflow-auto p-6 sm:p-8">
+        {/* единый заголовок раздела (бывший топ-бар) — страницы со своими
+            hero остаются как были, безымянных страниц нет */}
+        <h1 className="mb-5 text-lg font-semibold tracking-tight text-ink">{pageTitle}</h1>
+        <Outlet />
+      </main>
 
-          <div className="flex items-center gap-6">
-            {usage && (
-              <QuotaMeter
-                // Prefer "current catalog size" (latest processed upload)
-                // over "last-trained SKU count" — users see the upload's
-                // numbers immediately, before they kick off training.
-                used={usage.current_sku_count ?? usage.trained_sku_count ?? 0}
-                max={usage.max_skus}
-                label="SKU"
-              />
-            )}
-            {usage && (
-              <PlanBadge
-                plan={usage.plan}
-                modelName={usage.model_display_name}
-              />
-            )}
-            <NotificationBell />
-            <ProfileMenu />
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-auto p-6 sm:p-8">
-          <Outlet />
-        </main>
-      </div>
       {/* LEG-3 #431: блокирующая модалка повторного согласия */}
       <ConsentGate />
     </div>
