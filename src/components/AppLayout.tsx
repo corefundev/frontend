@@ -112,7 +112,7 @@ export default function AppLayout() {
 
         {/* ── Полоса разделов: ВСЕ ссылки горизонтально ── */}
         <nav aria-label="Разделы кабинета"
-             className="no-scrollbar flex items-center gap-0.5 overflow-x-auto px-3">
+             className="no-scrollbar flex items-center gap-0.5 overflow-x-auto overflow-y-hidden px-3">
           {NAV.map((item) => {
             const { to, label, icon: Icon } = item
             const minPlan = item.minPlan as PlanId
@@ -169,7 +169,7 @@ export default function AppLayout() {
       {isAccount && (
         <div className="bg-surface-raised/60 border-b border-surface-border shrink-0">
           <nav aria-label="Разделы аккаунта"
-               className="no-scrollbar flex items-center gap-0.5 overflow-x-auto px-3">
+               className="no-scrollbar flex items-center gap-0.5 overflow-x-auto overflow-y-hidden px-3">
             {ACCOUNT_NAV.map((s) => (
               <NavLink
                 key={s.to}
