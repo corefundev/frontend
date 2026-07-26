@@ -65,7 +65,9 @@ export default function AppLayout() {
   const pageTitle = (() => {
     if (isAccount) {
       const seg = rel.replace(/^account\/?/, '') || 'profile'
-      return ACCOUNT_NAV.find((n) => n.to === `account/${seg}`)?.label ?? 'Личный кабинет'
+      // префикс-матч: суб-страницы раздела (security/2fa) наследуют его
+      // заголовок, свой заголовок они рисуют в теле (#587)
+      return ACCOUNT_NAV.find((n) => `account/${seg}`.startsWith(n.to))?.label ?? 'Личный кабинет'
     }
     const matches = NAV.filter((n) => n.to !== '' && rel.startsWith(n.to))
     matches.sort((a, b) => b.to.length - a.to.length)

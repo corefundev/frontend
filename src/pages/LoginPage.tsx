@@ -63,6 +63,28 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [captcha, setCaptcha] = useState('')
   const [captchaNeeded, setCaptchaNeeded] = useState(false)
+  // 2FA-1 #587 slice C: пароль прошёл, аккаунт защищён — сервер вернул
+  // challenge вместо сессии; показываем шаг ввода кода
+  const [twofa, setTwofa] = useState<{ challenge: string; methods: string[] } | null>(null)
+
+  const finishLogin = (resp: { access_token: string; client_id: string }) => {
+    setAuth(resp.access_token, resp.client_id)
+    toast.success(`Добро пожаловать, ${resp.client_id}`)
+    // APP-1 (#495): кабинет живёт на app-хосте. ?next= пускаем ТОЛЬКО
+    // на свой app-origin (open-redirect guard); иначе — корень кабинета.
+    const next = new URLSearchParams(window.location.search).get('next')
+    const appRoot = appUrl('/app')
+    if (appRoot !== '/app') {                       // брендовый хост
+      // open-redirect guard: только свои origin'ы — кабинет и (#124)
+      // админ-хост; сессию поддомену передаёт refresh-кука, не URL.
+      const ok = next != null
+        && (next.startsWith(appUrl('/')) || next.startsWith(adminUrl('/')))
+      const target = ok ? next : appRoot
+      window.location.replace(target)
+      return
+    }
+    nav('/app', { replace: true })
+  }
 
   const login = useMutation({
     mutationFn: () => authApi.loginPassword({
@@ -71,22 +93,11 @@ export default function LoginPage() {
       captcha_token: captcha || undefined,
     }),
     onSuccess: (resp) => {
-      setAuth(resp.access_token, resp.client_id)
-      toast.success(`Добро пожаловать, ${resp.client_id}`)
-      // APP-1 (#495): кабинет живёт на app-хосте. ?next= пускаем ТОЛЬКО
-      // на свой app-origin (open-redirect guard); иначе — корень кабинета.
-      const next = new URLSearchParams(window.location.search).get('next')
-      const appRoot = appUrl('/app')
-      if (appRoot !== '/app') {                       // брендовый хост
-        // open-redirect guard: только свои origin'ы — кабинет и (#124)
-        // админ-хост; сессию поддомену передаёт refresh-кука, не URL.
-        const ok = next != null
-          && (next.startsWith(appUrl('/')) || next.startsWith(adminUrl('/')))
-        const target = ok ? next : appRoot
-        window.location.replace(target)
+      if (resp.twofa_required && resp.challenge) {
+        setTwofa({ challenge: resp.challenge, methods: resp.twofa_methods ?? [] })
         return
       }
-      nav('/app', { replace: true })
+      finishLogin(resp)
     },
     onError: (e) => {
       // Сервер требует капчу после 2 неудач — показать виджет и не
@@ -102,6 +113,19 @@ export default function LoginPage() {
       toast.error(errorMessage(e, 'Не удалось войти'))
     },
   })
+
+  if (twofa) {
+    return (
+      <AuthShell>
+        <TwoFAStep
+          challenge={twofa.challenge}
+          methods={twofa.methods}
+          onDone={finishLogin}
+          onBack={() => { setTwofa(null); setPassword('') }}
+        />
+      </AuthShell>
+    )
+  }
 
   return (
     <AuthShell>
@@ -181,6 +205,94 @@ export default function LoginPage() {
         </Link>
       </p>
     </AuthShell>
+  )
+}
+
+// ── 2FA-1 #587: шаг подтверждения входа кодом ───────────────────────────
+
+function TwoFAStep({ challenge, methods, onDone, onBack }: {
+  challenge: string
+  methods: string[]
+  onDone: (resp: { access_token: string; client_id: string }) => void
+  onBack: () => void
+}) {
+  const [code, setCode] = useState('')
+  const emailAvailable = methods.includes('email')
+
+  const verify = useMutation({
+    mutationFn: () => authApi.twofaVerify({ challenge, code: code.trim() }),
+    onSuccess: onDone,
+    onError: (e) => {
+      setCode('')
+      const status = (e as { response?: { status?: number } })?.response?.status
+      // challenge живёт 5 минут — по истечении возвращаем на ввод пароля
+      if (status === 401) {
+        toast.error('Время подтверждения истекло — войдите ещё раз')
+        onBack()
+        return
+      }
+      toast.error(errorMessage(e, 'Код не подошёл'))
+    },
+  })
+
+  const sendEmail = useMutation({
+    mutationFn: () => authApi.twofaEmailCode({ challenge }),
+    onSuccess: () => toast.success('Код отправлен на почту'),
+    onError: (e) => toast.error(errorMessage(e, 'Не удалось отправить письмо')),
+  })
+
+  return (
+    <>
+      <h1 className="text-[28px] font-bold text-ink text-center">Подтвердите вход</h1>
+      <p className="mt-4 text-sm text-ink-muted text-center">
+        Аккаунт защищён двухэтапной аутентификацией. Введите код из
+        приложения{emailAvailable ? ', письма' : ''} или резервный код.
+      </p>
+      <form
+        className="mt-7"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (!code.trim()) return toast.error('Введите код')
+          verify.mutate()
+        }}
+      >
+        <label className="label" htmlFor="twofa-code">Код подтверждения</label>
+        <input
+          id="twofa-code"
+          className="input text-center text-lg font-semibold tracking-[0.3em]"
+          autoComplete="one-time-code"
+          autoFocus
+          maxLength={16}
+          placeholder="000000"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
+        {emailAvailable && (
+          <button
+            type="button"
+            className="mt-3 text-sm font-medium text-brand-500 hover:underline"
+            disabled={sendEmail.isPending}
+            onClick={() => sendEmail.mutate()}
+          >
+            {sendEmail.isPending ? 'Отправляю…' : 'Отправить код на почту'}
+          </button>
+        )}
+        <button
+          type="submit"
+          className="btn-primary block mx-auto px-10 mt-7"
+          disabled={verify.isPending || !code.trim()}
+        >
+          {verify.isPending ? 'Проверяю…' : 'Подтвердить'}
+        </button>
+      </form>
+      <button
+        type="button"
+        className="mt-6 block mx-auto text-sm text-ink-muted hover:text-ink"
+        onClick={onBack}
+      >
+        ← Вернуться ко входу
+      </button>
+    </>
   )
 }
 
