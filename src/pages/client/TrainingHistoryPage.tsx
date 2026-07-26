@@ -44,7 +44,7 @@ export default function TrainingHistoryPage() {
   const runs = history?.runs ?? []
 
   return (
-    <div className="space-y-6 max-w-screen-2xl">
+    <div className="mx-auto w-full space-y-6 max-w-screen-2xl">
       <header className="flex items-baseline justify-between gap-4">
         <div>
           <h2 className="text-base font-semibold text-ink">Все запуски обучения</h2>

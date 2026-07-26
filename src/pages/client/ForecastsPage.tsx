@@ -41,7 +41,7 @@ export default function ForecastsPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl py-12">
+      <div className="mx-auto w-full max-w-6xl py-12">
         <div className="text-ink-muted">Загружаем прогнозы…</div>
       </div>
     )

@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const isFree        = usage?.plan === 'free'
 
   return (
-    <div className="max-w-6xl space-y-12">
+    <div className="mx-auto w-full max-w-6xl space-y-12">
       {/* ═══════════════════ GREETING ═══════════════════ */}
       <header>
         <div className="eyebrow">{new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
