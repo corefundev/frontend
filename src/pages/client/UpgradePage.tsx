@@ -110,7 +110,7 @@ export default function UpgradePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-10">
+    <div className="max-w-6xl space-y-10">
       <header>
         <div className="eyebrow">— ваш тариф —</div>
         <h1 className="display-lg mt-3 leading-tight">

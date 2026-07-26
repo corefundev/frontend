@@ -134,7 +134,7 @@ export default function OrdersPage() {
     : null
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-4">
+    <div className="max-w-5xl space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         {datasets && datasets.length > 0 && (
           <select

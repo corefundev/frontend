@@ -198,7 +198,7 @@ export default function TrainingPage() {
   )
 
   return (
-    <div className="mx-auto w-full space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl">
       {/* Success card lives ABOVE the launch form so the user sees
           "Обучение прошло успешно" first, then the form to start a
           new run sits beneath it — the obvious next-action place. */}

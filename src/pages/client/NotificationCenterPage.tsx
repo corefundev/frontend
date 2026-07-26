@@ -135,7 +135,7 @@ export default function NotificationCenterPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5">
+    <div className="max-w-4xl space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           {/* reference_applayout_pagetitle: топ-бар уже говорит «Уведомления» */}

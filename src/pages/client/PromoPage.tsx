@@ -225,7 +225,7 @@ export default function PromoPage() {
 
   if (!isBusiness) {
     return (
-      <div className="mx-auto w-full max-w-6xl">
+      <div className="max-w-6xl">
         <div className="relative min-h-[720px]">
           <LockOverlay
             required="business"

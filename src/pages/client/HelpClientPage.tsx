@@ -15,7 +15,7 @@ const BASE = cabPath('/app/help')
 
 function IndexView() {
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <HelpSearchBox basePath={BASE} />
       <HelpCategoriesGrid basePath={BASE} />
     </div>

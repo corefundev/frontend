@@ -238,7 +238,7 @@ export default function SettingsPage() {
   })
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-10">
+    <div className="max-w-6xl space-y-10">
       {/* ── Hero ──────────────────────────────────────────────── */}
       <header>
         <div className="eyebrow">Настройки модели</div>

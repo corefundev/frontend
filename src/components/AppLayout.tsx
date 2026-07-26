@@ -189,10 +189,11 @@ export default function AppLayout() {
       )}
 
       {/* ── Рабочая область на всю ширину ── */}
-      <main className="flex-1 overflow-auto p-6 sm:p-8">
-        {/* правка владельца: рабочая область центрирована, не прижата влево —
-            общий контейнер + mx-auto на корнях страниц */}
-        <div className="mx-auto w-full max-w-6xl">
+      <main className="flex-1 overflow-auto p-4">
+        {/* правка владельца v2 (прототип canvas): рабочая область — белый
+            ФРЕЙМ по ширине экрана, контент слева; серый фон остаётся узкой
+            рамкой вокруг */}
+        <div className="min-h-full rounded-lg border border-surface-border bg-surface-raised p-6 shadow-raised sm:p-7">
           <h1 className="mb-5 text-lg font-semibold tracking-tight text-ink">{pageTitle}</h1>
           <Outlet />
         </div>
