@@ -67,7 +67,7 @@ export default function NotificationPage() {
 
   if (!Number.isFinite(id) || notFound) {
     return (
-      <div className="max-w-4xl space-y-6">
+      <div className="mx-auto w-full max-w-4xl space-y-6">
         {backLink}
         <div className="card p-10 text-center">
           <p className="text-sm text-ink">Уведомление не найдено.</p>

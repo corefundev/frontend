@@ -112,7 +112,7 @@ export default function AppLayout() {
 
         {/* ── Полоса разделов: ВСЕ ссылки горизонтально ── */}
         <nav aria-label="Разделы кабинета"
-             className="flex items-center gap-0.5 overflow-x-auto px-3">
+             className="no-scrollbar flex items-center gap-0.5 overflow-x-auto px-3">
           {NAV.map((item) => {
             const { to, label, icon: Icon } = item
             const minPlan = item.minPlan as PlanId
@@ -169,7 +169,7 @@ export default function AppLayout() {
       {isAccount && (
         <div className="bg-surface-raised/60 border-b border-surface-border shrink-0">
           <nav aria-label="Разделы аккаунта"
-               className="flex items-center gap-0.5 overflow-x-auto px-3">
+               className="no-scrollbar flex items-center gap-0.5 overflow-x-auto px-3">
             {ACCOUNT_NAV.map((s) => (
               <NavLink
                 key={s.to}
@@ -190,10 +190,12 @@ export default function AppLayout() {
 
       {/* ── Рабочая область на всю ширину ── */}
       <main className="flex-1 overflow-auto p-6 sm:p-8">
-        {/* единый заголовок раздела (бывший топ-бар) — страницы со своими
-            hero остаются как были, безымянных страниц нет */}
-        <h1 className="mb-5 text-lg font-semibold tracking-tight text-ink">{pageTitle}</h1>
-        <Outlet />
+        {/* правка владельца: рабочая область центрирована, не прижата влево —
+            общий контейнер + mx-auto на корнях страниц */}
+        <div className="mx-auto w-full max-w-6xl">
+          <h1 className="mb-5 text-lg font-semibold tracking-tight text-ink">{pageTitle}</h1>
+          <Outlet />
+        </div>
       </main>
 
       {/* LEG-3 #431: блокирующая модалка повторного согласия */}

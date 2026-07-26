@@ -439,3 +439,8 @@ body {
 .admin-console::-webkit-scrollbar, .admin-console *::-webkit-scrollbar { display: none; }
 html.admin-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 html.admin-no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* #472 горизонтальный кабинет: полосы табов скроллятся на узких экранах,
+   но сам скроллбар не показываем (правка владельца) */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

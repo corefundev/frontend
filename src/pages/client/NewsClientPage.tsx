@@ -7,7 +7,7 @@ import { NewsFeedList, NewsPostView } from '../../features/news/NewsComponents'
 import { cabPath } from '../../shared/hostRouting'
 
 function FeedView() {
-  return <div className="max-w-3xl"><NewsFeedList basePath="/app/news" /></div>
+  return <div className="mx-auto w-full max-w-3xl"><NewsFeedList basePath="/app/news" /></div>
 }
 
 function PostView() {
