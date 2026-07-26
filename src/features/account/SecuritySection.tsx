@@ -9,12 +9,13 @@ import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { apiClient, errorMessage } from '../../shared/api/client'
 import { authApi } from '../auth/api'
 import { clientsApi } from '../clients/api'
 import { useAuthStore } from '../auth/store'
+import { twofaApi } from './twofa/api'
 
 const PROVIDER_LABEL: Record<string, string> = { google: 'Google', yandex: 'Яндекс', vk: 'VK' }
 
@@ -94,6 +95,19 @@ export default function SecuritySection() {
     ? `Изменён ${fmtTs(lastPwdChange.ts)}`
     : 'Используется для входа по email'
 
+  // 2FA-1 #587: статус двухэтапной аутентификации
+  const { data: twofa } = useQuery({
+    queryKey: ['twofa-status', clientId],
+    queryFn: () => twofaApi.status(clientId),
+    meta: { silent: true },
+    retry: 1,
+  })
+  const twofaSubtitle = twofa == null
+    ? 'Дополнительная защита входа'
+    : twofa.protected
+      ? <span className="text-moss">Включена</span>
+      : 'Отключена — рекомендуем включить'
+
   return (
     <div className="space-y-6">
       <section className="card p-6 sm:p-8">
@@ -118,6 +132,16 @@ export default function SecuritySection() {
               <button className="btn-secondary" onClick={() => setPwdOpen((v) => !v)}>
                 Изменить
               </button>
+            }
+          />
+          <SecRow
+            icon={IconShield}
+            title="Двухэтапная аутентификация"
+            subtitle={twofaSubtitle}
+            action={
+              <Link className="btn-secondary inline-block" to="/app/account/security/2fa">
+                Изменить
+              </Link>
             }
           />
           {rec?.oauth_provider && (

@@ -26,6 +26,7 @@ const SettingsPage      = lazy(() => import('./pages/client/SettingsPage'))
 const AccountPage       = lazy(() => import('./pages/client/AccountPage'))
 const AccountProfile    = lazy(() => import('./features/account/ProfileSection'))
 const AccountSecurity   = lazy(() => import('./features/account/SecuritySection'))
+const AccountTwoFA      = lazy(() => import('./features/account/twofa/TwoFAPage'))
 const AccountData       = lazy(() => import('./features/account/DataSection'))
 
 // AC-1 (#312): tiny inline placeholder for account sections whose AC issue
@@ -619,6 +620,7 @@ export default function App() {
           <Route index element={<Navigate to="profile" replace />} />
           <Route path="profile"       element={<Suspense fallback={<SuspenseFallback />}><AccountProfile /></Suspense>} />
           <Route path="security"      element={<Suspense fallback={<SuspenseFallback />}><AccountSecurity /></Suspense>} />
+          <Route path="security/2fa"  element={<Suspense fallback={<SuspenseFallback />}><AccountTwoFA /></Suspense>} />
           <Route path="subscription"  element={<AccountSectionPlaceholder />} />
           <Route path="notifications" element={<AccountSectionPlaceholder />} />
           <Route path="data"          element={<Suspense fallback={<SuspenseFallback />}><AccountData /></Suspense>} />

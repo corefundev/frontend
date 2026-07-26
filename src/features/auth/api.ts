@@ -56,6 +56,11 @@ export interface LoginVerifyResponse {
   client_id: string
   access_token: string
   token_type: 'bearer'
+  // 2FA-1 #587 slice B: при включённой 2FA пароль даёт не сессию, а
+  // challenge (5 мин) — access_token пуст, кука не ставится
+  twofa_required?: boolean
+  twofa_methods?: string[]
+  challenge?: string | null
 }
 
 export const authApi = {
@@ -89,6 +94,15 @@ export const authApi = {
       .then((r) => r.data),
   changePassword: (payload: { current_password?: string; new_password: string }) =>
     apiClient.post<{ status: string }>('/auth/password/change', payload)
+      .then((r) => r.data),
+
+  // ── 2FA-1 #587 slice B: обмен challenge + код → сессия ────────────
+  twofaVerify: (payload: { challenge: string; code: string }) =>
+    apiClient
+      .post<LoginVerifyResponse>('/auth/2fa/verify', payload, { withCredentials: true })
+      .then((r) => r.data),
+  twofaEmailCode: (payload: { challenge: string }) =>
+    apiClient.post<{ sent: boolean }>('/auth/2fa/email-code', payload)
       .then((r) => r.data),
 }
 
