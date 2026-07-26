@@ -1,18 +1,26 @@
-// Profile menu — top-right account dropdown. A compact launcher: account id,
-// a link into the Account Center (/app/account, where profile/security/data
-// live), and logout. The 152-ФЗ PII controls (export / close account) moved to
-// the account "Данные и приватность" section (AC-3 #314).
+// Profile menu — редизайн 2026-07-26 (прототип cabinet_design): аватар =
+// первые цифры ID; меню — шапка «ID · ТАРИФ» + прямые ссылки на
+// аккаунт-разделы (в горизонтальном кабинете сайдбарной подмены больше
+// нет) + выход. 152-ФЗ PII-контролы живут в «Данные и приватность».
 import { useEffect, useRef, useState } from 'react'
 import { authApi } from '../auth/api'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuthStore } from '../auth/store'
+import { useUsage } from '../plans/useUsage'
 import { cabPath } from '../../shared/hostRouting'
+
+const ITEMS = [
+  { to: '/app/account/profile',  label: 'Личная информация' },
+  { to: '/app/account/security', label: 'Безопасность' },
+  { to: '/app/settings',         label: 'Настройки модели' },
+] as const
 
 export function ProfileMenu() {
   const nav = useNavigate()
   const clientId = useAuthStore((s) => s.clientId)
   const logout = useAuthStore((s) => s.logout)
+  const { data: usage } = useUsage()
 
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -24,9 +32,19 @@ export function ProfileMenu() {
         setOpen(false)
       }
     }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [open])
+
+  const go = (to: string) => { setOpen(false); nav(cabPath(to)) }
+  // аватар: первые 2 цифры цифрового ID; фолбэк — первая буква
+  const avatarText = (clientId ?? '?').replace(/\D/g, '').slice(0, 2)
+    || (clientId ?? '?').slice(0, 1).toUpperCase()
 
   return (
     <div className="relative" ref={rootRef}>
@@ -34,29 +52,35 @@ export function ProfileMenu() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Личный кабинет"
-        className="flex h-9 w-9 items-center justify-center rounded-md text-ink-muted hover:text-ink hover:bg-surface-sunken transition-colors"
+        aria-expanded={open}
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-50 text-[13px] font-extrabold text-brand-700 transition-transform hover:scale-105"
       >
-        <IconUser className="h-5 w-5" />
+        {avatarText}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-surface-border bg-surface-raised shadow-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-surface-border">
-            <div className="text-xs text-ink-muted">Аккаунт</div>
-            <div className="font-mono text-sm text-ink truncate">{clientId ?? '—'}</div>
-            <button
-              className="mt-2 text-sm text-brand-700 hover:underline"
-              onClick={() => { setOpen(false); nav(cabPath('/app/account')) }}
-            >
-              Все настройки аккаунта →
-            </button>
+        <div className="absolute right-0 top-11 z-50 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-surface-border bg-surface-raised shadow-lg overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-surface-border text-[12px] font-bold text-ink-faint">
+            <span className="font-mono">{clientId ?? '—'}</span>
+            {usage && <span> · {usage.plan.toUpperCase()}</span>}
           </div>
 
+          {ITEMS.map((i) => (
+            <button
+              key={i.to}
+              className="block w-full text-left px-4 py-2.5 text-sm font-semibold text-ink hover:bg-surface-sunken transition-colors"
+              onClick={() => go(i.to)}
+            >
+              {i.label}
+            </button>
+          ))}
+
+          <div className="h-px bg-surface-border" />
           <button
-            className="w-full text-left px-4 py-3 text-sm text-ink-muted hover:text-ink hover:bg-surface-sunken transition-colors"
+            className="block w-full text-left px-4 py-2.5 text-sm text-ink-muted hover:text-ink hover:bg-surface-sunken transition-colors"
             onClick={async () => {
-              // #126: как в консоли — сначала отзыв на сервере (иначе
-              // гонка с интерсептором теряет Authorization), потом очистка.
+              // #126: сначала отзыв на сервере (иначе гонка с интерсептором
+              // теряет Authorization), потом локальная очистка.
               try { await authApi.logout() } catch { /* revoke best-effort */ }
               logout()
               nav('/login')
@@ -67,15 +91,5 @@ export function ProfileMenu() {
         </div>
       )}
     </div>
-  )
-}
-
-function IconUser({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
   )
 }

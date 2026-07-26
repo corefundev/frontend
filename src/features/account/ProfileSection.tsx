@@ -36,8 +36,8 @@ export default function ProfileSection() {
       <p className="text-ink-muted text-sm mb-4">Данные вашего аккаунта.</p>
 
       <div>
-        <Row label="Email" value={rec?.email ?? '—'} />
         <Row label="ID аккаунта" value={<span className="font-mono">{clientId}</span>} />
+        <Row label="Email" value={rec?.email ?? '—'} />
         <Row label="Дата регистрации" value={fmtDate(rec?.created_at)} />
         <Row
           label="Тариф"

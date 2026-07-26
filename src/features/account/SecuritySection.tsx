@@ -1,6 +1,10 @@
-// AC-2 (#313) — Безопасность. API-key rotation (one-time reveal) + login
-// history + sign-in methods (read). All from existing endpoints. OAuth
-// link/unlink is a follow-up (unlink needs a backend endpoint + last-method guard).
+// AC-2 (#313) — Безопасность. Редизайн по референсу владельца (2026-07-25):
+// группы «Данные аккаунта» / «Способ входа в аккаунт» / «API-доступ», строки
+// «иконка-кружок · заголовок + подзаголовок · кнопка справа». Состав — только
+// РЕАЛЬНЫЕ механики: смена пароля (AUTH-3), ротация API-ключа, история
+// событий. Телефон/2FA/восстановление по документам из референса не
+// портированы — таких механик нет, мёртвые кнопки не рисуем (смена
+// email = AC-4 #315, появится строкой при реализации).
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -29,9 +33,48 @@ function fmtTs(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('ru-RU', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
+// ── строка референса: кружок-иконка · текст · действие справа ────────────
+function SecRow({ icon, title, subtitle, action }: {
+  icon: React.ReactNode
+  title: string
+  subtitle: React.ReactNode
+  action?: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-4 py-3">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-ink-muted">
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-ink">{title}</div>
+        <div className="text-sm text-ink-muted truncate">{subtitle}</div>
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  )
+}
+
+function GroupTitle({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-base font-semibold text-ink mb-1">{children}</h3>
+}
+
+const IconMail = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+)
+const IconLock = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+)
+const IconShield = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/></svg>
+)
+const IconKey = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/></svg>
+)
+
 export default function SecuritySection() {
   const clientId = useAuthStore((s) => s.clientId)!
   const [newKey, setNewKey] = useState<string | null>(null)
+  const [pwdOpen, setPwdOpen] = useState(false)
 
   const { data: rec } = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsApi.get(clientId) })
   const { data: audit } = useQuery({
@@ -45,34 +88,62 @@ export default function SecuritySection() {
     onError: (e) => toast.error(errorMessage(e, 'Не удалось обновить ключ')),
   })
 
+  // подзаголовок строки «Пароль»: дата последней смены из журнала событий
+  const lastPwdChange = audit?.events?.find((e) => e.event_type === 'password_change')
+  const pwdSubtitle = lastPwdChange
+    ? `Изменён ${fmtTs(lastPwdChange.ts)}`
+    : 'Используется для входа по email'
+
   return (
     <div className="space-y-6">
-      {/* Sign-in methods */}
       <section className="card p-6 sm:p-8">
-        <div className="text-sm text-ink-muted mb-2">Способы входа</div>
-        <ul className="text-sm text-ink space-y-1">
-          <li>• Email + пароль{rec?.email ? ` — ${rec.email}` : ''}</li>
-          {rec?.oauth_provider && <li>• {PROVIDER_LABEL[rec.oauth_provider] ?? rec.oauth_provider}</li>}
-        </ul>
+        <GroupTitle>Данные аккаунта</GroupTitle>
+        <div className="divide-y divide-surface-border">
+          <SecRow
+            icon={IconMail}
+            title="Электронная почта"
+            subtitle={rec?.email ?? '—'}
+          />
+        </div>
       </section>
 
-      {/* AUTH-3 #447: смена пароля. После успеха сервер отзывает ВСЕ
-          сессии (включая текущую) — честно разлогиниваем и ведём на вход. */}
-      <PasswordChangeCard />
-
-      {/* API key */}
       <section className="card p-6 sm:p-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="font-medium text-ink">API-ключ</div>
-            <p className="text-sm text-ink-muted mt-1 max-w-md">
-              Для интеграций (1С и др.). При обновлении старый ключ сразу
-              перестаёт работать.
-            </p>
-          </div>
-          <button className="btn-secondary shrink-0" onClick={() => rotate()} disabled={rotating}>
-            {rotating ? 'Обновляю…' : 'Обновить ключ'}
-          </button>
+        <GroupTitle>Способ входа в аккаунт</GroupTitle>
+        <div className="divide-y divide-surface-border">
+          <SecRow
+            icon={IconLock}
+            title="Пароль"
+            subtitle={pwdSubtitle}
+            action={
+              <button className="btn-secondary" onClick={() => setPwdOpen((v) => !v)}>
+                Изменить
+              </button>
+            }
+          />
+          {rec?.oauth_provider && (
+            <SecRow
+              icon={IconShield}
+              title={`Вход через ${PROVIDER_LABEL[rec.oauth_provider] ?? rec.oauth_provider}`}
+              subtitle={<span className="text-moss">Подключён</span>}
+            />
+          )}
+        </div>
+        {pwdOpen && <PasswordChangeForm />}
+      </section>
+
+      <section className="card p-6 sm:p-8">
+        <GroupTitle>API-доступ</GroupTitle>
+        <div className="divide-y divide-surface-border">
+          <SecRow
+            icon={IconKey}
+            title="API-ключ"
+            subtitle="Для интеграций (1С и др.). Старый ключ перестаёт работать сразу"
+            action={
+              <button className="btn-secondary" onClick={() => rotate()} disabled={rotating}>
+                {rotating ? 'Обновляю…' : 'Обновить'}
+              </button>
+            }
+          />
         </div>
         {newKey && (
           <div className="mt-4 rounded-lg border border-brand-200 bg-brand-50 p-4">
@@ -125,7 +196,7 @@ export default function SecuritySection() {
 }
 
 
-function PasswordChangeCard() {
+function PasswordChangeForm() {
   const nav = useNavigate()
   const logout = useAuthStore((s) => s.logout)
   const [current, setCurrent] = useState('')
@@ -147,9 +218,8 @@ function PasswordChangeCard() {
   })
 
   return (
-    <section className="card p-6 sm:p-8">
-      <div className="font-medium text-ink">Пароль</div>
-      <p className="text-xs text-ink-muted mt-1 mb-4">
+    <div className="mt-4 border-t border-surface-border pt-4">
+      <p className="text-xs text-ink-muted mb-4">
         После смены пароля все активные сессии будут завершены — вход с новым паролем.
       </p>
       <form
@@ -184,6 +254,6 @@ function PasswordChangeCard() {
           {isPending ? 'Сохранение…' : 'Сменить пароль'}
         </button>
       </form>
-    </section>
+    </div>
   )
 }
