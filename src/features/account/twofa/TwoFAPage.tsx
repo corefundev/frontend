@@ -24,9 +24,10 @@ const IconShieldCheck = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>
 )
 
-// Прямоугольный переключатель по референсу владельца (2026-07-28,
-// codepen MvqpPr, нижний правый): зелёный трек + галочка при включении,
-// серый трек + крестик при выключении, прямоугольная шайба.
+// Прямоугольный переключатель — точное воспроизведение референса
+// владельца (2026-07-28, codepen MvqpPr, нижний правый). Цвета
+// сэмплированы из референс-скриншотов: вкл #68D78E + белая галочка,
+// выкл #3C5D7C + белый крестик, шайба #E1EAEC в обоих состояниях.
 function Toggle({ on, busy, label, onClick }: {
   on: boolean
   busy?: boolean
@@ -41,28 +42,28 @@ function Toggle({ on, busy, label, onClick }: {
       aria-label={label}
       disabled={busy}
       onClick={onClick}
-      className={`relative mt-1 h-7 w-[52px] shrink-0 rounded-md transition-colors disabled:opacity-60 ${
-        on ? 'bg-success' : 'bg-surface-sunken border border-surface-border'
+      className={`relative mt-1 h-7 w-[52px] shrink-0 rounded transition-colors disabled:opacity-60 ${
+        on ? 'bg-[#68D78E]' : 'bg-[#3C5D7C]'
       }`}
     >
       <svg
         aria-hidden
         className={`absolute left-[7px] top-1/2 -translate-y-1/2 transition-opacity ${on ? 'opacity-100' : 'opacity-0'}`}
-        width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff"
-        strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"
+        width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff"
+        strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
       >
         <path d="m4 12 5 5L20 6" />
       </svg>
       <svg
         aria-hidden
-        className={`absolute right-[7px] top-1/2 -translate-y-1/2 text-ink-faint transition-opacity ${on ? 'opacity-0' : 'opacity-100'}`}
-        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        strokeWidth="3" strokeLinecap="round"
+        className={`absolute right-[7px] top-1/2 -translate-y-1/2 transition-opacity ${on ? 'opacity-0' : 'opacity-100'}`}
+        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff"
+        strokeWidth="2.6" strokeLinecap="round"
       >
         <path d="M6 6l12 12M18 6L6 18" />
       </svg>
       <span
-        className={`absolute top-[3px] h-[22px] w-[22px] rounded bg-slate-100 shadow transition-all ${
+        className={`absolute top-[3px] h-[22px] w-[22px] rounded bg-[#E1EAEC] transition-all ${
           on ? 'left-[27px]' : 'left-[3px]'
         }`}
       />
