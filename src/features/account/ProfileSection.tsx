@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { clientsApi } from '../clients/api'
 import { useUsage } from '../plans/useUsage'
 import { useAuthStore } from '../auth/store'
+import { twofaApi } from './twofa/api'
 
 const PROVIDER_LABEL: Record<string, string> = { google: 'Google', yandex: 'Яндекс', vk: 'VK' }
 
@@ -31,6 +32,23 @@ export default function ProfileSection() {
   })
   const { data: usage } = useUsage()
 
+  // #472: честный «Способ входа» — пароль/OAuth из записи + признак 2FA
+  const { data: twofa } = useQuery({
+    queryKey: ['twofa-status', clientId],
+    queryFn: () => twofaApi.status(clientId),
+    meta: { silent: true },
+    retry: 1,
+  })
+  const loginMethod = (() => {
+    if (!rec) return '—'
+    const base = rec.oauth_provider
+      ? `Email + ${PROVIDER_LABEL[rec.oauth_provider] ?? rec.oauth_provider}`
+      : rec.has_password
+        ? 'Пароль'
+        : 'Email (код на почту)'
+    return twofa?.protected ? `${base} · двухэтапная аутентификация` : base
+  })()
+
   return (
     <section className="card p-6 sm:p-8">
       <p className="text-ink-muted text-sm mb-4">Данные вашего аккаунта.</p>
@@ -43,14 +61,7 @@ export default function ProfileSection() {
           label="Тариф"
           value={usage ? `${usage.plan === 'free' ? 'Free' : usage.plan === 'start' ? 'Start' : 'Business'} · ${usage.model_display_name}` : '—'}
         />
-        <Row
-          label="Способ входа"
-          value={
-            rec?.oauth_provider
-              ? `Email + ${PROVIDER_LABEL[rec.oauth_provider] ?? rec.oauth_provider}`
-              : 'Email (код на почту)'
-          }
-        />
+        <Row label="Способ входа" value={loginMethod} />
       </div>
     </section>
   )

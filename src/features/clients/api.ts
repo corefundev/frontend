@@ -22,6 +22,8 @@ export interface ClientRecord {
   email?: string | null
   email_verified_at?: string | null
   oauth_provider?: string | null
+  // производный флаг (#472): у аккаунта задан пароль (сам хеш API не отдаёт)
+  has_password?: boolean
   // ADM-10 (#278): NULL = active; timestamp = suspended since then.
   suspended_at?: string | null
   training_runs_this_month: number
