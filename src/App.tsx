@@ -27,6 +27,8 @@ const AccountPage       = lazy(() => import('./pages/client/AccountPage'))
 const AccountProfile    = lazy(() => import('./features/account/ProfileSection'))
 const AccountSecurity   = lazy(() => import('./features/account/SecuritySection'))
 const AccountTwoFA      = lazy(() => import('./features/account/twofa/TwoFAPage'))
+const AccountAuthLog    = lazy(() => import('./features/account/AuthLogSection'))
+const AccountIntegration = lazy(() => import('./features/account/IntegrationSection'))
 const AccountData       = lazy(() => import('./features/account/DataSection'))
 
 // AC-1 (#312): tiny inline placeholder for account sections whose AC issue
@@ -621,9 +623,11 @@ export default function App() {
           <Route path="profile"       element={<Suspense fallback={<SuspenseFallback />}><AccountProfile /></Suspense>} />
           <Route path="security"      element={<Suspense fallback={<SuspenseFallback />}><AccountSecurity /></Suspense>} />
           <Route path="security/2fa"  element={<Suspense fallback={<SuspenseFallback />}><AccountTwoFA /></Suspense>} />
+          <Route path="auth-log"      element={<Suspense fallback={<SuspenseFallback />}><AccountAuthLog /></Suspense>} />
           <Route path="subscription"  element={<AccountSectionPlaceholder />} />
           <Route path="notifications" element={<AccountSectionPlaceholder />} />
           <Route path="data"          element={<Suspense fallback={<SuspenseFallback />}><AccountData /></Suspense>} />
+          <Route path="integration"   element={<Suspense fallback={<SuspenseFallback />}><AccountIntegration /></Suspense>} />
         </Route>
       </Route>
 

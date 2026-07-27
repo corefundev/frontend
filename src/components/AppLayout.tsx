@@ -35,9 +35,11 @@ const NAV = [
 const ACCOUNT_NAV = [
   { to: 'account/profile',       label: 'Личная информация' },
   { to: 'account/security',      label: 'Безопасность' },
+  { to: 'account/auth-log',      label: 'Журнал авторизаций' },
   { to: 'account/subscription',  label: 'Подписка' },
   { to: 'account/notifications', label: 'Уведомления' },
   { to: 'account/data',          label: 'Данные и приватность' },
+  { to: 'account/integration',   label: 'Интеграция' },
 ] as const
 
 const PLAN_RANK: Record<PlanId, number> = { free: 0, start: 1, business: 2 }
