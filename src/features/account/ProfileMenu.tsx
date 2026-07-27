@@ -10,10 +10,12 @@ import { useAuthStore } from '../auth/store'
 import { useUsage } from '../plans/useUsage'
 import { cabPath } from '../../shared/hostRouting'
 
+// Состав меню — правки владельца 2026-07-28: ID (шапка), новости,
+// база знаний, настройки личного кабинета, выход.
 const ITEMS = [
-  { to: '/app/account/profile',  label: 'Личная информация' },
-  { to: '/app/account/security', label: 'Безопасность' },
-  { to: '/app/settings',         label: 'Настройки модели' },
+  { to: '/app/news',            label: 'Новости' },
+  { to: '/app/help',            label: 'База знаний' },
+  { to: '/app/account/profile', label: 'Настройки' },
 ] as const
 
 export function ProfileMenu() {
