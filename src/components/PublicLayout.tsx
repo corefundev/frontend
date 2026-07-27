@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import { appUrl, isExternal, mainUrl, sectionUrl } from '../shared/hostRouting'
 import { ReactNode } from 'react'
 import { useAuthStore } from '../features/auth/store'
+import { hasSessionHint } from '../features/auth/sessionHint'
 
 interface Props {
   children: ReactNode
@@ -37,7 +38,9 @@ function HostLink({ to, className, children, ...rest }: {
 }
 
 export default function PublicLayout({ children }: Props) {
-  const isAuthed = useAuthStore((s) => s.isAuthenticated())
+  // #472: LS per-origin — на апексе копия сессии кабинета отсутствует
+  // или протухает; кросс-контурный хинт-кука закрывает разрыв
+  const isAuthed = useAuthStore((s) => s.isAuthenticated()) || hasSessionHint()
   return (
     <div className="min-h-screen bg-white text-ink flex flex-col">
       <PublicHeader isAuthed={isAuthed} />

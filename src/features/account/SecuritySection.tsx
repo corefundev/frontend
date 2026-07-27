@@ -69,8 +69,9 @@ export default function SecuritySection() {
         />
       </div>
 
+      {/* правка владельца: без разделительных линий между строками группы */}
       <h3 className="text-base font-semibold text-ink mb-1 mt-6">Способ входа в аккаунт</h3>
-      <div className="divide-y divide-surface-border">
+      <div>
         <SecRow
           icon={IconLock}
           title="Пароль"
