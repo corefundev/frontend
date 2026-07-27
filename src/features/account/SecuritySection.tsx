@@ -1,6 +1,6 @@
 // AC-2 (#313) — Безопасность. Правки владельца 2026-07-28 (#472): один
-// общий блок строк без групповых карточек; журнал входов уехал в раздел
-// «Журнал авторизаций», API-ключ — в раздел «Интеграция».
+// общий лист (без карточки на каждую группу), заголовки групп остаются;
+// журнал входов — раздел «Журнал авторизаций», API-ключ — «Интеграция».
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -56,14 +56,21 @@ export default function SecuritySection() {
       ? <span className="text-moss">Включена</span>
       : 'Отключена — рекомендуем включить'
 
+  // правка владельца 2026-07-28: без отдельных карточек-блоков — один
+  // общий лист, но заголовки групп остаются (референс Т-Банка)
   return (
     <section className="card p-6 sm:p-8">
+      <h3 className="text-base font-semibold text-ink mb-1">Данные аккаунта</h3>
       <div className="divide-y divide-surface-border">
         <SecRow
           icon={IconMail}
           title="Электронная почта"
           subtitle={rec?.email ?? '—'}
         />
+      </div>
+
+      <h3 className="text-base font-semibold text-ink mb-1 mt-6">Способ входа в аккаунт</h3>
+      <div className="divide-y divide-surface-border">
         <SecRow
           icon={IconLock}
           title="Пароль"

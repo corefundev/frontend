@@ -1,13 +1,12 @@
 // Profile menu — редизайн 2026-07-26 (прототип cabinet_design): аватар =
-// первые цифры ID; меню — шапка «ID · ТАРИФ» + прямые ссылки на
-// аккаунт-разделы (в горизонтальном кабинете сайдбарной подмены больше
-// нет) + выход. 152-ФЗ PII-контролы живут в «Данные и приватность».
+// первые цифры ID; меню — шапка «ID: XXXXXX» + новости / база знаний /
+// настройки кабинета + выход (правки владельца 2026-07-28).
+// 152-ФЗ PII-контролы живут в «Данные и приватность».
 import { useEffect, useRef, useState } from 'react'
 import { authApi } from '../auth/api'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuthStore } from '../auth/store'
-import { useUsage } from '../plans/useUsage'
 import { cabPath } from '../../shared/hostRouting'
 
 // Состав меню — правки владельца 2026-07-28: ID (шапка), новости,
@@ -22,7 +21,6 @@ export function ProfileMenu() {
   const nav = useNavigate()
   const clientId = useAuthStore((s) => s.clientId)
   const logout = useAuthStore((s) => s.logout)
-  const { data: usage } = useUsage()
 
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -63,8 +61,7 @@ export function ProfileMenu() {
       {open && (
         <div className="absolute right-0 top-11 z-50 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-surface-border bg-surface-raised shadow-lg overflow-hidden">
           <div className="px-4 py-2.5 border-b border-surface-border text-[12px] font-bold text-ink-faint">
-            <span className="font-mono">{clientId ?? '—'}</span>
-            {usage && <span> · {usage.plan.toUpperCase()}</span>}
+            ID: <span className="font-mono">{clientId ?? '—'}</span>
           </div>
 
           {ITEMS.map((i) => (
