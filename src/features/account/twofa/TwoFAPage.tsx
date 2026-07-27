@@ -28,6 +28,8 @@ const IconShieldCheck = (
 // правый), масштаб 80×40 → 56×28: радиус 2px, шайба 85% высоты с
 // отступом 2px, фирменные SVG-иконки пена белой заливкой ПОД шайбой,
 // анимация slide+scale (.35s) при переключении. Цвета — сэмпл владельца.
+// rounded-[2px] — санкционированное владельцем исключение из referest-шкалы
+// (в пене border-radius: 2px; rounded-sm у нас переопределён на 4px).
 function Toggle({ on, busy, label, onClick }: {
   on: boolean
   busy?: boolean
@@ -42,7 +44,7 @@ function Toggle({ on, busy, label, onClick }: {
       aria-label={label}
       disabled={busy}
       onClick={onClick}
-      className={`relative mt-1 h-7 w-14 shrink-0 rounded-sm transition-colors duration-200 disabled:opacity-60 ${
+      className={`relative mt-1 h-7 w-14 shrink-0 rounded-[2px] transition-colors duration-200 disabled:opacity-60 ${
         on ? 'bg-[#68D78E]' : 'bg-[#3C5D7C]'
       }`}
     >
@@ -65,7 +67,7 @@ function Toggle({ on, busy, label, onClick }: {
         <path fillRule="evenodd" clipRule="evenodd" d="M131.804 106.49l75.936-75.935c6.99-6.99 6.99-18.323 0-25.312-6.99-6.99-18.322-6.99-25.312 0L106.49 81.18 30.555 5.242c-6.99-6.99-18.322-6.99-25.312 0-6.99 6.99-6.99 18.323 0 25.312L81.18 106.49 5.24 182.427c-6.99 6.99-6.99 18.323 0 25.312 6.99 6.99 18.322 6.99 25.312 0L106.49 131.8l75.938 75.937c6.99 6.99 18.322 6.99 25.312 0 6.99-6.99 6.99-18.323 0-25.313l-75.936-75.936z" />
       </svg>
       <span
-        className={`absolute top-[2px] z-[2] h-6 w-6 rounded-sm bg-[#E1EAEC] transition-all duration-300 ${
+        className={`absolute top-[2px] z-[2] h-6 w-6 rounded-[2px] bg-[#E1EAEC] transition-all duration-300 ${
           on ? 'left-[calc(100%-26px)]' : 'left-[2px]'
         }`}
       />
