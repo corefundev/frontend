@@ -58,7 +58,7 @@ function Toggle({ on, busy, label, onClick }: {
       <svg
         aria-hidden
         viewBox="0 0 212.982 212.982"
-        className={`absolute right-[10%] top-1/2 z-[1] w-[11px] -translate-y-1/2 fill-white transition-all duration-300 ${
+        className={`absolute right-[19%] top-1/2 z-[1] w-[11px] -translate-y-1/2 fill-white transition-all duration-300 ${
           on ? '-translate-x-[190%] scale-0' : 'translate-x-0 scale-100'
         }`}
       >
