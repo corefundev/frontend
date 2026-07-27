@@ -24,10 +24,10 @@ const IconShieldCheck = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>
 )
 
-// Прямоугольный переключатель — точное воспроизведение референса
-// владельца (2026-07-28, codepen MvqpPr, нижний правый). Цвета
-// сэмплированы из референс-скриншотов: вкл #68D78E + белая галочка,
-// выкл #3C5D7C + белый крестик, шайба #E1EAEC в обоих состояниях.
+// Точный порт switch_4 из референса владельца (codepen MvqpPr, нижний
+// правый), масштаб 80×40 → 56×28: радиус 2px, шайба 85% высоты с
+// отступом 2px, фирменные SVG-иконки пена белой заливкой ПОД шайбой,
+// анимация slide+scale (.35s) при переключении. Цвета — сэмпл владельца.
 function Toggle({ on, busy, label, onClick }: {
   on: boolean
   busy?: boolean
@@ -42,29 +42,31 @@ function Toggle({ on, busy, label, onClick }: {
       aria-label={label}
       disabled={busy}
       onClick={onClick}
-      className={`relative mt-1 h-7 w-[52px] shrink-0 rounded transition-colors disabled:opacity-60 ${
+      className={`relative mt-1 h-7 w-14 shrink-0 rounded-sm transition-colors duration-200 disabled:opacity-60 ${
         on ? 'bg-[#68D78E]' : 'bg-[#3C5D7C]'
       }`}
     >
       <svg
         aria-hidden
-        className={`absolute left-[7px] top-1/2 -translate-y-1/2 transition-opacity ${on ? 'opacity-100' : 'opacity-0'}`}
-        width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff"
-        strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+        viewBox="0 0 426.67 426.67"
+        className={`absolute left-[18%] top-1/2 z-[1] w-[13px] -translate-y-1/2 fill-white transition-all duration-300 ${
+          on ? 'translate-x-0 scale-100' : 'translate-x-[190%] scale-0'
+        }`}
       >
-        <path d="m4 12 5 5L20 6" />
+        <path d="M153.504 366.84c-8.657 0-17.323-3.303-23.927-9.912L9.914 237.265c-13.218-13.218-13.218-34.645 0-47.863 13.218-13.218 34.645-13.218 47.863 0l95.727 95.727 215.39-215.387c13.218-13.214 34.65-13.218 47.86 0 13.22 13.218 13.22 34.65 0 47.863L177.435 356.928c-6.61 6.605-15.27 9.91-23.932 9.91z" />
       </svg>
       <svg
         aria-hidden
-        className={`absolute right-[7px] top-1/2 -translate-y-1/2 transition-opacity ${on ? 'opacity-0' : 'opacity-100'}`}
-        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff"
-        strokeWidth="2.6" strokeLinecap="round"
+        viewBox="0 0 212.982 212.982"
+        className={`absolute right-[10%] top-1/2 z-[1] w-[11px] -translate-y-1/2 fill-white transition-all duration-300 ${
+          on ? '-translate-x-[190%] scale-0' : 'translate-x-0 scale-100'
+        }`}
       >
-        <path d="M6 6l12 12M18 6L6 18" />
+        <path fillRule="evenodd" clipRule="evenodd" d="M131.804 106.49l75.936-75.935c6.99-6.99 6.99-18.323 0-25.312-6.99-6.99-18.322-6.99-25.312 0L106.49 81.18 30.555 5.242c-6.99-6.99-18.322-6.99-25.312 0-6.99 6.99-6.99 18.323 0 25.312L81.18 106.49 5.24 182.427c-6.99 6.99-6.99 18.323 0 25.312 6.99 6.99 18.322 6.99 25.312 0L106.49 131.8l75.938 75.937c6.99 6.99 18.322 6.99 25.312 0 6.99-6.99 6.99-18.323 0-25.313l-75.936-75.936z" />
       </svg>
       <span
-        className={`absolute top-[3px] h-[22px] w-[22px] rounded bg-[#E1EAEC] transition-all ${
-          on ? 'left-[27px]' : 'left-[3px]'
+        className={`absolute top-[2px] z-[2] h-6 w-6 rounded-sm bg-[#E1EAEC] transition-all duration-300 ${
+          on ? 'left-[calc(100%-26px)]' : 'left-[2px]'
         }`}
       />
     </button>
