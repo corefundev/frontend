@@ -9,6 +9,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+import { clearSessionHint, setSessionHint } from './sessionHint'
+
 export type Role = 'forecast' | 'admin'
 
 interface JwtPayload {
@@ -65,9 +67,14 @@ export const useAuthStore = create<AuthState>()(
         )
         const expiresAt = typeof p?.exp === 'number' ? p.exp * 1000 : null
         set({ token, clientId, roles, expiresAt })
+        // кросс-контурный хинт для публичного хедера («В кабинет»)
+        setSessionHint()
       },
 
-      logout: () => set({ token: null, clientId: null, roles: [], expiresAt: null }),
+      logout: () => {
+        clearSessionHint()
+        set({ token: null, clientId: null, roles: [], expiresAt: null })
+      },
 
       isAuthenticated: () => {
         const { token, expiresAt } = get()
