@@ -203,6 +203,8 @@ export default function DataPage() {
   })
 
   const history = uploads.filter((u) => {
+    // #570 PC-3: календарные загрузки живут в секции «Календарь акций»
+    if (u.kind === 'promo_calendar') return false
     if (dsFilter !== 'all' && (u.dataset_id ?? '') !== dsFilter) return false
     if (stFilter === 'ok' && u.status !== 'processed') return false
     if (stFilter === 'error'

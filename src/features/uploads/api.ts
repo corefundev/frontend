@@ -22,6 +22,9 @@ export interface UploadRecord {
   size_bytes: number
   sha256: string
   status: UploadStatus
+  // #570 PC-3: 'sales' | 'promo_calendar' — календарные загрузки в общих
+  // списках скрываются (живут в секции «Календарь акций»)
+  kind?: string
   scan_result: string | null
   error_message: string | null
   processed_key: string | null
