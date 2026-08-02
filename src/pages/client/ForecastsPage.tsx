@@ -13,6 +13,7 @@ import {
   type ForecastsResponse,
 } from '../../features/forecasts/api'
 import { ForecastChart } from '../../features/forecasts/ForecastChart'
+import { PromoBadge } from '../../features/promo/PromoBadge'
 import { useUsage } from '../../features/plans/useUsage'
 import {
   LockOverlay,
@@ -239,6 +240,7 @@ function ForecastViewer({
                 <div>
                   <div className="eyebrow">Прогноз для</div>
                   <div className="font-mono text-2xl mt-1">{selected.sku}</div>
+                  <PromoBadge clientId={clientId} sku={selected.sku} />
                   <div className="eyebrow mt-3">на ближайшие</div>
                   <div className="num font-display text-brand-700 text-3xl mt-0.5">
                     {data.horizon_days} <span className="text-ink-subtle text-lg">дн.</span>

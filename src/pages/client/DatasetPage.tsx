@@ -19,6 +19,7 @@ import {
   type UploadStatus,
 } from '../../features/uploads/api'
 import { cooldownEta, errorMessage, trainingDenial } from '../../shared/api/client'
+import { PromoCalendarSection } from '../../features/promo/PromoCalendarSection'
 import { datasetBadge, fmtDate, fmtDateTime, fmtInt, fmtPeriod } from '../../features/datasets/format'
 import { cabPath } from '../../shared/hostRouting'
 
@@ -400,6 +401,14 @@ export default function DatasetPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Календарь акций (#570 PC-3) ── */}
+      <PromoCalendarSection
+        clientId={clientId}
+        datasetId={datasetId}
+        onTrain={() => train.mutate()}
+        trainPending={train.isPending}
+      />
 
       {/* история этого датасета — время последней загрузки для контекста */}
       {pendingUploads.length > 0 && (
