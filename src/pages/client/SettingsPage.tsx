@@ -581,9 +581,15 @@ function SettingsContent({
 function NotificationsBlock() {
   const clientId = useAuthStore((s) => s.clientId)!
   const qc = useQueryClient()
+  // Light polling so the status flips to "Привязано" within a few
+  // seconds after the user finishes the bot dialog. #600: штатный
+  // refetchInterval + silent вместо самодельного setInterval+invalidate —
+  // тот дёргал PjaxLoader-полосу каждые 5с, пока Telegram не привязан.
   const { data: status, isLoading } = useQuery({
     queryKey: ['telegram-status', clientId],
     queryFn:  () => notificationsApi.getTelegramStatus(clientId),
+    meta: { silent: true },
+    refetchInterval: (q) => (q.state.data?.linked ? false : 5000),
   })
 
   const linkMut = useMutation({
@@ -613,17 +619,6 @@ function NotificationsBlock() {
     },
     onError: (e) => toast.error(errorMessage(e, 'Не удалось отвязать')),
   })
-
-  // Light polling so the status flips to "Привязано" within a few
-  // seconds after the user finishes the bot dialog.
-  useEffect(() => {
-    if (status?.linked) return
-    const id = setInterval(
-      () => qc.invalidateQueries({ queryKey: ['telegram-status', clientId] }),
-      5000,
-    )
-    return () => clearInterval(id)
-  }, [status?.linked, clientId, qc])
 
   return (
     <div className="space-y-4">
