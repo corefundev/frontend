@@ -6,6 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
 import { Link, useNavigate } from 'react-router-dom'
+import { cabPath } from '../../shared/hostRouting'
 
 import { apiClient, errorMessage } from '../../shared/api/client'
 import { authApi } from '../auth/api'
@@ -87,7 +88,7 @@ export default function SecuritySection() {
           title="Двухэтапная аутентификация"
           subtitle={twofaSubtitle}
           action={
-            <Link className="btn-secondary inline-block" to="/app/account/security/2fa">
+            <Link className="btn-secondary inline-block" to={cabPath('/app/account/security/2fa')}>
               Изменить
             </Link>
           }

@@ -9,7 +9,7 @@ import AuthShell from '../components/AuthShell'
 import { PasswordInput } from '../components/PasswordInput'
 import { SsoBadges, SsoDivider } from '../components/SsoBadges'
 import { errorMessage, tryRefreshToken } from '../shared/api/client'
-import { adminUrl, appUrl } from '../shared/hostRouting'
+import { cabPath, adminUrl, appUrl } from '../shared/hostRouting'
 
 // ─────────────────────────────────────────────────────────────────────────
 //  LoginPage — AUTH-3 #447: классический вход email + пароль.
@@ -83,7 +83,7 @@ export default function LoginPage() {
       window.location.replace(target)
       return
     }
-    nav('/app', { replace: true })
+    nav(cabPath('/app'), { replace: true })
   }
 
   const login = useMutation({

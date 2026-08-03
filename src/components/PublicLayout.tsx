@@ -20,17 +20,17 @@ interface Props {
 // MIGR-1 (#424): ссылка, живущая и на сервис-поддомене (абсолютной), и на
 // основном домене (роутерной). Секции news/help всегда получают
 // КАНОНИЧЕСКИЙ адрес (поддомен на новом бренде).
-function HostLink({ to, className, children, ...rest }: {
-  to: string
+function HostLink({ path, className, children, ...rest }: {
+  path: string
   className?: string
   children: React.ReactNode
 } & Record<string, unknown>) {
-  const url = to === '/news' ? sectionUrl('news')
-    : to === '/help' ? sectionUrl('help')
+  const url = path === '/news' ? sectionUrl('news')
+    : path === '/help' ? sectionUrl('help')
     // APP-1 (#495): кабинет живёт на app-хосте — кнопка «В кабинет»
     // ведёт сразу на его origin (без двойного прыжка через guard).
-    : to === '/app' || to.startsWith('/app/') ? appUrl(to)
-    : mainUrl(to)
+    : path === '/app' || path.startsWith('/app/') ? appUrl(path)
+    : mainUrl(path)
   if (isExternal(url)) {
     return <a href={url} className={className} {...rest}>{children}</a>
   }
@@ -63,7 +63,7 @@ export function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-ink/10">
       <div className="mx-auto max-w-7xl px-5 lg:px-8 h-16 flex items-center justify-between text-sm leading-5 text-[#020817]">
-        <HostLink to="/" className="flex items-center gap-2.5">
+        <HostLink path="/" className="flex items-center gap-2.5">
           <div className="h-8 w-8 rounded bg-brand-500 grid place-items-center text-white font-bold text-sm">
             S
           </div>
@@ -72,19 +72,19 @@ export function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
 
         <nav className="hidden md:flex items-center gap-1">
           <HostLink
-            to="/#benefits"
+            path="/#benefits"
             className="px-3 py-2 rounded hover:bg-[#f1f5f9] transition-colors"
           >
             Возможности
           </HostLink>
           <HostLink
-            to="/#audience"
+            path="/#audience"
             className="px-3 py-2 rounded hover:bg-[#f1f5f9] transition-colors"
           >
             Для кого
           </HostLink>
           <HostLink
-            to="/plans"
+            path="/plans"
             className="px-3 py-2 rounded hover:bg-[#f1f5f9] transition-colors"
           >
             Тарифы
@@ -94,7 +94,7 @@ export function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
         <div className="flex items-center gap-2">
           {isAuthed ? (
             <HostLink
-              to="/app"
+              path="/app"
               className="inline-flex items-center px-4 py-2 rounded text-sm font-medium bg-[#0f172a] text-[#f8fafc] hover:bg-[#020817] transition-colors"
             >
               В кабинет →
@@ -102,13 +102,13 @@ export function PublicHeader({ isAuthed }: { isAuthed: boolean }) {
           ) : (
             <>
               <HostLink
-                to="/login"
+                path="/login"
                 className="hidden sm:inline-flex px-3 py-2 rounded text-sm hover:bg-[#f1f5f9] transition-colors"
               >
                 Войти
               </HostLink>
               <HostLink
-                to="/signup"
+                path="/signup"
                 className="inline-flex items-center px-4 py-2 rounded text-sm font-medium bg-[#0f172a] text-[#f8fafc] hover:bg-[#020817] transition-colors"
               >
                 Регистрация
@@ -140,7 +140,7 @@ function PublicFooter() {
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-20">
           {/* ── бренд ── */}
           <div className="max-w-sm shrink-0">
-            <HostLink to="/" className="flex items-center gap-2.5">
+            <HostLink path="/" className="flex items-center gap-2.5">
               <div className="h-8 w-8 rounded bg-brand-500 grid place-items-center text-white font-bold text-sm">
                 S
               </div>
@@ -209,8 +209,8 @@ function PublicFooter() {
             © {new Date().getFullYear()} Sprosly. Все права защищены.
           </p>
           <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <HostLink to="/terms"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Пользовательское соглашение</HostLink>
-            <HostLink to="/privacy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Политика конфиденциальности</HostLink>
+            <HostLink path="/terms"   className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Пользовательское соглашение</HostLink>
+            <HostLink path="/privacy" className="text-sm text-[#64748B] hover:text-[#020817] transition-colors">Политика конфиденциальности</HostLink>
           </nav>
         </div>
       </div>
@@ -255,7 +255,7 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
           ) : (
             <li key={l.label}>
               <HostLink
-                to={l.href!}
+                path={l.href!}
                 className="text-sm text-[#64748B] hover:text-[#020817] transition-colors"
               >
                 {l.label}

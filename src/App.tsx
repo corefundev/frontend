@@ -657,12 +657,12 @@ export default function App() {
       <Route path="/app/admin/notifications" element={<Navigate to="/admin/notifications" replace />} />
 
       {/* Старые ссылки вида /uploads, /forecasts и т.п. редиректим на /app/* */}
-      <Route path="/uploads"        element={<Navigate to="/app/data"           replace />} />
-      <Route path="/training"       element={<Navigate to="/app/training"       replace />} />
-      <Route path="/forecasts"      element={<Navigate to="/app/forecasts"      replace />} />
-      <Route path="/scenarios"      element={<Navigate to="/app/scenarios"      replace />} />
-      <Route path="/promo"          element={<Navigate to="/app/promo"          replace />} />
-      <Route path="/settings"       element={<Navigate to="/app/settings"       replace />} />
+      <Route path="/uploads"        element={<Navigate to={cabPath('/app/data')}           replace />} />
+      <Route path="/training"       element={<Navigate to={cabPath('/app/training')}       replace />} />
+      <Route path="/forecasts"      element={<Navigate to={cabPath('/app/forecasts')}      replace />} />
+      <Route path="/scenarios"      element={<Navigate to={cabPath('/app/scenarios')}      replace />} />
+      <Route path="/promo"          element={<Navigate to={cabPath('/app/promo')}          replace />} />
+      <Route path="/settings"       element={<Navigate to={cabPath('/app/settings')}       replace />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
