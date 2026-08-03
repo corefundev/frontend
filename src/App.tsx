@@ -7,6 +7,7 @@ import AppLayout from './components/AppLayout'
 import AdminGuard from './components/AdminGuard'
 import { IS_ADMIN_HOST, IS_APP_HOST, MAIN_ORIGIN, SECTION_HOST, adminUrl, appUrl, cabPath, mainUrl } from './shared/hostRouting'
 import PjaxLoader from './components/PjaxLoader'
+import CabinetSkeleton from './components/CabinetSkeleton'
 import CookieNotice from './components/CookieNotice'
 import SupportWidget from './components/SupportWidget'
 import LoginPage from './pages/LoginPage'
@@ -104,7 +105,7 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
     return () => clearTimeout(t)
   }, [expiresAt, logout])
 
-  if (restoring) return <SessionRestoreScreen />
+  if (restoring) return <CabinetSkeleton />
   if (!isAuthed) {
     // ADM-HOST (#126): у admin-хоста свой локальный вход (api-key
     // форма) — клиентская сессия/кука к консоли отношения не имеет.
@@ -114,7 +115,7 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
     if (IS_APP_HOST) {
       window.location.replace(mainUrl(
         '/login?next=' + encodeURIComponent(window.location.href)))
-      return <SessionRestoreScreen />
+      return <CabinetSkeleton />
     }
     return <Navigate to="/login" replace />
   }
@@ -127,19 +128,6 @@ function SuspenseFallback() {
   return <div className="h-64" aria-hidden="true" />
 }
 
-// #599: восстановление сессии по куке может занять секунды (медленная
-// сеть) — пустой блок читался как «белый экран сломанного сайта».
-// Видимый брендированный экран честно говорит, что происходит.
-function SessionRestoreScreen() {
-  return (
-    <div className="grid min-h-screen place-items-center bg-surface">
-      <div className="flex flex-col items-center gap-3 text-ink-muted">
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-500 text-[17px] font-bold text-white">S</span>
-        <span className="text-sm">Входим в аккаунт…</span>
-      </div>
-    </div>
-  )
-}
 
 // ── MIGR-1 (#424): сервис-поддомены news.<домен> / help.<домен> ──────────
 // Решение владельца 2026-07-17: «Новости» и «База знаний» живут на своих
