@@ -10,12 +10,11 @@
 
 import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { HostLink } from '../components/PublicLayout'
 
 import { plansApi, type PlanSpec } from '../features/plans/api'
 import { useAuthStore } from '../features/auth/store'
 import PublicLayout from '../components/PublicLayout'
-import { cabPath } from '../shared/hostRouting'
 
 type Billing = 'monthly' | 'yearly'
 
@@ -43,7 +42,7 @@ export default function PlansPage() {
   })
 
   const byId = (id: string) => plans.find((p) => p.id === id)
-  const signupTo = isAuthed ? cabPath('/app/upgrade') : '/signup'
+  const signupTo = isAuthed ? '/app/upgrade' : '/signup'
 
   return (
     <PublicLayout>
@@ -192,7 +191,7 @@ function PlanCards({
           <div className="relative flex flex-col rounded-2xl border border-ink/10 bg-white p-7 shadow-sm">
             <h2 className="text-xl font-bold text-ink">Free</h2>
             <PriceLine big="0 ₽" per="навсегда" note="без карты и ограничения по времени" />
-            <Link to={signupTo} className={ghostCta}>Начать бесплатно</Link>
+            <HostLink path={signupTo} className={ghostCta}>Начать бесплатно</HostLink>
             <div className="my-6 h-px bg-ink/10" />
             <ul className="space-y-3">
               <Feature>до {free?.max_skus ?? 30} SKU</Feature>
@@ -210,7 +209,7 @@ function PlanCards({
             </span>
             <h2 className="text-xl font-bold text-ink">Start</h2>
             <PriceLine big={sp.big} per="/мес" note={sp.note} />
-            <Link to={signupTo} className={primaryCta}>Выбрать Start</Link>
+            <HostLink path={signupTo} className={primaryCta}>Выбрать Start</HostLink>
             <div className="my-6 h-px bg-ink/10" />
             <ul className="space-y-3">
               <Feature featured>до {fmt(start?.max_skus ?? 1500)} SKU</Feature>
@@ -225,7 +224,7 @@ function PlanCards({
           <div className="relative flex flex-col rounded-2xl border border-ink/10 bg-white p-7 shadow-sm">
             <h2 className="text-xl font-bold text-ink">Business</h2>
             <PriceLine big={bp.big} per="/мес" note={bp.note} />
-            <Link to={signupTo} className={ghostCta}>Выбрать Business</Link>
+            <HostLink path={signupTo} className={ghostCta}>Выбрать Business</HostLink>
             <div className="my-6 h-px bg-ink/10" />
             <ul className="space-y-3">
               <Feature>SKU без ограничений</Feature>
@@ -369,13 +368,13 @@ function PlanCompare({
                 <BillingToggle billing={billing} onBilling={onBilling} compact />
               </div>
               <HeadCell name="Free" price="0 ₽ — навсегда, без карты">
-                <Link to={signupTo} className={miniGhost}>Начать</Link>
+                <HostLink path={signupTo} className={miniGhost}>Начать</HostLink>
               </HeadCell>
               <HeadCell name="Start" price={`${sp.big}/мес, ${billing === 'yearly' ? `при годовой — ${fmt(PRICING.start.yearlyTotal)} ₽/год` : 'помесячно'}`} tinted>
-                <Link to={signupTo} className={miniPrimary}>Выбрать</Link>
+                <HostLink path={signupTo} className={miniPrimary}>Выбрать</HostLink>
               </HeadCell>
               <HeadCell name="Business" price={`${bp.big}/мес, ${billing === 'yearly' ? `при годовой — ${fmt(PRICING.business.yearlyTotal)} ₽/год` : 'помесячно'}`}>
-                <Link to={signupTo} className={miniGhost}>Выбрать</Link>
+                <HostLink path={signupTo} className={miniGhost}>Выбрать</HostLink>
               </HeadCell>
             </div>
 
