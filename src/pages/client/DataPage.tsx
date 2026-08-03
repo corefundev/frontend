@@ -184,6 +184,9 @@ export default function DataPage() {
   const { data: uploads = [] } = useQuery({
     queryKey: ['uploads', clientId],
     queryFn: () => uploadsApi.list(clientId),
+    // #600: poll ticks are background noise for the PJAX bar; the first
+    // fetch still shows it (dataUpdatedAt === 0 predicate in PjaxLoader)
+    meta: { silent: true },
     refetchInterval: (q) =>
       (q.state.data ?? []).some((u) => MOVING_STATES.includes(u.status))
         ? 3000

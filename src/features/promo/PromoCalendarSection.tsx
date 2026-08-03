@@ -32,6 +32,8 @@ export function PromoCalendarSection({ clientId, datasetId, onTrain, trainPendin
   const { data: state } = useQuery({
     queryKey: ['promo-calendar', clientId, datasetId],
     queryFn: () => promoCalendarApi.state(clientId, datasetId),
+    // #600: см. PjaxLoader — тики поллинга не должны дёргать полосу
+    meta: { silent: true },
     refetchInterval: (q) =>
       q.state.data?.last_upload && MOVING.has(q.state.data.last_upload.status)
         ? 3000
