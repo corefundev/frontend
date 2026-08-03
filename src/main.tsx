@@ -11,7 +11,14 @@ import toast, { Toaster } from 'react-hot-toast'
 
 import App from './App'
 import './index.css'
+import { AppErrorBoundary } from './components/AppErrorBoundary'
 import { errorMessage } from './shared/api/client'
+import { installChunkReloadHandler } from './shared/chunkReload'
+
+// #599: до первого рендера — обработчик упавших lazy-чанков (деплой
+// сменил хэши → 404 на старое имя): одноразовый reload с гардом от
+// цикла; повторное падение показывает AppErrorBoundary, не белый экран.
+installChunkReloadHandler()
 
 // Global error surface: react-query swallows errors silently otherwise,
 // which means a 500 on a background refetch never reaches the user.
@@ -65,6 +72,7 @@ const queryClient = new QueryClient({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <AppErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <App />
@@ -84,5 +92,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         />
       </BrowserRouter>
     </QueryClientProvider>
+    </AppErrorBoundary>
   </React.StrictMode>
 )

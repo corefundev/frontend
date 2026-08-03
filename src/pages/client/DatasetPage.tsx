@@ -70,6 +70,8 @@ export default function DatasetPage() {
   const { data: ds, isLoading, isError, error } = useQuery({
     queryKey: ['dataset', clientId, datasetId],
     queryFn: () => datasetsApi.get(clientId, datasetId),
+    // #600: см. PjaxLoader — тики поллинга не должны дёргать полосу
+    meta: { silent: true },
     refetchInterval: (q) => {
       const d = q.state.data as DatasetDetail | undefined
       return (d?.pending_uploads ?? []).some((p) => PENDING_MOVING.includes(p.status))
