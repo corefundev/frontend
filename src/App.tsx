@@ -183,7 +183,7 @@ function SectionHostApp({ section }: { section: 'news' | 'help' }) {
 // Тот же вариант B, что и у кабинета: на admin-хосте консоль живёт ОТ
 // КОРНЯ, /admin/* каноникализируется в корень, всё постороннее уезжает
 // full-reload'ом на основной домен. На апексе маршруты /admin/* остаются
-// для легаси/dev-хостов (на брендовом апексе HostZoneGuard редиректит).
+// для легаси/dev-хостов (на брендовом апексе HostZoneGate редиректит).
 const ADMIN_CONSOLE_ROUTES = (
   <>
     <Route index element={
@@ -300,54 +300,55 @@ const APEX_ONLY_PREFIXES = [
   '/oauth', '/auth', '/forgot-password',
 ]
 
-function HostZoneGuard() {
-  const location = useLocation()
-  useEffect(() => {
-    const path = location.pathname + location.search
-    if (IS_APP_HOST) {
-      // Вариант B: кабинет от корня. Публичные страницы живут только на
-      // апексе; /app/* здесь не существует — канонизируем в корень.
-      if (location.pathname === '/app' || location.pathname.startsWith('/app/')) {
-        window.location.replace(cabPath(path))
-        return
-      }
-      if (location.pathname === '/admin'
-          || location.pathname.startsWith('/admin/')) {
-        window.location.replace(adminUrl(path))
-        return
-      }
-      if (APEX_ONLY_PREFIXES.some((p) => location.pathname === p
-          || location.pathname.startsWith(p + '/'))) {
-        window.location.replace(mainUrl(path))
-      }
-      return
-    }
-    if (location.pathname === '/app' || location.pathname.startsWith('/app/')) {
-      const target = appUrl(path)
-      if (target !== path) window.location.replace(target)
-      return
-    }
-    if (location.pathname === '/admin' || location.pathname.startsWith('/admin/')) {
-      const target = adminUrl(path)
-      if (target !== path) window.location.replace(target)
-      return
-    }
-    if (location.pathname === '/login/admin') {
-      // #551: канон — корень admin-хоста (периметр сам решает: консоль
-      // или проверка CF); на легаси/dev путь остаётся относительным.
-      const target = adminUrl('/')
-      if (target !== '/') window.location.replace(target)
-    }
-  }, [location])
+/** Синхронно: куда редиректить с текущего адреса, если он из чужой
+ *  зоны (кабинет/консоль/апекс-only). null = адрес в своей зоне. */
+function zoneRedirectTarget(pathname: string, search: string): string | null {
+  const path = pathname + search
+  if (IS_APP_HOST) {
+    // Вариант B: кабинет от корня. Публичные страницы живут только на
+    // апексе; /app/* здесь не существует — канонизируем в корень.
+    if (pathname === '/app' || pathname.startsWith('/app/')) return cabPath(path)
+    if (pathname === '/admin' || pathname.startsWith('/admin/')) return adminUrl(path)
+    if (APEX_ONLY_PREFIXES.some((p) => pathname === p
+        || pathname.startsWith(p + '/'))) return mainUrl(path)
+    return null
+  }
+  if (pathname === '/app' || pathname.startsWith('/app/')) {
+    const target = appUrl(path)
+    return target !== path ? target : null
+  }
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    const target = adminUrl(path)
+    return target !== path ? target : null
+  }
+  if (pathname === '/login/admin') {
+    // #551: канон — корень admin-хоста (периметр сам решает: консоль
+    // или проверка CF); на легаси/dev путь остаётся относительным.
+    const target = adminUrl('/')
+    return target !== '/' ? target : null
+  }
   return null
+}
+
+// #601-класс, корневое закрытие: пока адрес из чужой зоны, маршруты НЕ
+// рендерятся вовсе — ни мигания чужой страницы, ни загрузки lazy-чанков,
+// которые location.replace оборвал бы на полпути (обрыв кормил
+// vite:preloadError и приводил к ложному экрану ошибки на /plans).
+function HostZoneGate({ children }: { children: React.ReactNode }) {
+  const location = useLocation()
+  const target = zoneRedirectTarget(location.pathname, location.search)
+  useEffect(() => {
+    if (target) window.location.replace(target)
+  }, [target])
+  if (target) return <CabinetSkeleton />
+  return <>{children}</>
 }
 
 export default function App() {
   if (SECTION_HOST) return <SectionHostApp section={SECTION_HOST} />
   if (IS_ADMIN_HOST) return <AdminHostApp />
   return (
-    <>
-      <HostZoneGuard />
+    <HostZoneGate>
       {/* GitHub-style pjax progress bar — fixed-top, brand-500.
           Listens to route changes + react-query in-flight state. */}
       <PjaxLoader />
@@ -666,6 +667,6 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </>
+    </HostZoneGate>
   )
 }

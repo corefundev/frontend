@@ -20,7 +20,7 @@ interface Props {
 // MIGR-1 (#424): ссылка, живущая и на сервис-поддомене (абсолютной), и на
 // основном домене (роутерной). Секции news/help всегда получают
 // КАНОНИЧЕСКИЙ адрес (поддомен на новом бренде).
-function HostLink({ path, className, children, ...rest }: {
+export function HostLink({ path, className, children, ...rest }: {
   path: string
   className?: string
   children: React.ReactNode
