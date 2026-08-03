@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { cabPath } from '../../../shared/hostRouting'
 import toast from 'react-hot-toast'
 import QRCode from 'qrcode'
 
@@ -413,7 +414,7 @@ export default function TwoFAPage() {
   return (
     <div>
       <nav className="text-[13px] text-ink-faint" aria-label="Хлебные крошки">
-        <Link to="/app/account/security" className="font-medium text-ink-muted hover:text-brand-600">
+        <Link to={cabPath('/app/account/security')} className="font-medium text-ink-muted hover:text-brand-600">
           Безопасность
         </Link>
         <span className="mx-1.5">/</span>

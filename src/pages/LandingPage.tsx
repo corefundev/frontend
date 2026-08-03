@@ -42,7 +42,7 @@ function Hero({ isAuthed }: { isAuthed: boolean }) {
           <div className="mt-8 flex flex-wrap items-center gap-3">
             {isAuthed ? (
               <Link
-                to={cabPath(cabPath('/app'))}
+                to={cabPath('/app')}
                 className="inline-flex items-center px-6 py-3 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors"
               >
                 Открыть кабинет →
@@ -284,7 +284,7 @@ function FinalCta({ isAuthed }: { isAuthed: boolean }) {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           {isAuthed ? (
             <Link
-              to={cabPath(cabPath('/app'))}
+              to={cabPath('/app')}
               className="inline-flex items-center px-6 py-3 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors"
             >
               Открыть кабинет →
