@@ -15,20 +15,22 @@
 import { useEffect, useRef, useState } from 'react'
 
 import {
-  supportChat, supportHealth, type Citation, type HealthResponse,
+  supportChat, supportHealth, type HealthResponse,
 } from '../features/support/api'
 import { useAuthStore } from '../features/auth/store'
+import { useSupportChat } from '../features/support/chatStore'
 import { IS_ADMIN_HOST, SECTION_HOST, mainUrl } from '../shared/hostRouting'
-
-interface Msg {
-  role: 'user' | 'assistant'
-  text: string
-  at: string          // HH:MM локальное время постановки сообщения
-  citations?: Citation[]
-}
 
 const HUMAN_MAILTO =
   'mailto:dochub.org@gmail.com?subject=%D0%92%D0%BE%D0%BF%D1%80%D0%BE%D1%81%20%D0%B2%20Sprosly'
+
+// SUP-UX #566 (п.1): приветствие рендерится на фронте БЕЗ запроса к
+// боту; текст = канонный _WELCOME бота (support/api/app.py) — при
+// правке менять оба.
+const WELCOME =
+  'Здравствуйте! Я ассистент Sprosly. Помогу разобраться с загрузкой ' +
+  'данных, обучением модели, точностью прогноза, тарифами и настройками — ' +
+  'спрашивайте своими словами, отвечу со ссылками на документацию.'
 
 // Чипы пустого состояния — вопросы, на которые база знаний точно отвечает.
 const QUICK_QUESTIONS = [
@@ -76,10 +78,13 @@ function AssistantAvatar({ size }: { size: 'header' | 'bubble' }) {
 
 function Panel({ surface, onClose }: { surface: 'public' | 'cabinet'; onClose: () => void }) {
   const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [msgs, setMsgs] = useState<Msg[]>([])
+  // #566: диалог в сторе (sessionStorage) — переживает сворачивание
+  // панели и перезагрузку; умирает вместе со вкладкой.
+  const msgs = useSupportChat((s) => s.msgs)
+  const sessionId = useSupportChat((s) => s.sessionId)
+  const { append, patchLast, appendToLastText, setSessionId } = useSupportChat.getState()
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
-  const [sessionId, setSessionId] = useState<string | null>(null)
   const token = useAuthStore((s) => s.token)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -98,23 +103,12 @@ function Panel({ surface, onClose }: { surface: 'public' | 'cabinet'; onClose: (
     const text = raw.trim()
     if (!text || streaming || health?.status !== 'ok') return
     setInput('')
-    setMsgs((m) => [
-      ...m,
-      { role: 'user', text, at: nowHHMM() },
-      { role: 'assistant', text: '', at: nowHHMM() },
-    ])
+    append({ role: 'user', text, at: nowHHMM() })
+    append({ role: 'assistant', text: '', at: nowHHMM() })
     setStreaming(true)
     void supportChat(text, sessionId, surface, {
-      onToken: (d) => setMsgs((m) => {
-        const out = [...m]
-        out[out.length - 1] = { ...out[out.length - 1], text: out[out.length - 1].text + d }
-        return out
-      }),
-      onCitations: (items) => setMsgs((m) => {
-        const out = [...m]
-        out[out.length - 1] = { ...out[out.length - 1], citations: items }
-        return out
-      }),
+      onToken: (d) => appendToLastText(d),
+      onCitations: (items) => patchLast({ citations: items }),
       onDone: (sid) => { setSessionId(sid || sessionId); setStreaming(false) },
       onError: () => {
         setStreaming(false)
@@ -157,6 +151,17 @@ function Panel({ surface, onClose }: { surface: 'public' | 'cabinet'; onClose: (
             Ассистент готовится к запуску. Пока он спит — загляните в{' '}
             <a href={mainUrl('/help')} className="font-medium text-brand-500 hover:text-brand-600">Базу знаний</a>{' '}
             или напишите нам — отвечаем быстро.
+          </div>
+        )}
+
+        {/* #566: приветствие — статичный первый пузырь, в историю не пишется */}
+        {health?.status !== 'offline' && (
+          <div className="flex items-end gap-2 pt-1">
+            <AssistantAvatar size="bubble" />
+            <div className="max-w-[85%] rounded-pill bg-surface px-4 py-2.5 text-sm leading-relaxed text-ink">
+              <div className="mb-0.5 text-[13px] font-semibold text-brand-500">Ассистент</div>
+              {WELCOME}
+            </div>
           </div>
         )}
 
